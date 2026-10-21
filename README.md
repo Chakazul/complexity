@@ -60,7 +60,7 @@ uv run complexity run life:random --measures png,video_h264 --size 256x256 --eve
 
 ## Measures
 
-All compression measures report **bits per cell** (per frame for video), so values are
+Compression measures report **bits per cell** (per frame for video), so values are
 comparable across grid sizes: ~0 for a uniform grid, ~1 for incompressible binary noise,
 ~8 for incompressible 8-bit noise, plus each format's overhead. Frames are quantized to
 8-bit gray first.
@@ -71,6 +71,15 @@ comparable across grid sizes: ~0 for a uniform grid, ~1 for incompressible binar
 | `lzma` | LZMA size of raw frame | 1 | 1-D dictionary compression, no image model |
 | `video_lzma` | LZMA size of a frame window | 16 | repeats across time compress away |
 | `video_h264` | lossless H.264 size of a frame window | 16 | motion compensation captures translating structures |
+| `image_min` | best of `png`, `lzma` | 1 | tightest per-frame upper bound |
+| `video_min` | best of `video_lzma`, `video_h264` | 16 | tightest per-window upper bound |
+| `novelty` | `video_min` ÷ mean `image_min` | 16 | fraction of each frame that is new: ~0 static, ~1 fresh noise (unit: ratio) |
+
+Each compressor sees a different kind of regularity: PNG sees smooth 2-D variation, LZMA
+exact repeats anywhere, H.264 approximate and sub-pixel motion. Where they disagree tells
+you what kind of structure a pattern has; the minimum is the tightest bound. Bits per
+cell are size-invariant only for space-filling patterns; isolated objects get "cheaper"
+on larger grids, so compare them at equal size.
 
 Window measures see fewer frames until the window fills, so their first ~16 steps are a
 warm-up transient.
