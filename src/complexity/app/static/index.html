@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Complexity Lab</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Complexity Lab</h1>
+    <span class="sub">complexity measures on dynamical complex systems</span>
+    <span id="status" class="status">connecting…</span>
+  </header>
+  <div class="layout">
+    <aside>
+      <section>
+        <h2>Runs <span class="hint">compare up to 4</span></h2>
+        <div id="runs"></div>
+        <button id="add-run" class="ghost">+ Add run</button>
+        <label class="inline">Grid size <input id="size" type="number" value="128" min="32" max="512" step="16"></label>
+      </section>
+      <section>
+        <h2>Measures</h2>
+        <div id="measures"></div>
+      </section>
+      <section>
+        <h2>Playback</h2>
+        <div class="buttons">
+          <button id="start" class="primary">Start</button>
+          <button id="play" disabled>Pause</button>
+          <button id="step" disabled>Step</button>
+        </div>
+        <label>Steps per frame <output id="spt-out">1</output>
+          <input id="spt" type="range" min="1" max="20" value="1"></label>
+        <label>Max frames/s <output id="fps-out">30</output>
+          <input id="fps" type="range" min="1" max="60" value="30"></label>
+      </section>
+    </aside>
+    <main>
+      <div id="views" class="views"></div>
+      <div id="table-wrap"></div>
+      <div id="charts" class="charts"></div>
+      <p id="empty" class="empty">Pick runs and measures, then press <b>Start</b>.</p>
+    </main>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
