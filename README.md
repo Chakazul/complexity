@@ -127,6 +127,7 @@ src/complexity/
 Computation runs in Python on the server; the browser only draws. The same app can be
 deployed as a hosted demo (for example on a Hugging Face Space) without changes.
 
-Lenia patterns come from Lenium, the JAX Lenia library (not yet published). Until then,
-the code and data needed here are copied into this repo with their sources noted;
-afterwards they will be replaced by `import lenium`.
+Lenia data comes from Lenium, the JAX Lenia library (not yet published). Currently only
+the classic Orbium is included, inline in `systems/lenia.py`. M1 copies the needed Lenium
+code and data (Integer Lenia, `min_orbium`) into `src/complexity/vendor/lenium/`, to be
+replaced by `import lenium` once it is published.
