@@ -23,8 +23,9 @@ These hold for every system and measure; tests enforce them.
 `[0, 1]`. Systems whose state is not a grid (particles, multi-channel) render themselves to
 a frame. Measures see frames only, never system internals.
 
-**Discreteness.** Every system declares `n_states`: `2` for Game of Life, `P + 1` for
-Integer Lenia, `None` for continuous states. A discrete frame takes exactly the values
+**Discreteness.** Every system declares `n_states(pattern)`: `2` for Game of Life, `P + 1`
+for Integer Lenia, `None` for continuous states. It is a method because one system (Lenia)
+runs both discrete and continuous patterns. A discrete frame takes exactly the values
 `k / (n_states - 1)`. Measures that need symbols call `discretize(frames, n_levels)`, which
 is exact for discrete systems and a uniform coarse-graining for continuous ones (the
 coarse-graining level is a measure parameter, recorded with every result).
@@ -78,18 +79,22 @@ so values compare across grid sizes. Other measures state their unit.
 ```python
 class System:
     key: str; name: str
-    n_states: int | None            # see §2
     patterns: dict[str, str]        # key -> display name; first is default
     default_size: tuple[int, int]
     params: dict                    # static, hashable; part of the jit cache key
 
+    def n_states(self, pattern) -> int | None                     # see §2
     def init(self, pattern: str, size, rng: jax.Array) -> State   # State is a pytree
     def step(self, state: State) -> State                         # pure, jit-able
     def observe(self, state: State) -> jax.Array                  # (H, W) float32 in [0, 1]
 ```
 
 `complexity.engine.rollout(system, state, steps, every)` returns `(state, frames)` using
-`lax.scan`; `rollout_batch` adds `vmap` over a leading batch axis.
+`lax.scan`; `rollout_batch` adds `vmap` over a leading batch axis; `advance` steps without
+observing (traced step count, so no recompile per count). Systems compare equal by type and
+`params`, so the jit cache is shared across instances. Pattern-specific parameters (Lenia's
+`R, T, P, m, s`) live in the state pytree as static metadata
+(`jax.tree_util.register_dataclass`), so they are part of the cache key too.
 
 ### 3.3 Measure interface
 
@@ -150,8 +155,11 @@ One system covering continuous and Integer Lenia via the quantization level `P`
   - Potential: `U = Σ K · A`, integer, by wrap-padded direct convolution. Crop `K` to
     `(2R+1)²`, since the predecessor's world-size kernel gives the same result but is
     O(N⁴). A float FFT plus `round` is allowed only if a test proves it bit-identical to
-    the direct convolution.
-  - Growth lookup table indexed by integer `U`: `g[u] = round(P · (2·bell(u / (P·ΣK), m, s) − 1))`.
+    the direct convolution. **Done:** the system uses the FFT path (40–150× faster on
+    CPU); its error before rounding is ≤ 0.004 against the 0.5 that would change a value,
+    and a test checks bit-identity on full, random and trajectory grids of several sizes.
+  - Growth lookup table indexed by integer `U`: `g[u] = round(P · (2·bell(u / (P·ΣK − 1), m, s) − 1))`
+    for `u < P·ΣK` (the predecessor's `linspace(0, 1, P·ΣK)`), and `g[P·ΣK] = round(P · (2·bell(1, m, s) − 1))`.
   - Update: `A ← clip(A + round(g[U] / T), 0, P)`, so each cell changes by at most ±1 per
     step for `min_orbium`.
   - Observation: `frame = A / P`.
@@ -159,7 +167,11 @@ One system covering continuous and Integer Lenia via the quantization level `P`
     `min_orbium` survived 500 steps with stable mass, exactly 13 levels, and movement.
     The faithful port must reproduce at least that; the golden tests are set from the port.
 - Other patterns: random soup at `P = 12`, and the classic continuous Orbium (`P = 0`,
-  polynomial profiles, as in the current NumPy demo) kept as a comparison.
+  polynomial profiles, as in the current NumPy demo) kept as a comparison, with its
+  continuous random soup (`random_continuous`, used by the §5.1 findings).
+- Patterns are centered at `(N − n) // 2`, as for Life; the predecessor uses
+  `N // 2 − n // 2`, one cell different for odd `n`. Comparisons with the predecessor start
+  both from the same grid.
 - **Lenium is not published yet**, so its code and data are copied (vendored) into
   `src/complexity/vendor/lenium/`. Each file records where it came from: repo path and
   commit. Copy only what is needed: creature JSON entries, the RLE decoder, profiles,
@@ -266,9 +278,13 @@ for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
     glider every 30 steps.
   - Lenia: `min_orbium` keeps mass within ±10 % and exactly 13 levels over 500 steps, and
     its center of mass moves. Classic Orbium (`P = 0`) keeps mass within ±20 % over 200
-    steps.
-- **JAX parity.** The JAX GoL is bit-identical to the current NumPy GoL for 200 steps of
-  random soup. Lenia matches to `atol = 1e-5` (`P = 0`) or exactly (`P = 12`).
+    steps. A checksum of `min_orbium` after 500 steps guards the switch to `import lenium`.
+- **JAX parity.** The JAX GoL is bit-identical to the M0 NumPy GoL for 200 steps of
+  random soup. Continuous Lenia matches the M0 NumPy step to `atol = 1e-5` per step; over
+  200 steps the trajectories differ by up to ~4e-4 (NumPy's FFT ran in float64), tested at
+  `1e-3`. Integer Lenia was checked bit-identical to the predecessor's `IntegerLenia` for
+  1000 steps when porting (the predecessor is not a test dependency). The NumPy reference
+  steps live in `tests/numpy_reference.py`.
 - **Measure expectations on baselines** (the table is the test):
 
   | Measure | empty | frozen_noise | iid_noise | glider stream |
@@ -296,20 +312,21 @@ for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
       grid-size comparison (`scripts/compression_by_grid_size.py`, findings in §5.1)
 
 ### M1 — JAX engine
-- [ ] Add `jax` dependency and `cuda13` extra; `complexity info` command
-- [ ] Functional `System` API (`init` / `step` / `observe`, pytree state); `engine.rollout`
+- [x] Add `jax` dependency and `cuda13` extra; `complexity info` command
+- [x] Functional `System` API (`init` / `step` / `observe`, pytree state); `engine.rollout`
       (`lax.scan`) and `rollout_batch` (`vmap`)
-- [ ] Port Game of Life to JAX; parity test against the NumPy version
-- [ ] Vendor from Lenium into `src/complexity/vendor/lenium/` with source notes: creature
+- [x] Port Game of Life to JAX; parity test against the NumPy version
+- [x] Vendor from Lenium into `src/complexity/vendor/lenium/` with source notes: creature
       JSON (`min_orbium`, `orbium`), RLE decoder, profiles
-- [ ] Integer Lenia in JAX, ported from the predecessor's `IntegerLenia` (integer kernel,
+- [x] Integer Lenia in JAX, ported from the predecessor's `IntegerLenia` (integer kernel,
       direct convolution, growth lookup); continuous Lenia (`P = 0`) alongside
-- [ ] `min_orbium` as the default Lenia pattern; golden tests (mass, 13 levels, motion)
+- [x] `min_orbium` as the default Lenia pattern; golden tests (mass, 13 levels, motion)
 - [ ] Later, once Lenium is published: replace `vendor/lenium/` with `import lenium`
-- [ ] `n_states` on every system; `discretize()` helper with tests
-- [ ] Device ring buffer in `Run`; one `device_get` per tick for host measures
-- [ ] Remove the NumPy system implementations once parity tests pass
-- [ ] Benchmark steps/s on CPU and GPU at 128², 256², 512² and record it in the README
+- [x] `n_states` on every system; `discretize()` helper with tests
+- [x] Device ring buffer in `Run`; one `device_get` per tick for host measures
+- [x] Remove the NumPy system implementations once parity tests pass (the reference steps
+      moved to `tests/numpy_reference.py`)
+- [x] Benchmark steps/s on CPU and GPU at 128², 256², 512² and record it in the README
 
 ### M2 — Measure conventions and transfer entropy
 - [ ] `Measure` gains `backend`, `needs_discrete`, `ctx`; orientation documented in the
@@ -360,6 +377,9 @@ for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
   steps, a process pool for host measures, and JAX-native measures where possible.
 - **TE parameters for continuous fields.** `offset` and `n_levels` change TE values for
   Lenia; record them with every result and treat their choice as part of the study.
+- **GPU step is launch-bound.** On the laptop GPU every system runs ~7–10 k steps/s from
+  128² to 512², below the CPU on small grids (README). Batching seeds with `vmap` is the
+  way to use the GPU; a single interactive run gains little.
 - **x264 availability.** PyAV wheels bundle libx264 on Linux; check macOS and Windows
   wheels in CI, and fall back to `video_lzma` if missing.
 - **Lenium alignment.** The vendored code may drift from Lenium as it evolves. When Lenium
@@ -369,3 +389,6 @@ for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
 ## Log
 - 2026-10-21 — M0 done: NumPy demo with GoL, Lenia, 4 compression measures, UI and CLI.
 - 2026-10-21 — Added best-of and novelty compression measures; grid-size findings in §5.1.
+- 2026-10-29 — M1 done: JAX engine (`rollout` / `rollout_batch` / `advance`), functional
+  systems, Integer Lenia with `min_orbium` as default (bit-identical to the predecessor;
+  exact FFT potential), vendored Lenium, `discretize`, device frame buffer, benchmarks.
