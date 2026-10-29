@@ -152,7 +152,7 @@ function buildViews() {
     box.append(el);
     r.ctx = c.getContext("2d");
     r.image = r.ctx.createImageData(r.width, r.height);
-    r.lut = LUT[systemByKey(r.system).state_type] || LUT.continuous;
+    r.lut = r.n_states === 2 ? LUT.discrete : LUT.continuous;
   });
 }
 

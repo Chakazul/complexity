@@ -1,9 +1,11 @@
-"""Conway's Game of Life on a torus."""
+"""Conway's Game of Life (B3/S23) on a torus."""
 
 from __future__ import annotations
 
 import re
 
+import jax
+import jax.numpy as jnp
 import numpy as np
 
 from complexity.registry import register_system
@@ -45,9 +47,10 @@ def rle2arr(text: str) -> np.ndarray:
 
 @register_system
 class GameOfLife(System):
+    """State: uint8 (height, width) of 0/1."""
+
     key = "life"
     name = "Game of Life"
-    state_type = "discrete"
     patterns = {
         "gosper_glider_gun": "Gosper glider gun",
         "glider": "Glider",
@@ -57,22 +60,22 @@ class GameOfLife(System):
         "random": "Random soup (50%)",
     }
 
-    def reset(self, pattern: str) -> None:
-        self.grid = np.zeros(self.size, dtype=np.uint8)
-        if pattern == "random":
-            self.grid[:] = self.rng.random(self.size) < 0.5
-        else:
-            place_center(self.grid, rle2arr(RLE[pattern]))
+    def n_states(self, pattern: str) -> int:
+        return 2
 
-    def step(self) -> None:
-        g = self.grid
+    def init(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> jax.Array:
+        if pattern == "random":
+            return (jax.random.uniform(rng, size) < 0.5).astype(jnp.uint8)
+        return place_center(jnp.zeros(size, jnp.uint8), rle2arr(RLE[pattern]))
+
+    def step(self, grid: jax.Array) -> jax.Array:
         n = sum(
-            np.roll(np.roll(g, dy, 0), dx, 1)
+            jnp.roll(grid, (dy, dx), (0, 1))
             for dy in (-1, 0, 1)
             for dx in (-1, 0, 1)
             if dy or dx
         )
-        self.grid = ((n == 3) | ((g == 1) & (n == 2))).astype(np.uint8)
+        return ((n == 3) | ((grid == 1) & (n == 2))).astype(jnp.uint8)
 
-    def frame(self) -> np.ndarray:
-        return self.grid.astype(np.float32)
+    def observe(self, grid: jax.Array) -> jax.Array:
+        return grid.astype(jnp.float32)

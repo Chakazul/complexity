@@ -6,7 +6,8 @@ Protocol (JSON messages):
     {"type": "play"} | {"type": "pause"} | {"type": "step"}
     {"type": "speed", "steps_per_tick": int, "fps": int}
   server -> client
-    {"type": "init", "runs": [{"label", "system", "height", "width", "measures", "skipped"}]}
+    {"type": "init", "runs": [{"label", "system", "n_states", "height", "width", "measures",
+                               "skipped"}]}
     {"type": "tick", "t": int, "runs": [{"frame": base64 uint8, "values": {}, "ms": {}}]}
     {"type": "error", "message": str}
 """
@@ -42,8 +43,9 @@ def catalog():
     probes = {key: cls() for key, cls in systems.items()}
     return {
         "systems": [
-            {"key": key, "name": cls.name, "state_type": cls.state_type,
-             "patterns": cls.patterns, "default_size": cls.default_size}
+            {"key": key, "name": cls.name, "patterns": cls.patterns,
+             "n_states": {p: probes[key].n_states(p) for p in cls.patterns},
+             "default_size": cls.default_size}
             for key, cls in systems.items()
         ],
         "measures": [
@@ -65,8 +67,8 @@ class Session:
 
     def init_message(self) -> dict:
         return {"type": "init", "runs": [
-            {"label": r.spec.label, "system": r.spec.system,
-             "height": r.system.size[0], "width": r.system.size[1],
+            {"label": r.spec.label, "system": r.spec.system, "n_states": r.n_states,
+             "height": r.size[0], "width": r.size[1],
              "measures": [m.key for m in r.measures], "skipped": r.skipped}
             for r in self.runs
         ]}

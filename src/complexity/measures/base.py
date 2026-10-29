@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
+import jax.numpy as jnp
 import numpy as np
 
 
@@ -38,3 +39,14 @@ class Measure(ABC):
 def to_uint8(frame: np.ndarray) -> np.ndarray:
     """Quantize a [0, 1] frame to 8-bit gray, the common input of the compressors."""
     return np.round(np.clip(frame, 0, 1) * 255).astype(np.uint8)
+
+
+def discretize(frames, n_levels: int):
+    """Symbols 0..n_levels-1 from [0, 1] frames, by `n_levels` equal-width bins (PLAN.md §2).
+
+    Exact for a discrete system with `n_levels = n_states`: its values k / (n_states - 1)
+    map to k. For a continuous system it is a uniform coarse-graining. Works on NumPy and
+    JAX arrays alike and returns the same kind, as int32.
+    """
+    xp = np if isinstance(frames, np.ndarray) else jnp
+    return xp.minimum(xp.floor(xp.asarray(frames) * n_levels), n_levels - 1).astype(xp.int32)
