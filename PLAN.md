@@ -140,16 +140,20 @@ Patterns: Gosper glider gun, glider, pulsar (period 3), R-pentomino, acorn, rand
 One system covering continuous and Integer Lenia via the quantization level `P`
 (`P = 0` → continuous, `n_states = None`; `P > 0` → `n_states = P + 1`).
 
+**Base library: the hand-coded Lenium** (`~/github/lenium.old`, commit `9acb864`, identical
+to `~/github/lenia-ref/code/lenium`). `~/github/lenium` is a newer, agent-written rewrite
+and is not used. **Gaussian kernel shells and growth are the standard** for Lenia
+experiments here, unless an experiment says otherwise: kernel rings
+`bell(D mod 1, 0.5, 0.15)`, growth `2·bell(U, m, s) − 1`, with
+`bell(x, m, s) = exp(-((x − m)/s)² / 2)`.
+
 - **Default pattern: minimum Orbium** (`min_orbium`): Integer Lenia, `R = 12, T = 10,
   P = 12`, one ring (`b = [1]`), `m = 0.15, s = 0.015`, Gaussian kernel shell and growth,
   integer cells `0..12`. Its 13 exact levels make it usable by both discrete measures
   (13 symbols) and continuous ones.
-  - Data: `~/github/lenium/src/lenium/io/data/default_creatures.json`, key `"min_orbium"`
-    (schema v3, `variant: "integer"`). Lenium generates it from the predecessor library:
-    `~/github/lenia-ref/code/lenium/src/lenium/pattern.py`, `patterns["min-orbium"]`.
-- **Integer Lenia update**, ported from the predecessor's `IntegerLenia`
-  (`~/github/lenia-ref/code/lenium/src/lenium/model.py`, helpers in `func.py`). Lenium itself
-  has no Integer Lenia engine yet. Everything is integer:
+  - Data: `~/github/lenium.old/src/lenium/pattern.py`, `patterns["min-orbium"]`.
+- **Integer Lenia update**, ported from the hand-coded `IntegerLenia`
+  (`~/github/lenium.old/src/lenium/model.py`, helpers in `func.py`). Everything is integer:
   - Kernel: `K = round(P · bell(D mod 1, 0.5, 0.15) · [D < 1])` with `D = dist / R`
     (`bell(x, m, s) = exp(-((x − m)/s)² / 2)`), unnormalized integer weights `0..P`.
   - Potential: `U = Σ K · A`, integer, by wrap-padded direct convolution. Crop `K` to
@@ -166,16 +170,19 @@ One system covering continuous and Integer Lenia via the quantization level `P`
   - A float approximation (rounding only the state) was prototyped here. On 64²,
     `min_orbium` survived 500 steps with stable mass, exactly 13 levels, and movement.
     The faithful port must reproduce at least that; the golden tests are set from the port.
-- Other patterns: random soup at `P = 12`, and the classic continuous Orbium (`P = 0`,
-  polynomial profiles, as in the current NumPy demo) kept as a comparison, with its
-  continuous random soup (`random_continuous`, used by the §5.1 findings).
+- Other patterns: random soup at `P = 12`, and the continuous Orbium (`P = 0`) of the
+  hand-coded Lenium (`patterns["orbium"]`, Gaussian, `R = 13`), with its continuous random
+  soup (`random_continuous`). Continuous Lenia is ported from the hand-coded `Lenia` class.
+  It replaced M0's polynomial Orbium (2026-10-29), so the M0 NumPy Lenia parity test was
+  dropped.
 - Patterns are centered at `(N − n) // 2`, as for Life; the predecessor uses
   `N // 2 − n // 2`, one cell different for odd `n`. Comparisons with the predecessor start
   both from the same grid.
 - **Lenium is not published yet**, so its code and data are copied (vendored) into
   `src/complexity/vendor/lenium/`. Each file records where it came from: repo path and
-  commit. Copy only what is needed: creature JSON entries, the RLE decoder, profiles,
-  Integer Lenia. When Lenium is published, replace the vendored code with `import lenium`
+  commit. Copy only what is needed: the `orbium` and `min-orbium` pattern entries, and
+  Lenia / Integer Lenia as functions (`model.py`). Patterns are cell arrays, so no RLE
+  decoder is needed. When Lenium is published, replace the vendored code with `import lenium`
   (add the dependency, delete `vendor/lenium/`, and keep the golden tests as the check
   that behaviour is unchanged).
 
@@ -218,12 +225,13 @@ the sliding window do not recompress anything.
   grid. PNG's 2-D prediction does not make up for its weaker entropy coder here, so
   `image_min` is almost always LZMA.
 - Video LZMA beats H.264 everywhere. The gap narrows for continuous Lenia (soup at 512²:
-  1.485 vs 1.503 bits/cell/frame). Open question: does H.264 win for larger-R (smoother)
+  1.305 vs 1.318 bits/cell/frame). Open question: does H.264 win for larger-R (smoother)
   creatures or longer windows?
 - Bits per cell are size-invariant only for space-filling patterns. For a single object
   (gun, Orbium) they shrink as the grid grows (gun LZMA image: 0.098 at 128² → 0.008 at
   512²). Compare isolated patterns at equal grid size, or use total bits.
-- `novelty` is stable across sizes: gun ≈ 0.45, Orbium ≈ 0.69, chaotic soups 0.74–0.92.
+- `novelty` is stable across sizes: gun ≈ 0.45, Orbium ≈ 0.69, chaotic soups 0.77–0.92.
+- Rerun on 2026-10-29 with the Gaussian Orbium: the conclusions are unchanged.
 - Cost: all measures on a random soup take ≈ 0.3 s per measured step at 128² and 4–5 s at
   512², so large grids need "measure every k steps".
 
@@ -278,13 +286,13 @@ for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
     glider every 30 steps.
   - Lenia: `min_orbium` keeps mass within ±10 % and exactly 13 levels over 500 steps, and
     its center of mass moves. Classic Orbium (`P = 0`) keeps mass within ±20 % over 200
-    steps. A checksum of `min_orbium` after 500 steps guards the switch to `import lenium`.
+    steps. A checksum of `min_orbium` after 500 steps, and the Orbium's mass after 200 steps
+    (to 1e-3), guard the switch to `import lenium`.
 - **JAX parity.** The JAX GoL is bit-identical to the M0 NumPy GoL for 200 steps of
-  random soup. Continuous Lenia matches the M0 NumPy step to `atol = 1e-5` per step; over
-  200 steps the trajectories differ by up to ~4e-4 (NumPy's FFT ran in float64), tested at
-  `1e-3`. Integer Lenia was checked bit-identical to the predecessor's `IntegerLenia` for
-  1000 steps when porting (the predecessor is not a test dependency). The NumPy reference
-  steps live in `tests/numpy_reference.py`.
+  random soup (reference step in `tests/numpy_reference.py`). Against the hand-coded Lenium,
+  checked when porting (it is not a test dependency): Integer Lenia is bit-identical for
+  1000 steps at 64² and 128²; continuous Lenia has an identical kernel FFT and differs by
+  ~1e-7 after one step (float rounding order), growing chaotically to O(1) by step ~1000.
 - **Measure expectations on baselines** (the table is the test):
 
   | Measure | empty | frozen_noise | iid_noise | glider stream |
@@ -316,8 +324,8 @@ for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
 - [x] Functional `System` API (`init` / `step` / `observe`, pytree state); `engine.rollout`
       (`lax.scan`) and `rollout_batch` (`vmap`)
 - [x] Port Game of Life to JAX; parity test against the NumPy version
-- [x] Vendor from Lenium into `src/complexity/vendor/lenium/` with source notes: creature
-      JSON (`min_orbium`, `orbium`), RLE decoder, profiles
+- [x] Vendor from the hand-coded Lenium into `src/complexity/vendor/lenium/` with source
+      notes: patterns `min-orbium`, `orbium`; Lenia and Integer Lenia as functions
 - [x] Integer Lenia in JAX, ported from the predecessor's `IntegerLenia` (integer kernel,
       direct convolution, growth lookup); continuous Lenia (`P = 0`) alongside
 - [x] `min_orbium` as the default Lenia pattern; golden tests (mass, 13 levels, motion)
@@ -389,6 +397,8 @@ for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
 ## Log
 - 2026-10-21 — M0 done: NumPy demo with GoL, Lenia, 4 compression measures, UI and CLI.
 - 2026-10-21 — Added best-of and novelty compression measures; grid-size findings in §5.1.
+- 2026-10-29 — Lenia base switched to the hand-coded Lenium (`lenium.old`); Gaussian
+  Orbium replaces the polynomial one; §5.1 findings rerun.
 - 2026-10-29 — M1 done: JAX engine (`rollout` / `rollout_batch` / `advance`), functional
   systems, Integer Lenia with `min_orbium` as default (bit-identical to the predecessor;
   exact FFT potential), vendored Lenium, `discretize`, device frame buffer, benchmarks.

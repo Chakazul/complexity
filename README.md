@@ -67,6 +67,8 @@ uv run complexity run life:random --measures png,video_h264 --size 256x256 --eve
 | `life` — Game of Life (discrete) | Gosper glider gun, glider, pulsar, R-pentomino, acorn, random soup |
 | `lenia` — Lenia (Integer Lenia `P = 12`, or continuous) | minimum Orbium (default, integer), random soup (integer), Orbium (continuous), random soup (continuous) |
 
+Lenia uses Gaussian kernel shells and growth, the standard for experiments here.
+
 The minimum Orbium is an Integer Lenia glider: 13 cell states (0..12), integer kernel,
 potential and growth, so it suits both discrete measures (13 symbols) and continuous ones.
 Each system declares `n_states(pattern)`: 2 for Life, 13 for Integer Lenia, `None` for
@@ -78,8 +80,8 @@ HX 370, 24 threads / NVIDIA RTX 5070 Ti Laptop, JAX 0.12):
 | Run | CPU 128² | CPU 256² | CPU 512² | GPU 128² | GPU 256² | GPU 512² |
 |---|---|---|---|---|---|---|
 | `life:random` | 268,058 | 76,348 | 12,531 | 9,773 | 9,819 | 9,887 |
-| `lenia:random` (integer) | 20,164 | 1,367 | 902 | 6,988 | 6,924 | 7,180 |
-| `lenia:random_continuous` | 23,746 | 1,425 | 976 | 6,865 | 7,081 | 7,233 |
+| `lenia:random` (integer) | 20,082 | 1,343 | 861 | 6,937 | 6,968 | 7,459 |
+| `lenia:random_continuous` | 20,130 | 1,370 | 921 | 6,547 | 7,177 | 7,338 |
 
 On the GPU every step costs about the same up to 512² (the step is launch-bound); the CPU
 wins on small grids. Either way the host-side compression measures, not the simulation,
@@ -170,10 +172,9 @@ src/complexity/
 Computation runs in Python on the server; the browser only draws. The same app can be
 deployed as a hosted demo (for example on a Hugging Face Space) without changes.
 
-Lenia code and data come from Lenium, the JAX Lenia library, which is not published yet.
-The parts needed (creatures `orbium` and `min_orbium`, the RLE decoder, kernel and growth
-profiles) are copied into [src/complexity/vendor/lenium/](src/complexity/vendor/lenium/),
-together with Integer Lenia ported from Lenium's predecessor; its README records where
-each file came from. The port is bit-identical to the predecessor for 1000 steps of
-`min_orbium`. Once Lenium is published, the directory is replaced by `import lenium`, and
+Lenia code and data come from Lenium, the hand-coded JAX Lenia library, which is not
+published yet. The parts needed (patterns `orbium` and `min-orbium`, Lenia and Integer
+Lenia) are copied into [src/complexity/vendor/lenium/](src/complexity/vendor/lenium/),
+whose README records where each file came from. Integer Lenia is bit-identical to Lenium
+for 1000 steps of `min_orbium`. Once Lenium is published, the directory is replaced by `import lenium`, and
 the golden tests check that behaviour is unchanged.
