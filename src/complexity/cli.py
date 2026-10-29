@@ -15,10 +15,20 @@ def _list() -> None:
     print("Systems (system:pattern):")
     for key, cls in registry.systems().items():
         for p, name in cls.patterns.items():
-            print(f"  {key}:{p:<20} {cls.name} · {name}")
+            print(f"  {key + ':' + p:<28} {cls.name} · {name}")
     print("Measures:")
     for key, cls in registry.measures().items():
         print(f"  {key:<20} {cls.name} [{cls.unit}, window {cls.window}]")
+
+
+def _info() -> None:
+    from importlib.metadata import version
+
+    import jax
+
+    print(f"complexity {version('complexity')}")
+    print(f"jax {jax.__version__}, backend {jax.default_backend()}")
+    print(f"devices: {', '.join(str(d) for d in jax.devices())}")
 
 
 def _run(args) -> None:
@@ -53,6 +63,7 @@ def main(argv: list[str] | None = None) -> None:
     serve.add_argument("--port", type=int, default=8000)
 
     sub.add_parser("list", help="list systems, patterns and measures")
+    sub.add_parser("info", help="show the JAX version, backend and devices")
 
     run = sub.add_parser("run", help="run headless and write measure values as CSV")
     run.add_argument("runs", nargs="+", help="system:pattern, e.g. life:gosper_glider_gun")
@@ -71,6 +82,8 @@ def main(argv: list[str] | None = None) -> None:
         uvicorn.run("complexity.app.server:app", host=args.host, port=args.port, log_level="warning")
     elif args.command == "list":
         _list()
+    elif args.command == "info":
+        _info()
     else:
         _run(args)
 
