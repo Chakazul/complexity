@@ -206,7 +206,7 @@ function updateSidebar() {
   if (!active) renderMapControls();  // before a start, the menu follows the selection
 }
 
-// Where a measure is highest (PLAN.md §2): randomness measures peak at noise, structural ones
+// Where a measure is highest (docs/measures.md §2.1): randomness measures peak at noise, structural ones
 // are low for both order and noise. Logical depth's proxy does neither reliably.
 const PEAKS = {
   randomness: { icon: "🎲 ", tag: "randomness" },
@@ -258,7 +258,7 @@ function start() {
   }));
 }
 
-// ---------- heatmaps (PLAN.md §5.7) ----------
+// ---------- heatmaps (docs/measures.md §4) ----------
 // One measure's spatial map per run, beside its frame: an orange ramp from the surface
 // colour at 0. The scale is shared across runs: 0 to the largest value this tick;
 // negatives show as 0. (An overlay on the frame was tried and dropped, 2026-10-30.)

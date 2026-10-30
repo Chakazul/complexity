@@ -1,4 +1,4 @@
-"""Compare the compression measures across grid sizes at step 100 (findings in PLAN.md §5.1).
+"""Compare the compression measures across grid sizes at step 100 (findings in docs/measures.md §5.1).
 
 Run: uv run python scripts/compression_by_grid_size.py   (~1 min on CPU)
 """

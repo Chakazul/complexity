@@ -283,7 +283,7 @@ within 200 steps. So the replication switch sits within ~0.5 % of one kernel's r
 the goo search (M3b) should look around these two parameter sets.
 
 ### 4.3 Baselines — `baseline`
-Reference "systems" that calibrate every measure. Expected values are tested (§6).
+Reference "systems" that calibrate every measure. Expected values are tested (docs/measures.md §6).
 - `empty` — all zeros.
 - `frozen_noise` — one random frame repeated (static randomness).
 - `iid_noise` — a new random frame every step (dynamic randomness).
@@ -299,275 +299,19 @@ particle-native measures.
 
 ## 5. Measures
 
-### 5.1 Compression (proxy for algorithmic complexity) — existing
-All report compressed bits per cell; higher = less compressible = more complex. Frames
-are quantized to 8-bit gray first (`round(255 · v)`).
+The definitions, explanations, categorization and implementation decisions of all
+measures — implemented, deferred and proposed — with first values and the design Q&A, are
+in **[docs/measures.md](docs/measures.md)**. In brief:
 
-| Key | Window | Notes |
-|---|---|---|
-| `png` | 1 | DEFLATE + 2-D row prediction |
-| `lzma` | 1 | 1-D dictionary compression of raw bytes |
-| `video_lzma` | 16 | temporal repeats compress away |
-| `video_h264` | 16 | lossless x264 (qp 0); motion compensation for translating structures |
-| `novelty` | 16 | best video ÷ mean best image bits per frame: the fraction of a frame that is new (unit: ratio) |
-
-All run on the host (C libraries), so their frames are transferred from the device.
-Compressed sizes are cached per frame (and per window), so the novelty measure and
-the sliding window do not recompress anything.
-
-**Findings so far** (`scripts/compression_by_grid_size.py`, step 100, grids 128²–512²):
-- LZMA beats PNG on every run and size, including Lenia random soup, which fills the
-  grid. PNG's 2-D prediction does not make up for its weaker entropy coder here, so
-  the best image compressor is almost always LZMA.
-- Video LZMA beats H.264 everywhere. The gap narrows for continuous Lenia (soup at 512²:
-  1.305 vs 1.318 bits/cell/frame). Open question: does H.264 win for larger-R (smoother)
-  creatures or longer windows?
-- Bits per cell are size-invariant only for space-filling patterns. For a single object
-  (gun, Orbium) they shrink as the grid grows (gun LZMA image: 0.098 at 128² → 0.008 at
-  512²). Compare isolated patterns at equal grid size, or use total bits.
-- `novelty` is stable across sizes: gun ≈ 0.45, Orbium ≈ 0.69, chaotic soups 0.77–0.92.
-- Rerun on 2026-10-29 with the Gaussian Orbium: the conclusions are unchanged.
-- Cost: all measures on a random soup take ≈ 0.3 s per measured step at 128² and 4–5 s at
-  512², so large grids need "measure every k steps".
-
-### 5.2 Transfer entropy (local information flow) — new
-Chosen as the third measure because it complements compression on every axis that
-matters at this stage:
-
-- It is **local and dynamic**, where compression is global. That puts the first
-  cross-category comparison from the PDF's taxonomy in the demo.
-- It is **low at both extremes**: zero for empty and still-life patterns (a cell's own
-  past predicts its future) and ≈ 0 for iid noise (nothing is predictable). It is high
-  for propagating structure such as gliders, glider streams and moving Orbium.
-  Compression instead rates noise as most complex. Comparing the two is exactly the
-  "which measure suits which system" question.
-- It is established for cellular automata (Lizier, Prokopenko & Zomaya 2008: local
-  transfer entropy highlights gliders in ECA), is in the PDF (§2.12 TE, Schreiber 2000),
-  is cheap, and runs in JAX on the device.
-- It exercises the discretization adapter: exact for Game of Life and Integer Lenia,
-  coarse-grained for continuous Lenia.
-
-Definition (apparent TE, history length `k = 1`), averaged over all cells `y`, all time
-steps in the window, and the 4 von Neumann directions `x = y + δ`, `|δ| = offset`:
-
-```
-T_{X→Y} = H(Y_{t+1} | Y_t) − H(Y_{t+1} | Y_t, X_t)
-        = Σ p(y', y, x) · log2[ p(y' | y, x) / p(y' | y) ]
-```
-
-- Estimator: plug-in from a joint histogram of `(y', y, x)` with `n_levels³` bins
-  (`jnp.bincount` with static length), computed in JAX. GoL: 8 bins; min Orbium: 2197 bins
-  against ≈ 250 k samples per window at 128². **Miller–Madow correction** on each entropy
-  (`correct_bias`, on by default): the plug-in bias on 13-level iid noise at 128² is
-  0.0055 bits, as large as min Orbium's TE (0.006), and the correction removes it exactly
-  when all bins are occupied. Values are clipped at 0.
-- A filling window is zero-padded to the full shape with the padding weighted out, so the
-  start of a run does not recompile once per window length.
-- Parameters: `window = 16`, `offset = 1`, `n_levels = n_states` for discrete systems
-  (default 8 for continuous ones).
-- Unit: bits per cell per step. Orientation: higher = more information flow = more complex.
-- Known limits, to state in the UI description:
-  - `k = 1` mixes information storage into the flow; a larger `k` is a later parameter.
-  - Plug-in bias grows with bins / samples; corrected (above) and checked against
-    `iid_noise`.
-- **First values** (128², step 100, after correction): empty, frozen and iid noise 0;
-  Life glider 0.0005, Gosper gun 0.0038, pulsar 0.0022, random soup 0.025; min Orbium
-  0.0061, Integer Lenia soup 0.0098; Orbium 0.0054, Lenia soup 0.0065. Like compression of
-  an isolated object, per-cell TE of a single glider or creature shrinks with grid size,
-  and soups beat single objects because more of the grid is active.
-  - For smooth fields (Lenia), `offset = 1` may be too short; `offset` is exposed for
-    exploration (e.g. `≈ R/4`).
-
-### 5.3 The PDF's measures (M3)
-Almost all of the PDF's 18 measures are planned. Non-computable ones get a stated proxy,
-and three are deferred as too hard (below). Pattern-level measures fit the frame
-interface (§3.3). Rule-level measures (TL, FI, LL, WZ) describe a rule, not a frame, so
-they get a `RuleMeasure` interface: computed per (system, params) from batched runs or the
-rule table, shown in the UI as a constant per run, and used mainly in experiments.
-
-| PDF | Measure | Implementation | Cost |
-|---|---|---|---|
-| AC | Algorithmic complexity | done: compression (§5.1). Add **LZC**, Lempel–Ziv 1976 phrase count of the discretized frame, normalized (as in Adachi et al. 2024 for Lenia) | low |
-| SE | Shannon entropy | block entropy of `b × b` blocks of the discretized frame, bits/cell; `b = 1` is single-cell entropy | low |
-| LE | Lyapunov exponent | twin runs in JAX: perturb by ε, renormalize the separation every step, average `log` growth. Discrete systems use the damage-spreading rate (Hamming distance) instead | low |
-| FD | Fractal dimension | box counting of the thresholded frame over box sizes 2…N/4, slope of the log–log fit, in JAX | low |
-| EC | Effective complexity | proxy: compressed size of the coarse-grained frame (blurred, then few levels), i.e. the regularities without the noise | low |
-| SC | Statistical complexity | local statistical complexity from light cones (Shalizi et al. 2006): group past light cones by their future distributions; `C` = entropy of the local causal states. Check against `emic` on 1-D series | medium |
-| LD | Logical depth | proxy: decompression time of the LZMA-compressed frame (Zenil); median of repeats, since timing is noisy | low |
-| TD | Thermodynamic depth | **deferred**: for a deterministic system it is the entropy over a state's possible histories, computable only for tiny lattices. Revisit with ECA in M4 | — |
-| TL | Transient length | rule-level: from batched random soups, steps until the state repeats (hash for discrete states, tolerance for continuous ones); report the mean log transient | low |
-| PID | Partial information decomposition | `dit`, Williams–Beer `I_min`, target `y_{t+1}`, sources `y_t` and neighbour `x_t` on discretized cells (≤ 4 levels for Lenia); report synergy, bits/cell | medium |
-| FID | Functional information decomposition | `fid-tools` on the same variables as PID; check the library's maturity first | medium |
-| TE | Transfer entropy | §5.2 | low |
-| IIT | Integrated information | **too hard**: Φ is exponential in system size, so only ~3×3 binary patches are tractable (`pyphi`), and a patch's Φ is not the system's | — |
-| ITI | Individuality | Lenia creatures: segment the individual (largest component above a threshold, tracked), `S` = its cells, `E` = the surroundings; `A* = I(S'; S)`, `A = I(S'; S \| E)`, `nC = I(S'; E \| S)` from coarse-grained features | medium–high |
-| AT | Assembly index | **deferred**: the libraries target molecules and strings, and assembly index is exponential in object size. Revisit for small discrete patches | — |
-| FI | Functional information | rule-level experiment: `−log2` of the fraction of random parameters (e.g. Lenia `m, s`) or seeds whose run meets a function threshold (a surviving, moving creature) | medium |
-| LL | Langton's λ | rule-level, static, from the rule table: Life, outer-totalistic rules, ECA (M4) | low |
-| WZ | Wuensche's Z | rule-level, static: ECA only, added with the ECA system in M4 | low |
-
-Order within M3: conventions and baselines first, then TE, then the cheap ones (LZC, SE,
-FD, EC, LD, LE), then rule-level (TL, LL, FI), then the medium ones (SC, PID, FID, ITI).
-
-### 5.6 SC, PID and FID: decisions and first values (M3, done)
-
-- **SC.** Local statistical complexity (Shalizi et al. 2006): past = 3×3 at t, future =
-  the 5-cell cross at t+1, 2 levels by default (pasts have L⁹ values). Pasts are merged
-  most-frequent-first into the first causal state a G-test (α = 1e-3, vectorized over
-  states) cannot tell apart; a fixed total-variation threshold split iid noise into many
-  states, because 100-odd samples per past over 32 futures already differ by ~0.2. Values
-  (128², step 200): empty and iid binary noise 0, iid continuous 0.05 (chance splits),
-  frozen binary noise 5.0 (correct: predicting it needs each cell's whole cross), Life gun
-  0.22, Life soup 2.4, Integer Lenia soup 3.4, Lenia soup 3.5, Paraptera a. l. 0.38,
-  Tetralapillium 0.20. Not validated against `emic` on 1-D series yet.
-- **PID.** Implemented directly (I_min is a few lines), not with `dit`. Target y_{t+1},
-  sources y_t and a neighbour, ≤ 4 levels. On Life the synergy equals TE: I_min gives the
-  neighbour no unique information, so TE = unique + synergy is all synergy. On Lenia it is
-  about half of TE (Paraptera a. l. 0.012 of 0.018).
-- **FID.** `fid-tools` 0.1.2 (Bohm, Jan 2026, beta, depends on matplotlib) was read, not
-  run: its `neutral_completion_fid` weights every combination of observed input values
-  equally, completes unseen ones with a uniform output over the observed targets, and
-  reports I(T; X_i) and synergy = I(T; X) − Σ I(T; X_i). Reimplemented in ~15 lines with
-  the same conventions; tests check XOR, copy and a completed OR. Synergy is independent
-  of how much of the grid is active: glider 0.086, gun 0.053, Life soup 0.038, Paraptera
-  a. l. 0.12, Lenia soup 0.005; noise and empty 0.
-- **Taxonomy.** PID and FID are tagged system / local / dynamic as in the PDF. SC is tagged
-  pattern-level, not rule-level as in the PDF, because it is computed from the run's
-  frames (as are TE and LE, also rule-level in the PDF).
-- **ITI, both forms (Bert, 2026-10-30).** Krakauer's A* = I(S'; S), A = I(S'; S | E),
-  nC = I(S'; E | S); `component` selects one (organismal A* by default). Creatures are
-  8-connected components above a threshold, joined across the torus's edges.
-  - `iti_features` (as in the paper): S = mass of the largest creature, E = mass of the
-    rest, cut into 4 quantile levels over a 128-frame window, from the run's own frames.
-    Miller–Madow left iid noise at 0.10–0.12 bits (64 bins, 127 samples), so the mean over
-    20 time-shuffled S' is subtracted instead (noise 0.03). For a lone creature E is empty
-    and A* is the predictability of its mass (Orbium 0, gun 0.45, Tetralapillium 1.0). The
-    Aquarium (target creature among moving and still copies) is its intended test bed.
-  - `iti_local` (adaptation): per creature cell, S = (own state, summed state of its 8
-    neighbours in the creature), E = state of other creatures' cells within radius 3.
-    Rounded neighbour means erased Life's information (every member is alive), so sums are
-    used. Values: A* ≈ 0.93–1.1 for Life and Lenia creatures, 0.41–0.56 for Lenia soups,
-    0 for noise. nC is 0 in Life by construction (8-connected creatures never touch and the
-    rule reads only the 3×3) and ≤ 0.016 in these Lenia scenes (no near neighbours); it is
-    meant for crowded scenes. Has a map (pointwise values).
-
-### 5.7 Heatmaps (M3, done)
-
-Which measures have granularity in space (a map), time (a series) and rule (2026-10-30):
-all frame measures give a time series; TL, LL and FI are per rule only. Spatial maps come
-in two kinds. **Local fields**, one value per cell, averaged over the window: local
-transfer entropy (Lizier), local statistical complexity −log2 P(causal state) (Shalizi),
-local block surprisal −log2 p(block), and the Lyapunov twin's separation field. **Per
-tile**, the measure applied to tiles of the frame (coarser): compression, LZC, effective
-complexity, PID, FID. Fractal dimension and logical depth are left out (too few boxes per
-tile; timing noise), and effective complexity too (a 2-cell blur leaves nothing on an
-8×8 tile). Tiles are about 1/16 of the grid, at least 8 cells, and each tile shows its
-excess over an empty tile: LZMA spends ~8 bits/cell of format overhead on an 8×8 tile.
-The local maps average to the measure's value (tested). The Lyapunov map is 0 to 1 in both
-kinds of system: damage (discrete), or log10 growth over its 5-decade range (continuous).
-The UI computes the map of one chosen measure per tick (`{"type": "map"}` message).
-Colour: one orange ramp for magnitude (dataviz: sequential = one hue), from the surface
-colour at 0; the scale is shared across runs per tick. Drawn **side by side** with the
-frame: an overlay (frame in gray, orange over it) was tried and dropped, since it hid the
-structure it was explaining (Bert, 2026-10-30).
-
-What gives a measure a per-cell map: being computed from the run's frames (pattern level)
-and being an **average of a per-cell quantity**, so the map's mean is the measure (local
-TE, −log2 P(causal state), block surprisal). The `local` tag is a hint, not a guarantee:
-PID's I_min takes a minimum over distributions and has no per-cell form (pointwise PID
-would: Finn & Lizier 2018), so it gets tiles. `dynamic` and `structural` are not needed
-for a map (block entropy is static and randomness-peaked) but make it useful for the
-goal in §5.8: dark on noise and empty, following what structures do. TE and SC have all
-four properties.
-
-### 5.9 Creatures crossing the torus's border (2026-10-30)
-
-Measured with Orbium on 64² (179 of 380 steps straddling) and a Life glider on 32² (18 of
-140): measures that treat the grid as a torus, as the simulation does (TE, block entropy,
-PID, FID, SC, ITI local), do not change. Measures that read the frame row by row change a
-little: image compression < 1 %; video LZMA, novelty and LZC +2 % for Orbium and +11 % for
-the tiny glider split into 2–4 pieces. Fractal dimension and the Lyapunov exponent vary
-more from step to step than with the border. Centering the creature by its center of mass
-would remove the seam for row-reading measures, but rolling each frame separately would
-also remove its motion (video compression, novelty); rolling the whole window by one shift
-keeps the motion. Not done: the effect is small next to the differences between patterns.
-
-### 5.8 Multi-scale structural complexity (M3b, planned)
-
-The goal measure (Bert, 2026-10-30): a dynamic spatial map of complexity, possibly coarser
-than the simulation, low for empty and noise, high for self-organizing patterns, and
-highest for **small self-contained units forming larger networks**, above a patch of goo
-(self-organizing, but at one level). No measure in §5 has the last property: local
-statistical complexity and local information dynamics are structural but single-scale.
-Candidate: compute a structural measure (EC, local SC or local TE) on a pyramid of
-coarse-grainings (1, 2, 4, 8, … cells), each against its own noise baseline, and score
-high only when structure exists at several scales (minimum or product across scales;
-related to Bar-Yam's complexity profile). Reference cases are the Aquarium of multi-channel
-Lenia and its self-replicating variant, against goo-like structures at nearby parameters.
-
-### 5.5 Rule-level measures: decisions and first values (M3, done)
-
-- **Interface.** `RuleMeasure` is a `Measure` subclass with `compute_rule(system, pattern,
-  ctx)`; `Run` computes it on the first tick and caches it per (measure, parameters,
-  system, pattern), so it appears in the table and charts as a constant like any measure.
-  Systems gain `soup` (random initial state under the pattern's rule) and, for LL,
-  `uniform` (every cell iid uniform). Lenia's `m` and `s` became traced data, so runs with
-  different growth parameters batch (and creatures share one compiled step).
-- **TL.** Two uint32 hashes per step, computed in a `lax.scan` and `vmap`ped over 8 soups
-  on 64², up to 4096 steps; the transient is the index where the first repeated state
-  first occurred. Values: still baselines 0; Life soups 9.3 (~650 steps); Orbium-rule soups,
-  which die, 7.5; min Orbium 8.6; Paraptera and Tetralapillium rules and iid noise hit the
-  4096-step cap (12, a lower bound).
-- **LL.** One step of a uniformly random 256² grid: Life 0.269 (exact 140/512 = 0.273),
-  min Orbium 0.84. Continuous rules have no rule table and are skipped.
-- **FI.** An absolute box (m ∈ [0.05, 0.5], s ∈ [0.005, 0.1]) gave ~6 bits for every
-  creature (1 of 64 rules works): too coarse to compare. Sampling within ±50 % of the
-  pattern's own m and s asks how fragile a creature is to its rule: Lenia soup 1.1 bits;
-  min Orbium 3.1, Orbium 3.5, Hydrogeminium and Tetralapillium 3.7, Hexadentium 3.8,
-  Paraptera c. f. 4.0, Kronium 4.2, Gyrorbium 4.7, Paraptera a. l. 5.4, Scutium and
-  Helicium 7 (1 of 128). 1.5 s per creature at 128² (Integer Lenia 6 s).
-
-### 5.4 The cheap measures: decisions and first values (M3, done)
-
-- **LZC.** A direct Kaspar–Schuster parse rescans the history for every phrase, so noise
-  took 26 s at 512². Phrases are now found by rolling hashes: for each length ℓ ≤ 48, one
-  vectorized pass marks the positions whose ℓ-substring occurred earlier; longer phrases
-  fall back to `bytes.find`. Binary noise at 512² takes 0.6 s, 128² 20 ms; a test checks it
-  against the direct parse. Frames are read row by row.
-- **SE.** Overlapping `b × b` blocks on the torus, `b = 2` by default, Miller–Madow
-  corrected. With 13 levels there are more possible blocks (28 561) than cells at 128², so
-  iid noise reads 3.5 of 3.7 bits/cell.
-- **FD.** Threshold 0.1 (the creature mask used in §4.2), box sizes 2 … N/4.
-- **EC.** Fixed levels after blurring failed both ways: a blurred glider gun never reaches
-  1/3, while blurred binary noise straddles 1/2. The levels are now relative to the noise
-  band, mean ± z · std / sqrt(4π σ²), z = 4: iid noise of any kind becomes one level, and
-  any structure noise cannot explain stands out.
-- **LD.** LZMA stores incompressible chunks as is, so continuous noise decompresses faster
-  than an empty grid (0.19 vs 1.7 ns/cell at 128²). That matches Bennett (random and trivial
-  objects are both shallow) but breaks "noise ≥ empty", so LD has `peaks_at = "mixed"` and
-  is exempt from the orientation tests.
-- **LE.** A `needs_state` measure: `compute_state(system, state, rng)` runs a twin from
-  `System.perturb(state)` (Life: flip one live cell; Integer Lenia: one active cell ±1;
-  Lenia: 1e-5 Gaussian noise; baselines: one cell, plus a different noise stream). In Lenia
-  a random perturbation first shrinks ~4× within 8 steps (its stable part dies out), which
-  made a 16-step estimate negative even for chaotic creatures; the rate is now taken after
-  an 8-step burn-in, over 64 steps, and is the larger of the rates during and after the
-  burn-in (noise saturates at once). Discrete systems use damage spreading.
-- **First values** (128², step 200):
-
-  | Run | LZC | SE | FD | EC | LD ns/cell | LE |
-  |---|---|---|---|---|---|---|
-  | empty | 0.002 | 0 | 0 | 0.059 | 1.66 | 0.016 |
-  | iid noise, binary / 13 / continuous | 1.03 / 0.93 / 0.95 | 1.0 / 3.5 / 3.0 | 2.0 | ≈ empty | 2.7 / 12.5 / 0.19 | 0.20 / 0.22 / > 1 |
-  | Life glider / gun / soup | 0.004 / 0.027 / 0.31 | 0.003 / 0.036 / 0.32 | 0.40 / 0.80 / 1.35 | 0.076 / 0.12 / 0.36 | | 0.065 / 0.084 / 0.11 |
-  | min Orbium / Integer Lenia soup | 0.018 / 0.20 | 0.057 / 0.80 | 1.00 / 1.66 | 0.086 / 0.55 | | 0.11 / 0 |
-  | Orbium / Lenia soup | 0.019 / 0.25 | 0.054 / 0.83 | 1.45 / 1.65 | 0.084 / 0.72 | | 0.011 / 0.022 |
-  | Helicium / Paraptera a. l. / P. c. f. / Tetralapillium | 0.04 / 0.05 / 0.04 / 0.02 | 0.14 / 0.16 / 0.14 / 0.06 | 1.39 / 1.46 / 1.38 / 1.05 | 0.10 / 0.11 / 0.11 / 0.09 | | 0.008 / −0.02 / 0.016 / 0.073 |
-
-  LZC, SE and FD rank as compression does: soups and noise on top. EC puts soups first
-  and noise at the empty-grid level. LE singles out Tetralapillium metamorpha among the
-  creatures; Paraptera cavus furiosus, listed as chaotic, is only weakly so at this scale.
-  Integer Lenia heals single-level damage (soup: 0).
+- 20 measures cover all of the PDF's 18 except TD, IIT and AT (deferred) and WZ (with
+  elementary CA in M4); ITI comes in two forms, compression in five.
+- Each measure peaks at randomness (🎲: compression, LZC, block entropy, FD, LE, TL, LL),
+  at structure (🌿: EC, SC, TE, PID, FID, ITI, FI) or neither (logical depth's proxy).
+- Frame measures give time series; 11 also give spatial maps (heatmaps), per cell or per
+  tile; TL, LL and FI are per rule.
+- The goal measure — a dynamic map, low for empty and noise, highest for networks of
+  self-contained units above goo — is not among them; multi-scale structural complexity is
+  the candidate (M3b, docs/measures.md §8).
 
 ## 6. Validation
 
@@ -583,17 +327,8 @@ Lenia and its self-replicating variant, against goo-like structures at nearby pa
   checked when porting (it is not a test dependency): Integer Lenia is bit-identical for
   1000 steps at 64² and 128²; continuous Lenia has an identical kernel FFT and differs by
   ~1e-7 after one step (float rounding order), growing chaotically to O(1) by step ~1000.
-- **Measure expectations on baselines** (the table is the test):
-
-  | Measure | empty | frozen_noise | iid_noise | glider stream |
-  |---|---|---|---|---|
-  | compression (frame) | ≈ 0 | high | high | low |
-  | compression (video) | ≈ 0 | ≈ 0 | high | low |
-  | transfer entropy | 0 | 0 | ≈ 0 (< bias bound) | > 0 |
-
-- **Orientation test.** For every registered measure, `iid_noise` scores ≥ `empty`. For
-  structure-peaked measures, a declared `peaks_at = "structure"` flag adds a second test:
-  glider stream > both noise and empty.
+- **Measure expectations** on the noise baselines (orientation and structure tests, and
+  per-measure tests): docs/measures.md §6.
 - **Device independence.** CI runs on CPU JAX. GPU runs are checked locally to match CPU
   within tolerance.
 
@@ -607,7 +342,7 @@ Lenia and its self-replicating variant, against goo-like structures at nearby pa
 - [x] `complexity serve | list | run` CLI with CSV output
 - [x] Tests: GoL goldens, Orbium survival, compression sanity
 - [x] Composite compression measure `novelty` (best-of `image_min`/`video_min` dropped); per-frame cache;
-      grid-size comparison (`scripts/compression_by_grid_size.py`, findings in §5.1)
+      grid-size comparison (`scripts/compression_by_grid_size.py`, findings in docs/measures.md §5.1)
 
 ### M1 — JAX engine
 - [x] Add `jax` dependency and `cuda13` extra; `complexity info` command
@@ -637,7 +372,7 @@ then polishing and sharing.
 - [x] Survival tests for each creature; Life goldens for the new
       spaceships (displacement per period) and oscillators (period)
 
-### M3 — Measures (§5.2, §5.3) ✅
+### M3 — Measures (docs/measures.md) ✅
 - [x] `Measure` gains `backend`, `needs_discrete`, `ctx`, `peaks_at` and tunable `params`;
       orientation documented in the base class; `RuleMeasure` interface for rule-level
       measures
@@ -646,25 +381,25 @@ then polishing and sharing.
       bias correction)
 - [x] LZC, block entropy (SE), fractal dimension (FD), effective complexity proxy (EC),
       logical depth proxy (LD), Lyapunov exponent (LE); systems gain `perturb` for LE
-      (§5.4)
+      (docs/measures.md §5.2, §5.6)
 - [x] Rule-level: transient length (TL), Langton's λ (LL), functional information (FI)
-      (§5.5)
-- [x] Statistical complexity (SC), PID, FID (§5.6)
-- [x] Individuality (ITI) in both forms, `iti_features` and `iti_local` (§5.6)
+      (docs/measures.md §5.7)
+- [x] Statistical complexity (SC), PID, FID (docs/measures.md §5.3)
+- [x] Individuality (ITI) in both forms, `iti_features` and `iti_local` (docs/measures.md §5.4)
 - [ ] ITI features: target creature and environment of several creatures, once the
       Aquarium exists (M3b)
-- [x] Heatmaps (§5.7): a spatial map for every measure with spatial granularity, local
+- [x] Heatmaps (docs/measures.md §4): a spatial map for every measure with spatial granularity, local
       fields (TE, SC, block entropy, Lyapunov separation) or per tile (compression, LZC,
       PID, FID); shown overlaid on the frame or side by side
 - [x] Overlay or side by side: side by side (Bert, 2026-10-30)
-- [x] Measure-expectation tests from §6 for every measure (orientation and structure tests
+- [x] Measure-expectation tests (docs/measures.md §6) for every measure (orientation and structure tests
       over all registered measures, plus per-measure tests); `warming_up` flag for window
       measures, sent per tick and drawn faint in the UI
 - [x] UI: measures grouped (by kind, with taxonomy tags and popups); per-measure settings
       behind a ⚙ (typed and checked by the server, kept per browser, applied at the next
       Start); compatibility hints name the skipped systems and what the measure needs
 
-### M3b — Multi-scale structural complexity (§5.8), after multi-channel Lenia (M4)
+### M3b — Multi-scale structural complexity (docs/measures.md §8), after multi-channel Lenia (M4)
 - [ ] Reference cases: empty and noise (low); goo-like structures (self-organizing, one
       level); single creatures (Aquarium unit); **Aquarium** networks: self-replicating
       (`aquarium`) and dividing on collision (`aquarium_scene`) (highest) — the Aquarium
@@ -724,9 +459,10 @@ then polishing and sharing.
 
 ## Log
 - 2026-10-21 — M0 done: NumPy demo with GoL, Lenia, 4 compression measures, UI and CLI.
-- 2026-10-21 — Added best-of and novelty compression measures; grid-size findings in §5.1.
+- 2026-10-21 — Added best-of and novelty compression measures; grid-size findings in
+  docs/measures.md §5.1.
 - 2026-10-29 — Lenia base switched to the hand-coded Lenium (`lenium.old`); Gaussian
-  Orbium replaces the polynomial one; §5.1 findings rerun.
+  Orbium replaces the polynomial one; compression findings rerun.
 - 2026-10-29 — M1 done: JAX engine (`rollout` / `rollout_batch` / `advance`), functional
   systems, Integer Lenia with `min_orbium` as default (bit-identical to the predecessor;
   exact FFT potential), vendored Lenium, `discretize`, device frame buffer, benchmarks.
@@ -742,3 +478,5 @@ then polishing and sharing.
   AT; ITI in two forms), heatmaps for the 11 with spatial granularity, rule-level measures
   cached per rule, per-measure settings in the UI. Open: ITI features on the Aquarium
   (M3b), multi-scale structural complexity (M3b, after multi-channel Lenia in M4).
+- 2026-10-31 — Measure definitions, decisions, values and design Q&A moved from §5 to
+  docs/measures.md.

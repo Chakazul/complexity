@@ -1,4 +1,4 @@
-"""Statistical complexity (SC) from local causal states (PLAN.md §5.3).
+"""Statistical complexity (SC) from local causal states (docs/measures.md §5.3.1).
 
 Shalizi et al. (2006) define causal states for fields: two past light cones are equivalent
 when they predict the same distribution of future light cones. Here the past cone is a

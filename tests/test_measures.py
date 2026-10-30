@@ -24,7 +24,7 @@ def measured(system: str, pattern: str, steps: int = 20, size=(64, 64), **params
 
 @pytest.mark.parametrize("levels", ["binary", "13", "continuous"])
 def test_orientation_noise_scores_at_least_empty(levels):
-    """PLAN.md §6: higher = more complex, so iid noise never scores below an empty grid."""
+    """docs/measures.md §6: higher = more complex, so iid noise never scores below an empty grid."""
     empty, noise = measured("baseline", "empty"), measured("baseline", f"iid_noise_{levels}")
     for key, cls in registry.measures().items():
         if cls.peaks_at != "mixed" and key in noise:  # skips measures for other systems
@@ -55,7 +55,7 @@ def test_compression_orders_uniform_below_noise():
 
 @pytest.mark.parametrize("levels", ["binary", "13", "continuous"])
 def test_transfer_entropy_on_baselines(levels):
-    """PLAN.md §6: 0 for empty and frozen noise, ~0 for iid noise after bias correction."""
+    """docs/measures.md §6: 0 for empty and frozen noise, ~0 for iid noise after bias correction."""
     assert measured("baseline", "empty")["transfer_entropy"] == 0
     assert measured("baseline", f"frozen_noise_{levels}")["transfer_entropy"] < 1e-5  # float rounding
     assert measured("baseline", f"iid_noise_{levels}")["transfer_entropy"] < 1e-3

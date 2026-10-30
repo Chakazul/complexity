@@ -1,5 +1,5 @@
 """Information theory of individuality (ITI; Krakauer et al. 2020), in two forms
-(PLAN.md §5.6).
+(docs/measures.md §5.4).
 
 Krakauer's measures split what determines a system S's next state between S itself and
 its environment E:

@@ -1,4 +1,4 @@
-"""Algorithmic-complexity measures beyond compressed size (PLAN.md §5.3): Lempel-Ziv
+"""Algorithmic-complexity measures beyond compressed size (docs/measures.md §5.2): Lempel-Ziv
 complexity (AC), and proxies for effective complexity (EC) and logical depth (LD).
 
 All run on the host. LZC reads discretized symbols; the other two read [0, 1] frames.

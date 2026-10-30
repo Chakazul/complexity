@@ -1,4 +1,4 @@
-"""Measures of the dynamics rather than the frames (PLAN.md §5.3): the Lyapunov exponent
+"""Measures of the dynamics rather than the frames (docs/measures.md §5.6): the Lyapunov exponent
 (LE), from a twin run started from a perturbed copy of the current state.
 
 These need the system and its state, so they set `needs_state` and implement

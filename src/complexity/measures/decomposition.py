@@ -1,4 +1,4 @@
-"""Information decompositions of a cell's next state (PLAN.md §5.3): partial information
+"""Information decompositions of a cell's next state (docs/measures.md §5.3): partial information
 decomposition (PID, Williams & Beer 2010) and functional information decomposition (FID,
 Bohm et al. 2025).
 

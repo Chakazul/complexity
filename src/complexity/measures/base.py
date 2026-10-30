@@ -33,7 +33,7 @@ class Measure(ABC):
     a sliding window of consecutive frames, oldest first. Before the window fills, the
     measure receives the frames available so far, and the run flags its value as warming up.
 
-    Orientation: higher value = more complex by this measure's definition (PLAN.md §2). A
+    Orientation: higher value = more complex by this measure's definition (docs/measures.md §2). A
     quantity that runs the other way is negated or inverted in `compute`, and the
     `description` says so. `peaks_at` says where the measure is highest: "randomness"
     (compression, entropy), "structure" (transfer entropy) or "mixed" (neither reliably:
@@ -48,7 +48,7 @@ class Measure(ABC):
 
     Attributes named in `params` are tunable: `make_measure(key, window=32)`.
 
-    `map` says how the measure gives a spatial map (PLAN.md §5.7): "local" measures
+    `map` says how the measure gives a spatial map (docs/measures.md §4): "local" measures
     implement `compute_map` (or `compute_state_map`), one value per cell; "tile" measures
     are applied by the run to tiles of the frame; None: no map.
     """
@@ -126,7 +126,7 @@ class Measure(ABC):
 
 class RuleMeasure(Measure):
     """A property of a rule (the system with a pattern's parameters), not of a frame:
-    transient length, Langton's lambda, functional information (PLAN.md §5.3). Computed
+    transient length, Langton's lambda, functional information (docs/measures.md §5.7). Computed
     once per (system, pattern, parameters) from the rule or from batched runs of their own,
     cached, and reported as a constant on every tick of a run."""
 
