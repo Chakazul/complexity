@@ -29,6 +29,10 @@ def _info() -> None:
     print(f"complexity {version('complexity')}")
     print(f"jax {jax.__version__}, backend {jax.default_backend()}")
     print(f"devices: {', '.join(str(d) for d in jax.devices())}")
+    from complexity import device
+
+    if device.gpu_skipped:
+        print(f"GPU skipped: {device.gpu_skipped}; using the CPU")
 
 
 def _run(args) -> None:

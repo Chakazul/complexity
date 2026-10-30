@@ -475,6 +475,11 @@ then polishing and sharing.
 
 ### M5 — Polishing and sharing
 - [x] UI: device (CPU, or GPU and its name) in the header; collapsible side panel
+- [x] Without a usable GPU, a CUDA build of JAX falls back to the CPU quietly: the CUDA
+      driver is asked first (`complexity/device.py`) and `JAX_PLATFORMS=cpu` set if it has
+      no device, instead of the plugin's traceback
+- [x] UI starts with Paraptera arcus labens, Paraptera cavus furiosus, Tetralapillium
+      metamorpha and continuous iid noise
 - [ ] UI: "compiling…" state on start; export the session as CSV; record to MP4
       (baselines are selectable as systems and warm-up points are dimmed since M3)
 - [ ] `experiments/*.toml` config format and `complexity experiment <config>`; batched

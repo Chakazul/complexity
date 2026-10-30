@@ -366,8 +366,10 @@ async function main() {
   setPanel(panelOpen);
   $("toggle-panel").onclick = () => setPanel(document.querySelector(".layout").classList.contains("collapsed"));
   addEventListener("resize", () => { dirty = true; });
-  addRun("lenia", "orbium");
-  addRun("life", "glider");
+  for (const [system, pattern] of [
+    ["lenia", "paraptera_arcus_labens"], ["lenia", "paraptera_cavus_furiosus"],
+    ["lenia", "tetralapillium_metamorpha"], ["baseline", "iid_noise_continuous"],
+  ]) addRun(system, pattern);
   renderRuns();
   $("add-run").onclick = () => { addRun("lenia", "orbium"); renderRuns(); };
   $("start").onclick = () => { start(); $("start").textContent = "Restart"; };
