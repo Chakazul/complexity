@@ -94,23 +94,28 @@ function renderMeasures() {
 
 // ---------- session ----------
 
+// Each start gets a new id, echoed by the server on its init and ticks. Ticks of the old
+// session can still arrive after a restart (the server may be mid-tick), so messages with
+// another id are dropped, and `active` keeps describing the old session until init.
+let sessionId = 0;
+let pending = null;  // {measures, slots} of the session being started
+
 function start() {
   const size = parseInt($("size").value, 10) || 128;
   const measures = [...$("measures").querySelectorAll("input:checked")].map((i) => i.value);
   if (!measures.length) return setStatus("select at least one measure");
-  pendingSlots = runRows.map((r) => r.slot);
+  sessionId++;
+  pending = { measures, slots: runRows.map((r) => r.slot) };
   ws.send(JSON.stringify({
-    type: "start", measures,
+    type: "start", id: sessionId, measures,
     runs: runRows.map((r) => ({ system: r.system, pattern: r.pattern, size: [size, size] })),
   }));
-  active = { measures, runs: [] };
 }
-let pendingSlots = [];
 
 function onInit(msg) {
   // Labels under the views, in the table and the charts drop "(…)" descriptions.
-  active.runs = msg.runs.map((r, i) => ({ ...r, label: r.label.replace(/\s*\([^)]*\)/g, ""), slot: pendingSlots[i] }));
-  active.measures = active.measures.filter((k) => active.runs.some((r) => r.measures.includes(k)));
+  const runs = msg.runs.map((r, i) => ({ ...r, label: r.label.replace(/\s*\([^)]*\)/g, ""), slot: pending.slots[i] }));
+  active = { runs, measures: pending.measures.filter((k) => runs.some((r) => r.measures.includes(k))) };
   const perRun = () => Object.fromEntries(active.measures.map((k) => [k, active.runs.map(() => [])]));
   history = { t: [], v: perRun(), w: perRun() };
   buildViews();
@@ -312,8 +317,8 @@ function drawChart(chart) {
 }
 
 function frameLoop() {
-  if (dirty && history) { for (const ch of Object.values(charts)) drawChart(ch); dirty = false; }
-  requestAnimationFrame(frameLoop);
+  requestAnimationFrame(frameLoop);  // first, so an error in one draw cannot stop the loop
+  if (dirty && history) { dirty = false; for (const ch of Object.values(charts)) drawChart(ch); }
 }
 
 // ---------- wiring ----------
@@ -326,6 +331,7 @@ function connect() {
   ws.onclose = () => { setStatus("disconnected — retrying"); setPlaying(false); setTimeout(connect, 1000); };
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
+    if ((msg.type === "init" || msg.type === "tick") && msg.id !== sessionId) return;  // stale
     if (msg.type === "init") onInit(msg);
     else if (msg.type === "tick") onTick(msg);
     else if (msg.type === "error") setStatus(msg.message);

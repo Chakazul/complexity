@@ -2,14 +2,14 @@
 
 Protocol (JSON messages):
   client -> server
-    {"type": "start", "runs": [{"system", "pattern", "size"?, "seed"?}], "measures": [keys],
+    {"type": "start", "id"?: int, "runs": [{"system", "pattern", "size"?, "seed"?}], "measures": [keys],
      "measure_params"?: {key: {param: value}}}
     {"type": "play"} | {"type": "pause"} | {"type": "step"}
     {"type": "speed", "steps_per_tick": int, "fps": int}
-  server -> client
-    {"type": "init", "runs": [{"label", "system", "n_states", "height", "width", "measures",
+  server -> client (init and tick echo the start's id, so the client can drop stale ticks)
+    {"type": "init", "id": int, "runs": [{"label", "system", "n_states", "height", "width", "measures",
                                "skipped", "config": {key: {param: value}}}]}
-    {"type": "tick", "t": int, "runs": [{"frame": base64 uint8, "values": {}, "ms": {},
+    {"type": "tick", "id": int, "t": int, "runs": [{"frame": base64 uint8, "values": {}, "ms": {},
                                           "warming_up": [keys]}]}
     {"type": "error", "message": str}
 """
@@ -66,7 +66,9 @@ def catalog():
 
 
 class Session:
-    def __init__(self, runs: list[dict], measures: list[str], measure_params: dict | None = None):
+    def __init__(self, runs: list[dict], measures: list[str], measure_params: dict | None = None,
+                 id: int = 0):
+        self.id = id
         self.runs = [
             Run(RunSpec(r["system"], r["pattern"], r.get("size"), r.get("seed", 0)), measures,
                 measure_params)
@@ -74,7 +76,7 @@ class Session:
         ]
 
     def init_message(self) -> dict:
-        return {"type": "init", "runs": [
+        return {"type": "init", "id": self.id, "runs": [
             {"label": r.spec.label, "system": r.spec.system, "n_states": r.n_states,
              "height": r.size[0], "width": r.size[1],
              "measures": [m.key for m in r.measures], "skipped": r.skipped,
@@ -90,7 +92,7 @@ class Session:
             frame = base64.b64encode(run.frame_u8().tobytes()).decode()
             out.append({"frame": frame, "values": values, "ms": ms,
                         "warming_up": run.warming_up()})
-        return {"type": "tick", "t": self.runs[0].t if self.runs else 0, "runs": out}
+        return {"type": "tick", "id": self.id, "t": self.runs[0].t if self.runs else 0, "runs": out}
 
 
 @app.websocket("/ws")
@@ -122,7 +124,7 @@ async def websocket_endpoint(ws: WebSocket):
                 if kind == "start":
                     async with lock:
                         state["session"] = Session(msg["runs"], msg["measures"],
-                                                   msg.get("measure_params"))
+                                                   msg.get("measure_params"), msg.get("id", 0))
                     await ws.send_json(state["session"].init_message())
                     await tick(0)
                     state["playing"] = True
