@@ -1,7 +1,7 @@
 // Complexity Lab client: builds run/measure pickers from /api/catalog, streams from /ws.
 "use strict";
 
-const MAX_RUNS = 4;
+const MAX_RUNS = 6;
 const MAX_POINTS = 3000;
 const $ = (id) => document.getElementById(id);
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -60,7 +60,7 @@ function renderRuns() {
 
 function addRun(system, pattern) {
   const used = new Set(runRows.map((r) => r.slot));
-  const slot = [0, 1, 2, 3].find((s) => !used.has(s));
+  const slot = [...Array(MAX_RUNS).keys()].find((s) => !used.has(s));
   runRows.push({ slot, system, pattern });
 }
 
@@ -339,7 +339,7 @@ async function main() {
   addRun("lenia", "orbium");
   addRun("life", "glider");
   renderRuns();
-  $("add-run").onclick = () => { addRun("life", "random"); renderRuns(); };
+  $("add-run").onclick = () => { addRun("lenia", "orbium"); renderRuns(); };
   $("start").onclick = () => { start(); $("start").textContent = "Restart"; };
   $("play").onclick = () => { ws.send(JSON.stringify({ type: playing ? "pause" : "play" })); setPlaying(!playing); };
   $("step").onclick = () => ws.send(JSON.stringify({ type: "step" }));

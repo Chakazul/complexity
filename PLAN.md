@@ -404,7 +404,7 @@ FD, EC, LD, LE), then rule-level (TL, LL, FI), then the medium ones (SC, PID, FI
 - [x] Package layout, `System` / `Measure` base classes, registry
 - [x] Game of Life with 6 patterns; Lenia (continuous) with Orbium and random soup
 - [x] PNG, LZMA, video-LZMA, video-H.264 measures (bits/cell)
-- [x] FastAPI + WebSocket server, browser UI (≤ 4 runs, live table and charts, light/dark)
+- [x] FastAPI + WebSocket server, browser UI (≤ 4 runs, now 6, live table and charts, light/dark)
 - [x] `complexity serve | list | run` CLI with CSV output
 - [x] Tests: GoL goldens, Orbium survival, compression sanity
 - [x] Composite compression measure `novelty` (best-of `image_min`/`video_min` dropped); per-frame cache;
