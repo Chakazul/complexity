@@ -388,7 +388,7 @@ function sendSpeed() {
 
 function setPanel(open) {
   document.querySelector(".layout").classList.toggle("collapsed", !open);
-  const b = $("toggle-panel"), label = open ? "Hide the side panel" : "Show the side panel";
+  const b = $("toggle-panel"), label = open ? "Hide the controls" : "Show the controls";
   b.title = label; b.setAttribute("aria-label", label); b.setAttribute("aria-expanded", open);
   try { localStorage.setItem("panel", open ? "open" : "closed"); } catch {}
   dirty = true;  // charts take the new width on their next draw

@@ -518,7 +518,7 @@ then polishing and sharing.
       rendering, positions for particle-native measures)
 
 ### M5 — Polishing and sharing
-- [x] UI: device (CPU, or GPU and its name) in the header; collapsible side panel
+- [x] UI: device (CPU, or GPU and its name) in the header; collapsible controls panel (a top bar since M3)
 - [x] Without a usable GPU, a CUDA build of JAX falls back to the CPU quietly: the CUDA
       driver is asked first (`complexity/device.py`) and `JAX_PLATFORMS=cpu` set if it has
       no device, instead of the plugin's traceback

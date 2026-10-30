@@ -69,16 +69,16 @@ h1 { font-size: 17px; margin: 0; }
 .device { color: var(--text-secondary); font-size: 12px; }
 .device b { font-weight: 600; color: var(--text-primary); }
 button.icon { display: inline-flex; align-items: center; padding: 4px 6px; align-self: center; }
-.layout.collapsed { grid-template-columns: 1fr; }
 .layout.collapsed aside { display: none; }
 .fps-now { color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
-.layout { display: grid; grid-template-columns: 360px 1fr; min-height: calc(100vh - 50px); }
+/* Controls panel across the top: Run, Systems and Measures side by side. */
+.layout { display: flex; flex-direction: column; min-height: calc(100vh - 50px); }
 aside {
-  border-right: 1px solid var(--border); background: var(--surface-1); padding: 8px 16px 24px;
-  overflow-y: auto;
+  display: grid; grid-template-columns: 260px minmax(0, 1fr) minmax(0, 1fr); gap: 24px;
+  border-bottom: 1px solid var(--border); background: var(--surface-1); padding: 8px 20px 14px;
 }
-section { padding: 10px 0 14px; border-bottom: 1px solid var(--border); }
-section:last-child { border-bottom: 0; }
+section { padding: 10px 0 0; min-width: 0; }
+section + section { border-left: 1px solid var(--border); padding-left: 24px; }
 h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); margin: 4px 0 10px; }
 .hint { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text-muted); }
 label { display: block; margin: 10px 0 0; color: var(--text-secondary); font-size: 13px; }
@@ -99,10 +99,11 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 h2 { display: flex; align-items: baseline; gap: 6px; }
 button.clear { margin-left: auto; padding: 1px 8px; font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--text-secondary); }
 
-/* Pick lists: two thirds as tall as wide, scrollable; a selected item gets a coloured
-   border (its series colour for systems). Items keep a transparent 2px border so selecting does not shift. */
+/* Pick lists: fixed height, scrollable; a selected item gets a coloured border (its
+   series colour for systems). Items keep a transparent 2px border so selecting does not
+   shift. */
 .picklist {
-  aspect-ratio: 3 / 2; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;
+  height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg); padding: 4px;
 }
 .pick {
@@ -155,8 +156,10 @@ tr:last-child td { border-bottom: 0; }
 .empty { color: var(--text-muted); margin-top: 40px; }
 
 @media (max-width: 760px) {
-  .layout { grid-template-columns: 1fr; }
-  aside { border-right: 0; border-bottom: 1px solid var(--border); }
+  header { flex-wrap: wrap; row-gap: 4px; padding: 10px 16px; }
+  .sub { display: none; }
+  aside { grid-template-columns: 1fr; gap: 0; padding: 8px 16px 14px; }
+  section + section { border-left: 0; padding-left: 0; border-top: 1px solid var(--border); margin-top: 14px; }
   main { padding: 16px; }
   .charts { grid-template-columns: 1fr; }
 }
