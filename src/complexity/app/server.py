@@ -19,6 +19,7 @@ import base64
 import time
 from pathlib import Path
 
+import jax
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -41,7 +42,9 @@ def index():
 def catalog():
     systems = registry.systems()
     probes = {key: cls() for key, cls in systems.items()}
+    device = jax.devices()[0]
     return {
+        "device": {"backend": jax.default_backend(), "name": device.device_kind},
         "systems": [
             {"key": key, "name": cls.name, "patterns": cls.patterns,
              "n_states": {p: probes[key].n_states(p) for p in cls.patterns},

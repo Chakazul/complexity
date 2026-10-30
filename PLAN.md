@@ -459,7 +459,8 @@ then polishing and sharing.
       rendering, positions for particle-native measures)
 
 ### M5 — Polishing and sharing
-- [ ] UI: device and JAX backend in the header; "compiling…" state on start; baselines
+- [x] UI: device (CPU, or GPU and its name) in the header; collapsible side panel
+- [ ] UI: "compiling…" state on start; baselines
       selectable as systems; dim warm-up points; export the session as CSV; record to MP4
 - [ ] `experiments/*.toml` config format and `complexity experiment <config>`; batched
       seeds via `vmap`; results in `results/<name>/` with metadata sidecar

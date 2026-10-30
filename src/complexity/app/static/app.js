@@ -334,8 +334,23 @@ function sendSpeed() {
   ws && ws.readyState === 1 && ws.send(JSON.stringify({ type: "speed", steps_per_tick: steps, fps }));
 }
 
+function setPanel(open) {
+  document.querySelector(".layout").classList.toggle("collapsed", !open);
+  const b = $("toggle-panel"), label = open ? "Hide the side panel" : "Show the side panel";
+  b.title = label; b.setAttribute("aria-label", label); b.setAttribute("aria-expanded", open);
+  try { localStorage.setItem("panel", open ? "open" : "closed"); } catch {}
+  dirty = true;  // charts take the new width on their next draw
+}
+
 async function main() {
   catalog = await (await fetch("/api/catalog")).json();
+  const dev = catalog.device;
+  $("device").innerHTML = dev.backend === "cpu" ? "<b>CPU</b>" : `<b>${dev.backend.toUpperCase()}</b> · ${dev.name}`;
+  let panelOpen = true;
+  try { panelOpen = localStorage.getItem("panel") !== "closed"; } catch {}
+  setPanel(panelOpen);
+  $("toggle-panel").onclick = () => setPanel(document.querySelector(".layout").classList.contains("collapsed"));
+  addEventListener("resize", () => { dirty = true; });
   addRun("lenia", "orbium");
   addRun("life", "glider");
   renderRuns();

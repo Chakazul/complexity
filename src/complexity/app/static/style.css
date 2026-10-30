@@ -64,6 +64,11 @@ header {
 h1 { font-size: 17px; margin: 0; }
 .sub { color: var(--text-secondary); }
 .status { margin-left: auto; color: var(--text-muted); font-size: 12px; }
+.device { color: var(--text-secondary); font-size: 12px; }
+.device b { font-weight: 600; color: var(--text-primary); }
+button.icon { display: inline-flex; align-items: center; padding: 4px 6px; align-self: center; }
+.layout.collapsed { grid-template-columns: 1fr; }
+.layout.collapsed aside { display: none; }
 .fps-now { color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
 .layout { display: grid; grid-template-columns: 360px 1fr; min-height: calc(100vh - 50px); }
 aside {
