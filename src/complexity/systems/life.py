@@ -12,13 +12,7 @@ from complexity.vendor.lenia import ANIMALS
 from complexity.vendor.lenia.rle import rle2arr
 
 # Standard Life RLE (b = dead, o = alive, $ = end of row, ! = end).
-RLE = {
-    "acorn": "bo5b$3bo3b$2o2b3o!",
-    "pulsar": (
-        "2b3o3b3o2b2$o4bobo4bo$o4bobo4bo$o4bobo4bo$2b3o3b3o2b2$2b3o3b3o2b$"
-        "o4bobo4bo$o4bobo4bo$o4bobo4bo2$2b3o3b3o!"
-    ),
-}
+RLE = {"acorn": "bo5b$3bo3b$2o2b3o!"}
 
 # pattern -> index in the original Lenia catalogue (vendor/lenia/), whose last 16 entries
 # are Life patterns
@@ -43,10 +37,10 @@ class GameOfLife(System):
 
     key = "life"
     name = "Game of Life"
-    patterns = {
-        **{k: ANIMALS[i]["name"] for k, i in CATALOGUE.items()},
+    patterns = {  # catalogue order, but the two methuselahs together before the soup
+        **{k: ANIMALS[i]["name"] for k, i in CATALOGUE.items() if k != "r_pentomino"},
         "gosper_glider_gun": "Gosper glider gun (gun)",
-        "pulsar": "Pulsar (oscillator, period 3)",
+        "r_pentomino": ANIMALS[CATALOGUE["r_pentomino"]]["name"],
         "acorn": "Acorn (methuselah 5206)",
         "random": "Random soup (50%)",
     }

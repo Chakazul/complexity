@@ -30,7 +30,7 @@
   /* pairs share a hue; the more desired value is a step darker: dynamic, local, pattern,
      structural (yellow, over randomness) */
   --tag-v-dynamic: #ddd3f0; --tag-v-dynamic-border: #c4b5e4;
-  --tag-v-local: #cbe9e7; --tag-v-local-border: #a6d6d2;
+  --tag-v-local: #b9e1de; --tag-v-local-border: #8ccac5;
   --tag-v-pattern: #c4d8f3; --tag-v-pattern-border: #a2c0ea;
 }
 @media (prefers-color-scheme: dark) {
@@ -60,7 +60,7 @@
     --tag-scope: #1c3433; --tag-scope-border: #294b49;
     --tag-temporal: #2c2540; --tag-temporal-border: #40365c;
     --tag-v-dynamic: #3a3155; --tag-v-dynamic-border: #504575;
-    --tag-v-local: #25443f; --tag-v-local-border: #335e58;
+    --tag-v-local: #2c524c; --tag-v-local-border: #3d6e67;
     --tag-v-pattern: #2e4466; --tag-v-pattern-border: #3d5a85;
   }
 }
@@ -90,7 +90,7 @@
   --tag-scope: #1c3433; --tag-scope-border: #294b49;
   --tag-temporal: #2c2540; --tag-temporal-border: #40365c;
   --tag-v-dynamic: #3a3155; --tag-v-dynamic-border: #504575;
-  --tag-v-local: #25443f; --tag-v-local-border: #335e58;
+  --tag-v-local: #2c524c; --tag-v-local-border: #3d6e67;
   --tag-v-pattern: #2e4466; --tag-v-pattern-border: #3d5a85;
 }
 

@@ -134,7 +134,8 @@ the online demo. A static results site (GitHub Pages) is generated from `results
 
 ### 4.1 Game of Life — `life`
 Conway B3/S23 on a torus, `n_states = 2`. Step = sum of 8 rolled copies, in JAX.
-Patterns: the 16 catalogue patterns below, pulsar (period 3), acorn, random soup.
+Patterns: the 16 catalogue patterns below, acorn, random soup. (Pulsar was removed from the
+list on 2026-10-31; Galaxy and Star gate cover oscillators.)
 
 **Catalogue patterns (M2, done).** The last 16 entries of the Lenia catalogue
 (`animals.json` [598:614]) are Life patterns, stored in Lenia as `kn = 4` rules. Their
@@ -545,7 +546,7 @@ Lenia and its self-replicating variant, against goo-like structures at nearby pa
 ## 6. Validation
 
 - **System goldens.**
-  - GoL: glider translates (1, 1) every 4 steps; pulsar has period 3; Gosper gun emits a
+  - GoL: glider translates (1, 1) every 4 steps; Gosper gun emits a
     glider every 30 steps.
   - Lenia: `min_orbium` keeps mass within ±10 % and exactly 13 levels over 500 steps, and
     its center of mass moves. Classic Orbium (`P = 0`) keeps mass within ±20 % over 200
