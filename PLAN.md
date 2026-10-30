@@ -136,6 +136,32 @@ the online demo. A static results site (GitHub Pages) is generated from `results
 Conway B3/S23 on a torus, `n_states = 2`. Step = sum of 8 rolled copies, in JAX.
 Patterns: Gosper glider gun, glider, pulsar (period 3), R-pentomino, acorn, random soup.
 
+**Catalogue patterns (M2).** The last 16 entries of the Lenia catalogue
+(`animals.json` [598:614]) are Life patterns, stored in Lenia as `kn = 4` rules. Their
+cells are standard Life RLE, so the existing decoder in `life.py` reads them as-is:
+
+| Pattern | Kind | Cells |
+|---|---|---|
+| Glider | diagonal c/4 | 3×3 |
+| Lightweight / middleweight / heavyweight spaceship | orthogonal c/2 | 4×5, 4×6, 4×7 |
+| Glider gun (Gosper) | gun | 9×36 |
+| R-pentomino | methuselah, 1103 steps | 3×3 |
+| Copperhead | orthogonal c/10 | 13×11 |
+| Galaxy | oscillator, period 8 | 9×9 |
+| Weekender | orthogonal 2c/7 | 11×16 |
+| Lobster | diagonal c/7 | 26×26 |
+| Sir Robin | oblique (2,1)c/6 | 77×31 |
+| Pufferfish | puffer c/2 | 12×15 |
+| Switch engine | puffer c/12 | 4×16 |
+| Max | spacefiller | 27×27 |
+| Sidecar gun | gun | 142×213 |
+| Star gate | oscillator | 122×155 |
+
+Glider, Gosper gun and R-pentomino already exist; keep the current keys and check the
+cells match. Pulsar, acorn and random soup stay. Sir Robin needs ≥ 128²; Sidecar gun and
+Star gate need 256² (`min_size`, as for the Lenia creatures). On a torus, puffers and
+spacefillers wrap around and eventually collide with their own output; that is expected.
+
 ### 4.2 Lenia — `lenia`
 One system covering continuous and Integer Lenia via the quantization level `P`
 (`P = 0` → continuous, `n_states = None`; `P > 0` → `n_states = P + 1`).
@@ -181,10 +207,45 @@ experiments here, unless an experiment says otherwise: kernel rings
 - **Lenium is not published yet**, so its code and data are copied (vendored) into
   `src/complexity/vendor/lenium/`. Each file records where it came from: repo path and
   commit. Copy only what is needed: the `orbium` and `min-orbium` pattern entries, and
-  Lenia / Integer Lenia as functions (`model.py`). Patterns are cell arrays, so no RLE
-  decoder is needed. When Lenium is published, replace the vendored code with `import lenium`
-  (add the dependency, delete `vendor/lenium/`, and keep the golden tests as the check
-  that behaviour is unchanged).
+  Lenia / Integer Lenia as functions (`model.py`). When Lenium is published, replace the
+  vendored code with `import lenium` (add the dependency, delete `vendor/lenium/`, and keep
+  the golden tests as the check that behaviour is unchanged).
+
+**Creature patterns (M2).** Ten continuous creatures from the original Lenia catalogue,
+`~/github/lenia-ref/code/Lenia/Python/animals.json` (614 entries; the Python `LeniaND.py`
+is the reference implementation). Where the request named only a genus, the species below
+is a proposal (the genus's first catalogue entry, or its best-known one):
+
+| Pattern | Code | R | b | m | s | Cells | Notes |
+|---|---|---|---|---|---|---|---|
+| Gyrorbium gyrans | OG2g | 13 | 1 | 0.156 | 0.0224 | 23×21 | genus pick (also *revolvens*) |
+| Scutium solidus | S1s | 13 | 1 | 0.29 | 0.045 | 20×18 | genus pick (37 entries) |
+| Helicium solidus | H3s | 13 | 1 | 0.35 | 0.06 | 29×41 | genus pick (35 entries) |
+| Hydrogeminium natans | 3GH2n | 18 | 1/2, 1, 2/3 | 0.26 | 0.036 | 51×55 | no plain "Geminium"; family Geminidae, best-known member |
+| Paraptera arcus labens | P4al | 13 | 1 | 0.347 | 0.057 | 40×43 | |
+| Paraptera cavus furiosus | P4cf | 13 | 1 | 0.297 | 0.0405 | 36×39 | |
+| Tetralapillium metamorpha | 2L4m | 18 | 1, 1/2 | 0.2 | 0.022 | 22×23 | second of two entries; the first dies by step 750 on either kernel core |
+| Kronium solidus | K4s | 18 | 1, 1/3 | 0.24 | 0.029 | 23×23 | genus pick (46 entries) |
+| Hexadentium rotans | 2D6r | 18 | 1, 3/4 | 0.27 | 0.039 | 35×35 | genus pick |
+| Amoebium dentalis | 3Ad | 27 | 1, 5/6, 1/3 | 0.28 | 0.031 | 70×67 | genus pick; needs ≥ 256² |
+
+All have `T = 10`, `kn = 1`, `gn = 1`. What adding them takes:
+- **Kernel core.** `kn = 1` is the original *exponential bump* core,
+  `exp(4 − 1/(r(1 − r)))`. They run on the standard Gaussian shell `bell(r, 0.5, 0.15)`
+  instead, with no parameter changes: in a 1000-step test (2026-10-30, 128², Amoebium at
+  256²) all ten keep their shape and motion, with mass within 0.80–1.05 of the start, as
+  on the bump core. So no kernel-core parameter is needed. `gn = 1` is the Gaussian growth
+  already in use; ring weights `b` (fractions) and the radius convention (`D = dist / R`,
+  ring `⌊D · len(b)⌋`) already match.
+- **RLE decoder.** Cells are RLE strings, so port `Board.rle2arr` / `ch2val` from
+  `LeniaND.py` (2-D only), with its source noted. The decoder vendored in `1588585` came
+  from the agent rewrite and is not reused.
+- **Grid size.** A creature needs a grid of several kernel diameters; record a minimum
+  size per pattern (`min_size`), and have the UI raise the grid size (or warn) when it is
+  too small. Amoebium (R = 27) needs 256².
+- **Tests.** Each creature survives 500 steps at its minimum size: mass stays within
+  ±20 %, and it neither dies out nor fills the grid. A creature that fails gets its source
+  parameters checked against `LeniaND.py` before any tuning.
 
 ### 4.3 Baselines — `baseline`
 Reference "systems" that calibrate every measure. Expected values are tested (§6).
@@ -270,12 +331,36 @@ T_{X→Y} = H(Y_{t+1} | Y_t) − H(Y_{t+1} | Y_t, X_t)
   - For smooth fields (Lenia), `offset = 1` may be too short; `offset` is exposed for
     exploration (e.g. `≈ R/4`).
 
-### 5.3 Later measures (backlog, from the PDF)
-In rough order of cost/benefit: Shannon block entropy (SE), Lempel–Ziv complexity (LZC, as
-in Adachi et al. 2024), active information storage, fractal dimension (FD), transient
-length (TL), Lyapunov exponent (LE; perturbed twin runs, natural in JAX), statistical
-complexity (SC, via `emic`), PID (`dit`), assembly index (AT), Langton's λ and Wuensche's Z
-for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
+### 5.3 The PDF's measures (M3)
+Almost all of the PDF's 18 measures are planned. Non-computable ones get a stated proxy,
+and three are deferred as too hard (below). Pattern-level measures fit the frame
+interface (§3.3). Rule-level measures (TL, FI, LL, WZ) describe a rule, not a frame, so
+they get a `RuleMeasure` interface: computed per (system, params) from batched runs or the
+rule table, shown in the UI as a constant per run, and used mainly in experiments.
+
+| PDF | Measure | Implementation | Cost |
+|---|---|---|---|
+| AC | Algorithmic complexity | done: compression (§5.1). Add **LZC**, Lempel–Ziv 1976 phrase count of the discretized frame, normalized (as in Adachi et al. 2024 for Lenia) | low |
+| SE | Shannon entropy | block entropy of `b × b` blocks of the discretized frame, bits/cell; `b = 1` is single-cell entropy | low |
+| LE | Lyapunov exponent | twin runs in JAX: perturb by ε, renormalize the separation every step, average `log` growth. Discrete systems use the damage-spreading rate (Hamming distance) instead | low |
+| FD | Fractal dimension | box counting of the thresholded frame over box sizes 2…N/4, slope of the log–log fit, in JAX | low |
+| EC | Effective complexity | proxy: compressed size of the coarse-grained frame (blurred, then few levels), i.e. the regularities without the noise | low |
+| SC | Statistical complexity | local statistical complexity from light cones (Shalizi et al. 2006): group past light cones by their future distributions; `C` = entropy of the local causal states. Check against `emic` on 1-D series | medium |
+| LD | Logical depth | proxy: decompression time of the LZMA-compressed frame (Zenil); median of repeats, since timing is noisy | low |
+| TD | Thermodynamic depth | **deferred**: for a deterministic system it is the entropy over a state's possible histories, computable only for tiny lattices. Revisit with ECA in M4 | — |
+| TL | Transient length | rule-level: from batched random soups, steps until the state repeats (hash for discrete states, tolerance for continuous ones); report the mean log transient | low |
+| PID | Partial information decomposition | `dit`, Williams–Beer `I_min`, target `y_{t+1}`, sources `y_t` and neighbour `x_t` on discretized cells (≤ 4 levels for Lenia); report synergy, bits/cell | medium |
+| FID | Functional information decomposition | `fid-tools` on the same variables as PID; check the library's maturity first | medium |
+| TE | Transfer entropy | §5.2 | low |
+| IIT | Integrated information | **too hard**: Φ is exponential in system size, so only ~3×3 binary patches are tractable (`pyphi`), and a patch's Φ is not the system's | — |
+| ITI | Individuality | Lenia creatures: segment the individual (largest component above a threshold, tracked), `S` = its cells, `E` = the surroundings; `A* = I(S'; S)`, `A = I(S'; S \| E)`, `nC = I(S'; E \| S)` from coarse-grained features | medium–high |
+| AT | Assembly index | **deferred**: the libraries target molecules and strings, and assembly index is exponential in object size. Revisit for small discrete patches | — |
+| FI | Functional information | rule-level experiment: `−log2` of the fraction of random parameters (e.g. Lenia `m, s`) or seeds whose run meets a function threshold (a surviving, moving creature) | medium |
+| LL | Langton's λ | rule-level, static, from the rule table: Life, outer-totalistic rules, ECA (M4) | low |
+| WZ | Wuensche's Z | rule-level, static: ECA only, added with the ECA system in M4 | low |
+
+Order within M3: conventions and baselines first, then TE, then the cheap ones (LZC, SE,
+FD, EC, LD, LE), then rule-level (TL, LL, FI), then the medium ones (SC, PID, FID, ITI).
 
 ## 6. Validation
 
@@ -334,44 +419,51 @@ for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
       moved to `tests/numpy_reference.py`)
 - [x] Benchmark steps/s on CPU and GPU at 128², 256², 512² and record it in the README
 
-### M2 — Measure conventions and transfer entropy
+Priority from here (set 2026-10-30): Lenia patterns, then measures, then more systems,
+then polishing and sharing.
+
+### M2 — Lenia creatures and Life catalogue patterns (§4.1, §4.2)
+- [ ] Port the 2-D RLE decoder from `LeniaND.py`, with source notes
+- [ ] The ten creatures in the vendored patterns, with `min_size`
+- [ ] UI: grid size follows the selected patterns' `min_size` (raise or warn)
+- [ ] The 16 Life patterns from the end of `animals.json` (§4.1), with `min_size`
+- [ ] Survival tests for each creature at its minimum size; Life goldens for the new
+      spaceships (displacement per period) and oscillators (period)
+
+### M3 — Measures (§5.2, §5.3)
 - [ ] `Measure` gains `backend`, `needs_discrete`, `ctx`; orientation documented in the
-      base class
+      base class; `RuleMeasure` interface for rule-level measures
 - [ ] Baseline system (`empty`, `frozen_noise`, `iid_noise`, with noise levels)
-- [ ] Transfer entropy measure in JAX (`offset`, `n_levels`, `window` parameters)
-- [ ] Measure-expectation tests from §6 for all five measures
-- [ ] `warming_up` flag for window measures
+- [ ] Transfer entropy in JAX (`offset`, `n_levels`, `window` parameters)
+- [ ] LZC, block entropy (SE), fractal dimension (FD), effective complexity proxy (EC),
+      logical depth proxy (LD), Lyapunov exponent (LE)
+- [ ] Rule-level: transient length (TL), Langton's λ (LL), functional information (FI)
+- [ ] Statistical complexity (SC), PID, FID, individuality (ITI)
+- [ ] Measure-expectation tests from §6 for every measure; `warming_up` flag for window
+      measures
+- [ ] UI: new measures in the list, grouped by taxonomy; per-measure parameter controls
+      (window, `n_levels`, `offset`); compatibility hints (why a measure is greyed out)
 
-### M3 — UI update
-- [ ] Device and JAX backend shown in the header; "compiling…" state on start
-- [ ] Baselines selectable as runs; TE in the measure list with its parameters
-- [ ] Per-measure parameter controls (window, `n_levels`, `offset`)
-- [ ] Dim warm-up points; export the session as CSV; record the session to MP4
-- [ ] Compatibility hints: why a measure is greyed out for a system
+### M4 — More dynamical complex systems (§4.4, PDF §3)
+- [ ] Elementary CA (rule space) + Wuensche's Z; thermodynamic depth on tiny lattices
+- [ ] von Neumann / outer-totalistic CA; larger-than-life and multi-channel Lenia
+- [ ] Particle systems: Boids, Particle Life, Particle Lenia, Swarm Chemistry (+ density
+      rendering, positions for particle-native measures)
 
-### M4 — Experiments and results
-- [ ] `experiments/*.toml` config format and `complexity experiment <config>`
-- [ ] Batched seeds via `vmap`; results in `results/<name>/` with metadata sidecar
-- [ ] First study: the 5 measures × (GoL patterns, Lenia patterns, baselines) × 10 seeds
+### M5 — Polishing and sharing
+- [ ] UI: device and JAX backend in the header; "compiling…" state on start; baselines
+      selectable as systems; dim warm-up points; export the session as CSV; record to MP4
+- [ ] `experiments/*.toml` config format and `complexity experiment <config>`; batched
+      seeds via `vmap`; results in `results/<name>/` with metadata sidecar
+- [ ] First study: all measures × (GoL, Lenia creatures, baselines, new systems) × 10 seeds
 - [ ] Measure × system compatibility matrix (applicable / informative / misleading) with
       short notes, kept in `docs/compatibility.md`
 - [ ] Static results site generated from `results/` (GitHub Pages)
-
-### M5 — Sharing
 - [ ] `CONTRIBUTING.md`: adding a system / measure, the conventions in §2, the test checklist
 - [ ] GitHub Actions: ruff + pytest on CPU JAX
 - [ ] License; citation file
 - [ ] Hugging Face Space deployment of the UI
 - [ ] Publish the repo; announce to collaborators
-
-### M6+ — Growth (one item per PR, each with tests and a compatibility-matrix entry)
-- [ ] Shannon block entropy
-- [ ] Lempel–Ziv complexity
-- [ ] Lyapunov exponent (twin runs)
-- [ ] Transient length
-- [ ] Elementary CA + Langton's λ + Wuensche's Z
-- [ ] Particle Life, Boids, Particle Lenia (+ density rendering)
-- [ ] Further PDF measures (§5.3)
 
 ## 8. Risks and open questions
 
@@ -400,3 +492,7 @@ for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
 - 2026-10-29 — M1 done: JAX engine (`rollout` / `rollout_batch` / `advance`), functional
   systems, Integer Lenia with `min_orbium` as default (bit-identical to the predecessor;
   exact FFT potential), vendored Lenium, `discretize`, device frame buffer, benchmarks.
+- 2026-10-30 — Reprioritized: M2 Lenia creatures (ten from the original catalogue) and its
+  16 Life patterns, M3
+  measures (almost all of the PDF's; IIT, TD, AT deferred), M4 more systems, M5 polishing
+  and sharing.

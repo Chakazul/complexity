@@ -17,10 +17,13 @@ The design and the milestone checklist are in **[PLAN.md](PLAN.md)**. In brief:
 - **M0 (done):** NumPy demo — the systems and measures below, interactive UI, CLI.
 - **M1 (done):** JAX engine for GPU/TPU (CPU JAX supported), Integer Lenia with the
   *minimum Orbium* as the default Lenia pattern.
-- **M2 (next):** transfer entropy (a local, dynamic measure), noise baselines for calibration,
-  measure-expectation tests.
-- **M3–M5:** UI improvements, batch experiments and a results site, then sharing
-  (CI, contributor guide, hosted demo).
+- **M2 (next):** ten creatures from the original Lenia catalogue (Gyrorbium, Scutium,
+  Helicium, Geminium, Paraptera, Tetralapillium, Kronium, Hexadentium, Amoebium), and
+  16 Game of Life patterns from the same catalogue.
+- **M3:** most measures from the PDF, starting with noise baselines and transfer entropy.
+- **M4:** more systems: elementary CA, other CA rules, particle systems.
+- **M5:** polishing and sharing: UI, batch experiments and a results site, CI,
+  contributor guide, hosted demo.
 
 ## Conventions
 
