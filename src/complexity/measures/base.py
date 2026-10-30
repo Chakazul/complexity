@@ -36,7 +36,11 @@ class Measure(ABC):
     Orientation: higher value = more complex by this measure's definition (PLAN.md §2). A
     quantity that runs the other way is negated or inverted in `compute`, and the
     `description` says so. `peaks_at` says where the measure is highest: "randomness"
-    (compression, entropy) or "structure" (transfer entropy); the tests check both.
+    (compression, entropy), "structure" (transfer entropy) or "mixed" (neither reliably:
+    logical depth); the tests check the first two.
+
+    `needs_state` measures (Lyapunov exponent) need the dynamics, not frames: they implement
+    `compute_state(system, state, rng, ctx)`, which the run calls instead of `compute`.
 
     `backend = "host"` measures receive a list of NumPy frames; `backend = "jax"` measures a
     device array (window, height, width). Frames are float32 in [0, 1], or, with
@@ -52,8 +56,9 @@ class Measure(ABC):
     window: int = 1
     backend: str = "host"  # "host" or "jax"
     needs_discrete: bool = False
+    needs_state: bool = False
     n_levels: int | None = None  # None: n_states if discrete, else DEFAULT_LEVELS
-    peaks_at: str = "randomness"  # "randomness" or "structure"
+    peaks_at: str = "randomness"  # "randomness", "structure" or "mixed"
     params: tuple[str, ...] = ()
     # Classification from Complexity_Measure.pdf §1.1-1.2, shown in the UI.
     granularity: str = "pattern"  # "pattern", "rule" or "system"

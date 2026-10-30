@@ -75,3 +75,15 @@ class Baseline(System):
 
     def observe(self, state: BaselineState) -> jax.Array:
         return state.A
+
+    def perturb(self, state: BaselineState, rng: jax.Array) -> BaselineState:
+        """One cell to the next level (discrete) or small noise (continuous), and a different
+        noise stream, so a perturbed iid noise run diverges completely."""
+        if state.levels:
+            y, x = jax.random.randint(rng, (2,), 0, jnp.array(state.A.shape))
+            step = 1 / (state.levels - 1)
+            A = state.A.at[y, x].set(jnp.where(state.A[y, x] + step > 1 + 1e-6, 0.0,
+                                               state.A[y, x] + step))
+        else:
+            A = jnp.clip(state.A + 1e-5 * jax.random.normal(rng, state.A.shape), 0, 1)
+        return BaselineState(A, jax.random.fold_in(state.rng, 1), state.levels, state.fresh)

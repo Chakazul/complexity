@@ -1,8 +1,10 @@
-"""Information-theoretic measures on discretized frames, computed in JAX on the device.
+"""Information-theoretic measures on discretized frames: transfer entropy (TE, in JAX on
+the device) and block entropy (SE, on the host).
 
-All estimates are plug-in: probabilities are histogram frequencies over the cells and time
-steps of the window. The bias this adds grows with bins / samples (PLAN.md §5.2), so values
-are compared with the `baseline` system's iid noise of the same kind.
+All estimates are plug-in: probabilities are histogram frequencies over the cells (and time
+steps) of the window, with the Miller-Madow bias correction. The bias grows with bins /
+samples (PLAN.md §5.2), so values are compared with the `baseline` system's iid noise of the
+same kind.
 """
 
 from __future__ import annotations
@@ -11,6 +13,7 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from complexity.measures.base import NO_CONTEXT, Measure
 from complexity.registry import register_measure
@@ -83,3 +86,35 @@ class TransferEntropy(Measure):
         if n < self.window:  # a filling window: pad to the full shape, count only n frames
             frames = jnp.concatenate([jnp.zeros_like(frames[:1]).repeat(self.window - n, 0), frames])
         return float(transfer_entropy(frames, n, ctx.n_levels, self.offset, self.correct_bias))
+
+
+def block_entropy(symbols: np.ndarray, n_levels: int, block: int) -> float:
+    """Entropy of the `block` x `block` blocks at every cell (overlapping, on the torus),
+    with the Miller-Madow correction, in bits per cell."""
+    codes = np.zeros(symbols.shape, np.int64)
+    for dy in range(block):
+        for dx in range(block):
+            codes = codes * n_levels + np.roll(symbols, (-dy, -dx), (0, 1))
+    _, counts = np.unique(codes, return_counts=True)
+    n = codes.size
+    h = np.log2(n) - np.sum(counts * np.log2(counts)) / n + (len(counts) - 1) / (2 * n * np.log(2))
+    return float(h / block**2)
+
+
+@register_measure
+class BlockEntropy(Measure):
+    key = "block_entropy"
+    name = "Block entropy"
+    unit = "bits/cell"
+    description = (
+        "Shannon entropy of the discretized frame's `block` x `block` patches (every cell's "
+        "patch, on the torus), per cell. `block = 1` is the entropy of single cell states; "
+        "larger blocks also count spatial correlations. 0 for a uniform frame, log2(levels) "
+        "for iid noise (less for many levels: there are fewer cells than possible blocks)."
+    )
+    needs_discrete = True
+    block = 2
+    params = ("block", "n_levels")
+
+    def compute(self, frames, ctx=NO_CONTEXT) -> float:
+        return block_entropy(frames[-1], ctx.n_levels, self.block)

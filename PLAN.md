@@ -382,6 +382,48 @@ rule table, shown in the UI as a constant per run, and used mainly in experiment
 Order within M3: conventions and baselines first, then TE, then the cheap ones (LZC, SE,
 FD, EC, LD, LE), then rule-level (TL, LL, FI), then the medium ones (SC, PID, FID, ITI).
 
+### 5.4 The cheap measures: decisions and first values (M3, done)
+
+- **LZC.** A direct Kaspar–Schuster parse rescans the history for every phrase, so noise
+  took 26 s at 512². Phrases are now found by rolling hashes: for each length ℓ ≤ 48, one
+  vectorized pass marks the positions whose ℓ-substring occurred earlier; longer phrases
+  fall back to `bytes.find`. Binary noise at 512² takes 0.6 s, 128² 20 ms; a test checks it
+  against the direct parse. Frames are read row by row.
+- **SE.** Overlapping `b × b` blocks on the torus, `b = 2` by default, Miller–Madow
+  corrected. With 13 levels there are more possible blocks (28 561) than cells at 128², so
+  iid noise reads 3.5 of 3.7 bits/cell.
+- **FD.** Threshold 0.1 (the creature mask used in §4.2), box sizes 2 … N/4.
+- **EC.** Fixed levels after blurring failed both ways: a blurred glider gun never reaches
+  1/3, while blurred binary noise straddles 1/2. The levels are now relative to the noise
+  band, mean ± z · std / sqrt(4π σ²), z = 4: iid noise of any kind becomes one level, and
+  any structure noise cannot explain stands out.
+- **LD.** LZMA stores incompressible chunks as is, so continuous noise decompresses faster
+  than an empty grid (0.19 vs 1.7 ns/cell at 128²). That matches Bennett (random and trivial
+  objects are both shallow) but breaks "noise ≥ empty", so LD has `peaks_at = "mixed"` and
+  is exempt from the orientation tests.
+- **LE.** A `needs_state` measure: `compute_state(system, state, rng)` runs a twin from
+  `System.perturb(state)` (Life: flip one live cell; Integer Lenia: one active cell ±1;
+  Lenia: 1e-5 Gaussian noise; baselines: one cell, plus a different noise stream). In Lenia
+  a random perturbation first shrinks ~4× within 8 steps (its stable part dies out), which
+  made a 16-step estimate negative even for chaotic creatures; the rate is now taken after
+  an 8-step burn-in, over 64 steps, and is the larger of the rates during and after the
+  burn-in (noise saturates at once). Discrete systems use damage spreading.
+- **First values** (128², step 200):
+
+  | Run | LZC | SE | FD | EC | LD ns/cell | LE |
+  |---|---|---|---|---|---|---|
+  | empty | 0.002 | 0 | 0 | 0.059 | 1.66 | 0.016 |
+  | iid noise, binary / 13 / continuous | 1.03 / 0.93 / 0.95 | 1.0 / 3.5 / 3.0 | 2.0 | ≈ empty | 2.7 / 12.5 / 0.19 | 0.20 / 0.22 / > 1 |
+  | Life glider / gun / soup | 0.004 / 0.027 / 0.31 | 0.003 / 0.036 / 0.32 | 0.40 / 0.80 / 1.35 | 0.076 / 0.12 / 0.36 | | 0.065 / 0.084 / 0.11 |
+  | min Orbium / Integer Lenia soup | 0.018 / 0.20 | 0.057 / 0.80 | 1.00 / 1.66 | 0.086 / 0.55 | | 0.11 / 0 |
+  | Orbium / Lenia soup | 0.019 / 0.25 | 0.054 / 0.83 | 1.45 / 1.65 | 0.084 / 0.72 | | 0.011 / 0.022 |
+  | Helicium / Paraptera a. l. / P. c. f. / Tetralapillium | 0.04 / 0.05 / 0.04 / 0.02 | 0.14 / 0.16 / 0.14 / 0.06 | 1.39 / 1.46 / 1.38 / 1.05 | 0.10 / 0.11 / 0.11 / 0.09 | | 0.008 / −0.02 / 0.016 / 0.073 |
+
+  LZC, SE and FD rank as compression does: soups and noise on top. EC puts soups first
+  and noise at the empty-grid level. LE singles out Tetralapillium metamorpha among the
+  creatures; Paraptera cavus furiosus, listed as chaotic, is only weakly so at this scale.
+  Integer Lenia heals single-level damage (soup: 0).
+
 ## 6. Validation
 
 - **System goldens.**
@@ -457,13 +499,15 @@ then polishing and sharing.
 - [x] Baseline system (`empty`, `frozen_noise`, `iid_noise`, with noise levels)
 - [x] Transfer entropy in JAX (`offset`, `n_levels`, `window` parameters; Miller–Madow
       bias correction)
-- [ ] LZC, block entropy (SE), fractal dimension (FD), effective complexity proxy (EC),
-      logical depth proxy (LD), Lyapunov exponent (LE)
+- [x] LZC, block entropy (SE), fractal dimension (FD), effective complexity proxy (EC),
+      logical depth proxy (LD), Lyapunov exponent (LE); systems gain `perturb` for LE
+      (§5.4)
 - [ ] Rule-level: transient length (TL), Langton's λ (LL), functional information (FI)
 - [ ] Statistical complexity (SC), PID, FID, individuality (ITI)
 - [ ] Measure-expectation tests from §6 for every measure; `warming_up` flag for window
       measures (done so far: orientation and structure tests over all registered measures,
-      TE baselines; `warming_up` sent per tick and drawn faint in the UI)
+      TE baselines, per-measure tests for the §5.4 measures; `warming_up` sent per tick and
+      drawn faint in the UI)
 - [ ] UI: new measures in the list, grouped by taxonomy; per-measure parameter controls
       (window, `n_levels`, `offset`); compatibility hints (why a measure is greyed out)
 

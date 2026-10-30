@@ -1,10 +1,13 @@
+import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
 
 from complexity import registry
+from complexity.measures.algorithmic import lz76, regular_part
 from complexity.measures.base import Context, discretize
-from complexity.measures.information import transfer_entropy
+from complexity.measures.geometry import box_counts
+from complexity.measures.information import block_entropy, transfer_entropy
 from complexity.session import Run, RunSpec
 
 
@@ -19,8 +22,9 @@ def measured(system: str, pattern: str, steps: int = 20, size=(64, 64), **params
 def test_orientation_noise_scores_at_least_empty(levels):
     """PLAN.md §6: higher = more complex, so iid noise never scores below an empty grid."""
     empty, noise = measured("baseline", "empty"), measured("baseline", f"iid_noise_{levels}")
-    for key in registry.measures():
-        assert noise[key] >= empty[key], key
+    for key, cls in registry.measures().items():
+        if cls.peaks_at != "mixed":
+            assert noise[key] >= empty[key], key
 
 
 def test_structure_peaked_measures_rate_a_glider_stream_above_noise_and_empty():
@@ -38,7 +42,7 @@ def test_compression_orders_uniform_below_noise():
     uniform = [np.zeros((64, 64), np.float32)] * 16
     noise = [rng.random((64, 64), dtype=np.float32) for _ in range(16)]
     for key, cls in registry.measures().items():
-        if cls.backend != "host" or cls.needs_discrete:
+        if cls.__module__ != "complexity.measures.compression":
             continue
         m = cls()
         assert m.compute(uniform[-m.window :]) < 0.5 < m.compute(noise[-m.window :]), key
@@ -120,3 +124,87 @@ def test_novelty_separates_static_from_fresh_frames():
     fresh = [rng.random((64, 64), dtype=np.float32) for _ in range(16)]
     assert m.compute(still) < 0.2
     assert m.compute(fresh) > 0.8
+
+
+def lz76_reference(s: bytes) -> int:
+    """Kaspar & Schuster's parse, directly: grow each phrase while it occurs earlier."""
+    n, i, c = len(s), 0, 0
+    while i < n:
+        l = 1
+        while i + l <= n and s.find(s[i : i + l], 0, i + l - 1) != -1:
+            l += 1
+        c, i = c + 1, i + l
+    return c
+
+
+def test_lz76_matches_the_reference_parse():
+    rng = np.random.default_rng(0)
+    assert lz76(np.array([0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1])) == 6  # K&S 1987
+    cases = [rng.integers(0, L, 3000) for L in (2, 8, 13)] + [
+        np.zeros(5000, int),
+        np.tile([0, 1, 1, 0, 2], 900),  # phrases longer than the hashed lengths
+        np.r_[np.zeros(3000, int), rng.integers(0, 2, 500), np.zeros(2000, int)],
+    ]
+    for x in cases:
+        assert lz76(x) == lz76_reference(x.astype(np.uint8).tobytes())
+
+
+def test_lzc_is_near_0_for_uniform_and_near_1_for_binary_noise():
+    rng = np.random.default_rng(0)
+    m, ctx = registry.make_measure("lzc"), Context(n_levels=2)
+    assert m.compute([np.zeros((128, 128), np.int32)], ctx) < 0.01
+    assert m.compute([rng.integers(0, 2, (128, 128))], ctx) == pytest.approx(1, abs=0.05)
+
+
+def test_block_entropy():
+    rng = np.random.default_rng(0)
+    noise = rng.integers(0, 2, (128, 128))
+    assert block_entropy(noise, 2, 1) == pytest.approx(1, abs=0.01)
+    assert block_entropy(noise, 2, 2) == pytest.approx(1, abs=0.01)
+    assert block_entropy(np.zeros((32, 32), int), 2, 2) == 0
+    stripes = np.tile([0, 1], (64, 32))  # 1 bit per cell alone, 1/4 bit per cell in 2x2 blocks
+    assert block_entropy(stripes, 2, 1) == pytest.approx(1, abs=0.01)
+    assert block_entropy(stripes, 2, 2) == pytest.approx(0.25, abs=0.01)
+
+
+def test_fractal_dimension_of_a_point_a_line_and_a_plane():
+    m = registry.make_measure("fractal_dimension")
+    point, line, plane = (np.zeros((128, 128), np.float32) for _ in range(3))
+    point[5, 5] = line[64, :] = plane[:] = 1
+    assert m.compute([point]) == pytest.approx(0, abs=0.01)
+    assert m.compute([line]) == pytest.approx(1, abs=0.01)
+    assert m.compute([plane]) == pytest.approx(2, abs=0.01)
+    assert m.compute([np.zeros((128, 128), np.float32)]) == 0
+    sizes, counts = box_counts(line > 0)
+    assert list(sizes) == [2, 4, 8, 16, 32] and list(counts) == [64, 32, 16, 8, 4]
+
+
+@pytest.mark.parametrize("levels", ["binary", "13", "continuous"])
+def test_effective_complexity_sees_noise_as_uniform(levels):
+    frame = np.asarray(measured_frame("baseline", f"iid_noise_{levels}"))
+    assert np.all(regular_part(frame, 2.0, 4.0) == 1)  # all in the noise band
+
+
+def measured_frame(system: str, pattern: str):
+    return Run(RunSpec(system, pattern, (64, 64)), []).host_frames()[-1]
+
+
+def test_lyapunov_separates_chaos_from_order():
+    lyap = lambda s, p: measured(s, p, steps=100, size=(128, 128))["lyapunov"]
+    assert lyap("baseline", "frozen_noise_continuous") == pytest.approx(0, abs=1e-3)
+    assert lyap("baseline", "iid_noise_continuous") > 0.5
+    assert lyap("life", "random") > lyap("life", "glider")
+    assert lyap("lenia", "random") > 0
+
+
+@pytest.mark.parametrize("system", ["life", "integer_lenia", "baseline"])
+def test_discrete_perturbations_change_one_cell_by_one_level(system):
+    sys_ = registry.make_system(system)
+    pattern = {"life": "glider", "integer_lenia": "min_orbium", "baseline": "iid_noise_13"}[system]
+    state = sys_.init(pattern, (32, 32), jax.random.key(0))
+    n = sys_.n_states(pattern) - 1
+    a = np.asarray(sys_.observe(state)) * n
+    b = np.asarray(sys_.observe(sys_.perturb(state, jax.random.key(1)))) * n
+    diff = np.round(b - a).astype(int)
+    assert np.count_nonzero(diff) == 1
+    assert set(np.abs(diff[diff != 0])) <= {1, n}  # baseline wraps the top level to 0

@@ -21,7 +21,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from complexity.registry import register_system
-from complexity.systems.base import System, place_center
+from complexity.systems.base import System, place_center, random_active_cell
 from complexity.vendor.lenia import ANIMALS
 from complexity.vendor.lenia.rle import rle2arr
 from complexity.vendor.lenium import model
@@ -114,6 +114,19 @@ class Lenia(System):
             A = model.integer_update(st.A, model.potential_fft(st.A, st.K), st.g, st.T, st.P)
         else:
             A = model.step(st.A, st.K, st.m, st.s, st.T)
+        return LeniaState(A, st.K, st.g, st.P, st.T, st.m, st.s)
+
+    def perturb(self, st: LeniaState, rng: jax.Array) -> LeniaState:
+        """Integer: one active cell up or down one level. Continuous: Gaussian noise of
+        standard deviation 1e-5 on every cell, clipped to [0, 1]."""
+        if st.P:
+            k1, k2 = jax.random.split(rng)
+            y, x = random_active_cell(st.A > 0, k1)
+            a = st.A[y, x]
+            up = jnp.where(a == 0, True, jnp.where(a == st.P, False, jax.random.bernoulli(k2)))
+            A = st.A.at[y, x].set(jnp.where(up, a + 1, a - 1))
+        else:
+            A = jnp.clip(st.A + 1e-5 * jax.random.normal(rng, st.A.shape), 0, 1)
         return LeniaState(A, st.K, st.g, st.P, st.T, st.m, st.s)
 
     def observe(self, st: LeniaState) -> jax.Array:

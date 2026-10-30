@@ -17,6 +17,9 @@ _BUILTIN_MODULES = (
     "complexity.systems.baseline",
     "complexity.measures.compression",
     "complexity.measures.information",
+    "complexity.measures.algorithmic",
+    "complexity.measures.geometry",
+    "complexity.measures.dynamics",
 )
 _loaded = False
 

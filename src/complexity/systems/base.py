@@ -56,6 +56,18 @@ class System(ABC):
     def observe(self, state: State) -> jax.Array:
         """The current frame: float32 (height, width) with values in [0, 1]. Pure and jit-able."""
 
+    def perturb(self, state: State, rng: jax.Array) -> State:
+        """A slightly different state, for measures of the dynamics (Lyapunov exponent):
+        one active cell changed by one level if discrete, small noise if continuous.
+        Optional; measures that need it skip systems without it. Pure and jit-able."""
+        raise NotImplementedError
+
+
+def random_active_cell(active: jax.Array, rng: jax.Array) -> tuple[jax.Array, jax.Array]:
+    """(row, column) of a random cell where `active` is True, or of any cell if none is."""
+    logits = jnp.where(active.any(), jnp.where(active, 0.0, -jnp.inf), 0.0).ravel()
+    return jnp.unravel_index(jax.random.categorical(rng, logits), active.shape)
+
 
 def place_center(grid: jax.Array, pattern) -> jax.Array:
     """`grid` with `pattern` written into its center. A pattern larger than the grid is

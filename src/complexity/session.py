@@ -41,7 +41,8 @@ class Run:
         self.system = registry.make_system(spec.system)
         self.size = tuple(spec.size or self.system.default_size)
         self.n_states = self.system.n_states(spec.pattern)
-        self.state = self.system.init(spec.pattern, self.size, jax.random.key(spec.seed))
+        self.rng = jax.random.key(spec.seed)
+        self.state = self.system.init(spec.pattern, self.size, self.rng)
         engine.advance(self.system, self.state, 0)  # compile now, not on the first big step
         params = measure_params or {}
         all_measures = [registry.make_measure(k, **params.get(k, {})) for k in measure_keys]
@@ -93,7 +94,12 @@ class Run:
         values, ms = {}, {}
         for m in self.measures:
             t0 = time.perf_counter()
-            values[m.key] = float(m.compute(self._frames_for(m), self.contexts[m.key]))
+            ctx = self.contexts[m.key]
+            if m.needs_state:
+                rng = jax.random.fold_in(self.rng, self.t + 1)  # differs from init's key
+                values[m.key] = float(m.compute_state(self.system, self.state, rng, ctx))
+            else:
+                values[m.key] = float(m.compute(self._frames_for(m), ctx))
             ms[m.key] = (time.perf_counter() - t0) * 1000
         return values, ms
 

@@ -8,8 +8,9 @@ systems in scope.
 
 Current demo: **Game of Life** and **Lenia** (continuous and Integer Lenia), simulated in
 **JAX** (CPU, GPU or TPU), measured by **image and video compression** as proxies for
-algorithmic (Kolmogorov) complexity and by **transfer entropy** (local information flow),
-with **noise baselines** to calibrate each measure.
+algorithmic (Kolmogorov) complexity, and by Lempel–Ziv complexity, block entropy, fractal
+dimension, effective complexity, logical depth, the Lyapunov exponent and transfer
+entropy, with **noise baselines** to calibrate each measure.
 
 ## Status and roadmap
 
@@ -22,8 +23,9 @@ The design and the milestone checklist are in **[PLAN.md](PLAN.md)**. In brief:
   Helicium, Geminium, Paraptera, Tetralapillium, Kronium, Hexadentium, Amoebium), and
   16 Game of Life patterns from the same catalogue.
 - **M3 (in progress):** most measures from the PDF. Done: noise baselines, transfer
-  entropy. Next: LZC, block entropy, fractal dimension, effective complexity, logical
-  depth, Lyapunov exponent; then rule-level and the harder ones.
+  entropy, LZC, block entropy, fractal dimension, effective complexity, logical depth,
+  Lyapunov exponent. Next: rule-level measures (transient length, Langton's λ,
+  functional information), then statistical complexity, PID, FID, individuality.
 - **M4:** more systems: elementary CA, other CA rules, particle systems.
 - **M5:** polishing and sharing: UI, batch experiments and a results site, CI,
   contributor guide, hosted demo.
@@ -138,6 +140,24 @@ shrinks as the grid grows.
 Window measures see fewer frames until the window fills; the UI draws those warm-up values
 faint.
 
+Measures from the PDF's other categories (window 1 unless noted):
+
+| Key | PDF | Measure | Unit | Peaks at |
+|---|---|---|---|---|
+| `lzc` | AC | Lempel–Ziv (1976) phrase count of the discretized frame, normalized `c · log_L(n) / n` | ~0 uniform, ~1 noise | randomness |
+| `block_entropy` | SE | Shannon entropy of every cell's `block`×`block` patch (default 2), Miller–Madow corrected | bits/cell | randomness |
+| `fractal_dimension` | FD | box-counting slope of the cells above `threshold` (0.1), boxes 2 … N/4 | 0 point, 1 curve, 2 filled | randomness |
+| `effective_complexity` | EC | LZMA size of the regular part: blur (σ = 2), then 3 levels below / within / above the band iid noise with the same cell statistics would fill (z = 4) | bits/cell | structure |
+| `logical_depth` | LD | LZMA decompression time of the frame, median of 5 (Zenil's proxy) | ns/cell | mixed |
+| `lyapunov` | LE | twin run from a perturbed state: continuous, ln(separation growth) per step after an 8-step burn-in, over 64 steps; discrete, damage spreading log2(1 + cells that differ) / 64 | 1/step | randomness |
+
+Effective complexity collapses noise and uniform frames to one level, so it is ~0 for both
+and highest for large-scale structure (Lenia soups, Life soups). Logical depth is low for
+trivial frames and for noise alike (LZMA stores incompressible data as is), and it is
+timing-based, so compare runs measured in the same session. The Lyapunov exponent separates
+the chaotic Tetralapillium metamorpha (~0.07) and Lenia soup (~0.02) from the regular
+creatures (~0); each value costs 128 extra steps of the system.
+
 ## Adding a system or a measure
 
 Write one class, decorate it, and add its module to `_BUILTIN_MODULES` in
@@ -192,7 +212,8 @@ src/complexity/
   session.py             Run: one system + its measures + a device frame buffer (UI and CLI)
   cli.py                 complexity serve | list | info | run
   systems/               base.py, life.py, lenia.py, baseline.py (JAX)
-  measures/              base.py, compression.py, information.py (JAX)
+  measures/              base.py, compression.py, information.py (TE in JAX, block entropy),
+                         algorithmic.py (LZC, EC, LD), geometry.py (FD), dynamics.py (LE)
   vendor/lenium/         code and data copied from Lenium, with source notes
   vendor/lenia/          patterns and RLE decoder from the original Lenia, with source notes
   app/server.py          FastAPI + WebSocket streaming

@@ -7,7 +7,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from complexity.registry import register_system
-from complexity.systems.base import System, place_center
+from complexity.systems.base import System, place_center, random_active_cell
 from complexity.vendor.lenia import ANIMALS
 from complexity.vendor.lenia.rle import rle2arr
 
@@ -70,3 +70,8 @@ class GameOfLife(System):
 
     def observe(self, grid: jax.Array) -> jax.Array:
         return grid.astype(jnp.float32)
+
+    def perturb(self, grid: jax.Array, rng: jax.Array) -> jax.Array:
+        """Flip one live cell (any cell if none is alive)."""
+        y, x = random_active_cell(grid == 1, rng)
+        return grid.at[y, x].set(1 - grid[y, x])
