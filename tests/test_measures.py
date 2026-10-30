@@ -9,6 +9,7 @@ from complexity.measures.base import Context, discretize
 from complexity.measures.causal import causal_states
 from complexity.measures.decomposition import fid, pid
 from complexity.measures.geometry import box_counts
+from complexity.measures.individuality import decompose, torus_label
 from complexity.measures.information import block_entropy, transfer_entropy
 from complexity.measures.rule import transient
 from complexity.session import Run, RunSpec
@@ -323,3 +324,33 @@ def test_tile_maps_are_excess_over_an_empty_tile():
     assert np.count_nonzero(heat) in (1, 2, 3, 4) and heat.min() == 0  # only around the glider
     assert run.map("lyapunov").max() <= 1
     assert run.map("png") is None  # not running
+
+
+def test_torus_label_joins_creatures_across_edges():
+    mask = np.zeros((8, 8), bool)
+    mask[3, 0] = mask[3, 7] = True  # one creature split by the left/right edge
+    mask[0, 4] = mask[7, 5] = True  # one split diagonally by the top/bottom edge
+    labels = torus_label(mask)
+    assert labels[3, 0] == labels[3, 7] and labels[0, 4] == labels[7, 5]
+    assert labels[3, 0] != labels[0, 4]
+
+
+def test_iti_decomposition_of_self_and_environment_driven_systems():
+    rng = np.random.default_rng(0)
+    s, e = rng.integers(0, 2, 20000), rng.integers(0, 2, 20000)
+    for nxt, expected in ((s, {"organismal": 1, "colonial": 1, "driven": 0}),
+                          (e, {"organismal": 0, "colonial": 0, "driven": 1})):
+        joint = np.zeros((2, 2, 2))
+        np.add.at(joint, (nxt, s, e), 1)
+        assert decompose(joint) == pytest.approx(expected, abs=0.01)
+
+
+def test_individuality_measures():
+    glider = measured("life", "glider", steps=20, size=(32, 32))
+    assert glider["iti_local"] > 0.5  # survival is fixed by the in-creature neighbours
+    noise = measured("baseline", "iid_noise_binary", size=(64, 64))
+    assert noise["iti_local"] < 0.01 and noise["iti_features"] < 0.1
+    run = Run(RunSpec("life", "glider", (32, 32)), ["iti_local"], {"iti_local": {"component": "driven"}})
+    run.step(20)
+    assert run.measure()[0]["iti_local"] == pytest.approx(0, abs=1e-9)  # nothing else around
+    assert run.map("iti_local").shape == (32, 32)

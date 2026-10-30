@@ -407,13 +407,22 @@ FD, EC, LD, LE), then rule-level (TL, LL, FI), then the medium ones (SC, PID, FI
 - **Taxonomy.** PID and FID are tagged system / local / dynamic as in the PDF. SC is tagged
   pattern-level, not rule-level as in the PDF, because it is computed from the run's
   frames (as are TE and LE, also rule-level in the PDF).
-- **ITI, open.** Krakauer's A* = I(S'; S), A = I(S'; S | E), nC = I(S'; E | S) need S and
-  E as random variables. Two readings are possible here: (a) coarse-grained features of a
-  segmented creature (mass, centroid velocity, shape moments) and its surroundings, as a
-  time series from a long twin run, which gives few samples and mostly autocorrelation;
-  (b) a local form, per cell of the segmented creature, with s = the cell and its
-  neighbours inside the creature, e = its neighbours outside, which estimates well but is
-  a new reading of the measure. Needs a decision.
+- **ITI, both forms (Bert, 2026-10-30).** Krakauer's A* = I(S'; S), A = I(S'; S | E),
+  nC = I(S'; E | S); `component` selects one (organismal A* by default). Creatures are
+  8-connected components above a threshold, joined across the torus's edges.
+  - `iti_features` (as in the paper): S = mass of the largest creature, E = mass of the
+    rest, cut into 4 quantile levels over a 128-frame window, from the run's own frames.
+    Miller–Madow left iid noise at 0.10–0.12 bits (64 bins, 127 samples), so the mean over
+    20 time-shuffled S' is subtracted instead (noise 0.03). For a lone creature E is empty
+    and A* is the predictability of its mass (Orbium 0, gun 0.45, Tetralapillium 1.0). The
+    Aquarium (target creature among moving and still copies) is its intended test bed.
+  - `iti_local` (adaptation): per creature cell, S = (own state, summed state of its 8
+    neighbours in the creature), E = state of other creatures' cells within radius 3.
+    Rounded neighbour means erased Life's information (every member is alive), so sums are
+    used. Values: A* ≈ 0.93–1.1 for Life and Lenia creatures, 0.41–0.56 for Lenia soups,
+    0 for noise. nC is 0 in Life by construction (8-connected creatures never touch and the
+    rule reads only the 3×3) and ≤ 0.016 in these Lenia scenes (no near neighbours); it is
+    meant for crowded scenes. Has a map (pointwise values).
 
 ### 5.7 Heatmaps (M3, done)
 
@@ -443,6 +452,18 @@ would: Finn & Lizier 2018), so it gets tiles. `dynamic` and `structural` are not
 for a map (block entropy is static and randomness-peaked) but make it useful for the
 goal in §5.8: dark on noise and empty, following what structures do. TE and SC have all
 four properties.
+
+### 5.9 Creatures crossing the torus's border (2026-10-30)
+
+Measured with Orbium on 64² (179 of 380 steps straddling) and a Life glider on 32² (18 of
+140): measures that treat the grid as a torus, as the simulation does (TE, block entropy,
+PID, FID, SC, ITI local), do not change. Measures that read the frame row by row change a
+little: image compression < 1 %; video LZMA, novelty and LZC +2 % for Orbium and +11 % for
+the tiny glider split into 2–4 pieces. Fractal dimension and the Lyapunov exponent vary
+more from step to step than with the border. Centering the creature by its center of mass
+would remove the seam for row-reading measures, but rolling each frame separately would
+also remove its motion (video compression, novelty); rolling the whole window by one shift
+keeps the motion. Not done: the effect is small next to the differences between patterns.
 
 ### 5.8 Multi-scale structural complexity (M3b, planned)
 
@@ -602,7 +623,9 @@ then polishing and sharing.
 - [x] Rule-level: transient length (TL), Langton's λ (LL), functional information (FI)
       (§5.5)
 - [x] Statistical complexity (SC), PID, FID (§5.6)
-- [ ] Individuality (ITI): needs a design decision (§5.6)
+- [x] Individuality (ITI) in both forms, `iti_features` and `iti_local` (§5.6)
+- [ ] ITI features: target creature and environment of several creatures, once the
+      Aquarium exists (M3b)
 - [x] Heatmaps (§5.7): a spatial map for every measure with spatial granularity, local
       fields (TE, SC, block entropy, Lyapunov separation) or per tile (compression, LZC,
       PID, FID); shown overlaid on the frame or side by side

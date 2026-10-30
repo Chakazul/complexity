@@ -20,6 +20,7 @@ _BUILTIN_MODULES = (
     "complexity.measures.information",
     "complexity.measures.decomposition",
     "complexity.measures.causal",
+    "complexity.measures.individuality",
     "complexity.measures.geometry",
     "complexity.measures.dynamics",
     "complexity.measures.rule",

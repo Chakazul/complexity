@@ -181,6 +181,16 @@ correct: a static random field is predictable, but only by remembering each cell
 unique information is 0). FID weights input patterns equally, so a lone glider (0.086)
 scores above a soup (0.038): it describes the local rule as used, not how much happens.
 
+**Individuality** (Krakauer et al. 2020) splits what determines a creature's next state
+between the creature itself and its environment: organismal A* = I(S'; S), colonial
+A = I(S'; S | E), driven nC = I(S'; E | S) (`component`, A* by default). Creatures are
+connected cells above a threshold, joined across the torus's edges.
+
+| Key | Measure | Unit |
+|---|---|---|
+| `iti_features` | as in the paper: S = mass of the largest creature, E = mass of the rest, over a 128-frame window, less a time-shuffled surrogate; meant for scenes of several creatures (the Aquarium) | bits |
+| `iti_local` | local adaptation: per creature cell, S = the cell and its neighbours in the creature, E = other creatures within radius 3; has a heatmap | bits/cell |
+
 **Rule-level measures** describe the rule (the system with a pattern's parameters), not
 the frames. Each is computed once from runs of its own, cached, and shown as a constant:
 
@@ -249,7 +259,8 @@ src/complexity/
   systems/               base.py, life.py, lenia.py, baseline.py (JAX)
   measures/              base.py, compression.py, information.py (TE in JAX, block entropy),
                          algorithmic.py (LZC, EC, LD), geometry.py (FD), dynamics.py (LE),
-                         rule.py (TL, LL, FI), causal.py (SC), decomposition.py (PID, FID)
+                         rule.py (TL, LL, FI), causal.py (SC), decomposition.py (PID, FID),
+                         individuality.py (ITI)
   vendor/lenium/         code and data copied from Lenium, with source notes
   vendor/lenia/          patterns and RLE decoder from the original Lenia, with source notes
   app/server.py          FastAPI + WebSocket streaming
