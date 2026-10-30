@@ -8,9 +8,9 @@ Protocol (JSON messages):
     {"type": "speed", "steps_per_tick": int, "fps": int}
     {"type": "map", "measure": key | null}  (heatmap of one measure, PLAN.md §5.7)
   server -> client (init and tick echo the start's id, so the client can drop stale ticks)
-    {"type": "init", "id": int, "runs": [{"label", "system", "n_states", "height", "width", "measures",
+    {"type": "init", "id": int, "runs": [{"label", "system", "n_states", "rgb", "height", "width", "measures",
                                "skipped", "config": {key: {param: value}}}]}
-    {"type": "tick", "id": int, "t": int, "runs": [{"frame": base64 uint8, "values": {}, "ms": {},
+    {"type": "tick", "id": int, "t": int, "runs": [{"frame": base64 uint8 (h w, or h w 3 if rgb), "values": {}, "ms": {},
                                           "warming_up": [keys],
                                           "map"?: {"h", "w", "data": base64 float32}}]}
     {"type": "error", "message": str}
@@ -82,7 +82,7 @@ class Session:
 
     def init_message(self) -> dict:
         return {"type": "init", "id": self.id, "runs": [
-            {"label": r.spec.label, "system": r.spec.system, "n_states": r.n_states,
+            {"label": r.spec.label, "system": r.spec.system, "n_states": r.n_states, "rgb": r.rgb,
              "height": r.size[0], "width": r.size[1],
              "measures": [m.key for m in r.measures], "skipped": r.skipped,
              "config": {m.key: m.config() for m in r.measures}}

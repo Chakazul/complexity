@@ -1,8 +1,9 @@
 # Ported to JAX functions from the hand-coded Lenium (~/github/lenium.old, identical to
 # ~/github/lenia-ref/code/lenium) at commit 9acb864f82f1d4bea048a985ef3d3da864fb973c:
 # model.py `Lenia` and `IntegerLenia`, func.py `bell` / `calc_kernels` / `calc_growth_lookup`
-# / `discretize`, util.py `direct_convolve`. Single channel, single kernel. Replace with
-# `import lenium` once it is published (PLAN.md §4.2).
+# / `discretize` / `get_params`, util.py `direct_convolve`. Single channel and kernel, and
+# multi-channel, multi-kernel `Lenia` (2-D). Replace with `import lenium` once it is
+# published (PLAN.md §4.2).
 """Lenia and Integer Lenia, with Gaussian (`bell`) kernel shells and growth.
 
 Kernel: rings of height b over the scaled distance D = |x| · len(b) / R, each ring shaped
@@ -35,9 +36,10 @@ def discretize(A, P=1):
     return jnp.round(A * P).astype(jnp.int32)
 
 
-def ring_kernel(dist: jax.Array, R: float, b) -> jax.Array:
-    """Unnormalized kernel from distances to the origin, rings of heights `b`."""
-    D = dist * len(b) / jnp.float32(R) / jnp.float32(1.0)  # kernel radius r = 1
+def ring_kernel(dist: jax.Array, R: float, b, r: float = 1.0) -> jax.Array:
+    """Unnormalized kernel from distances to the origin, rings of heights `b` out to R · r
+    (divided in the original's order, so the floats match)."""
+    D = dist * len(b) / jnp.float32(R) / jnp.float32(r)
     return bell(D % 1, 0.5, 0.15) * jnp.asarray(b, jnp.float32)[D.astype(int)] * (D < len(b))
 
 
@@ -56,6 +58,40 @@ def step(A: jax.Array, fK: jax.Array, m: float, s: float, T: float, h: float = 1
     """A ← clip(A + (2 · bell(K ∗ A, m, s) − 1) · h / T, 0, 1)."""
     U = jnp.fft.irfft2(jnp.fft.rfft2(A) * fK, s=A.shape)
     G = (bell(U, jnp.float32(m), jnp.float32(s)) * 2 - 1) * jnp.float32(h)
+    return jnp.clip(A + G / jnp.float32(T), 0, 1)
+
+
+# ---- multi-channel, multi-kernel Lenia (Chan 2020), e.g. the Aquarium ----
+
+
+def multi_kernel_fft(size: tuple[int, int], R: float, kernels) -> jax.Array:
+    """rfft2 of the normalized kernels on a (height, width) torus, (y x' k). Kernel i has
+    rings `b` out to radius R · r (`calc_kernels` with ring heights)."""
+    h, w = size
+    I = jnp.mgrid[-(h // 2) : h - h // 2, -(w // 2) : w - w // 2]  # as calc_kernels
+    dist = jnp.linalg.norm(I, axis=0)
+    K = jnp.stack([ring_kernel(dist, R, k["b"], k.get("r", 1)) for k in kernels], axis=-1)
+    K = K / jnp.sum(K, axis=(0, 1), keepdims=True)
+    return jnp.fft.rfft2(jnp.fft.ifftshift(K, axes=(0, 1)), axes=(0, 1))
+
+
+def multi_params(kernels, channels: int):
+    """Per-kernel growth m, s, h (k) and the maps channel -> kernel Mk (c k) and kernel ->
+    channel Mc (k c) from source c0 and target c1 (`get_params`; absent values are 1, and
+    absent channels 0)."""
+    m, s, h = (jnp.array([k.get(key, 1) for k in kernels], jnp.float32) for key in "msh")
+    Mk = jnp.zeros((channels, len(kernels)), jnp.float32)
+    Mc = jnp.zeros((len(kernels), channels), jnp.float32)
+    for i, k in enumerate(kernels):
+        Mk, Mc = Mk.at[k.get("c0", 0), i].set(1.0), Mc.at[i, k.get("c1", 0)].set(1.0)
+    return m, s, h, Mk, Mc
+
+
+def multi_step(A, fK, m, s, h, Mk, Mc, T) -> jax.Array:
+    """A (y x c) ← clip(A + Σ_k (2 · bell(K_k ∗ A_c0(k), m_k, s_k) − 1) · h_k → c1(k) / T, 0, 1)."""
+    fA = jnp.fft.rfft2(A, axes=(0, 1))  # (y x' c)
+    U = jnp.fft.irfft2(fA @ Mk * fK, s=A.shape[:2], axes=(0, 1))  # potentials (y x k)
+    G = (bell(U, m, s) * 2 - 1) * h @ Mc  # growth (y x c)
     return jnp.clip(A + G / jnp.float32(T), 0, 1)
 
 

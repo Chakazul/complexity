@@ -186,3 +186,39 @@ def test_a_pattern_larger_than_the_grid_is_cropped_to_its_center():
     pattern = np.arange(25).reshape(5, 5) + 1
     grid = place_center(jnp.zeros((3, 4), jnp.int32), pattern)
     assert np.array_equal(grid, pattern[1:4, 0:4])  # rows (5 - 3) // 2 = 1.., columns 0..
+
+
+def _units(system, state) -> int:
+    from complexity.measures.individuality import torus_label
+
+    return len(np.unique(torus_label(np.asarray(system.observe(state)) > 0.1))) - 1
+
+
+def test_multi_channel_kernels_and_maps():
+    from complexity.systems.lenia_multi import CREATURES
+    from complexity.vendor.lenium import model
+
+    kernels = CREATURES["aquarium"]["kernels"]
+    fK = model.multi_kernel_fft((64, 64), 12, kernels)
+    assert fK.shape == (64, 33, 15)
+    assert np.allclose(fK[0, 0], 1, atol=1e-5)  # every kernel sums to 1
+    _, _, _, Mk, Mc = model.multi_params(kernels, 3)
+    assert np.array_equal(Mk.sum(0), np.ones(15)) and np.array_equal(Mc.sum(1), np.ones(15))
+    assert [int(np.argmax(Mk[:, i])) for i in range(15)] == [k["c0"] for k in kernels]
+
+
+def test_vt049w_differs_from_lenium_in_two_kernels():
+    from complexity.systems.lenia_multi import CREATURES
+
+    a, b = CREATURES["aquarium"]["kernels"], CREATURES["vt049w"]["kernels"]
+    assert [i for i, (x, y) in enumerate(zip(a, b)) if x != y] == [3, 13]
+
+
+def test_aquarium_self_replicates_and_the_vt049w_unit_does_not():
+    lm = registry.make_system("lenia_multi")
+    aquarium = lm.init("aquarium", (256, 256), jax.random.key(0))
+    assert _units(lm, engine.advance(lm, aquarium, 300)) >= 3
+    unit = lm.init("aquarium_unit", (128, 128), jax.random.key(0))
+    later = engine.advance(lm, unit, 500)
+    assert _units(lm, later) == 1
+    assert 0.8 < float(later.A.sum() / unit.A.sum()) < 3  # grows into its adult size, ~2.3x

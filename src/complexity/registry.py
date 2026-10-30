@@ -13,6 +13,7 @@ MEASURES: dict[str, type] = {}
 
 _BUILTIN_MODULES = (
     "complexity.systems.lenia",
+    "complexity.systems.lenia_multi",
     "complexity.systems.life",
     "complexity.systems.baseline",
     "complexity.measures.compression",  # measure modules in the UI's group order

@@ -408,6 +408,14 @@ function buildViews() {
 function drawFrame(i, b64) {
   const r = active.runs[i];
   const raw = atob(b64), px = r.image.data, lut = r.lut;
+  if (r.rgb) {  // a system's own RGB picture (multi-channel Lenia)
+    for (let p = 0; p < raw.length / 3; p++) {
+      px[p * 4] = raw.charCodeAt(p * 3); px[p * 4 + 1] = raw.charCodeAt(p * 3 + 1);
+      px[p * 4 + 2] = raw.charCodeAt(p * 3 + 2); px[p * 4 + 3] = 255;
+    }
+    r.ctx.putImageData(r.image, 0, 0);
+    return;
+  }
   for (let p = 0; p < raw.length; p++) {
     const v = raw.charCodeAt(p) * 3;
     px[p * 4] = lut[v]; px[p * 4 + 1] = lut[v + 1]; px[p * 4 + 2] = lut[v + 2]; px[p * 4 + 3] = 255;

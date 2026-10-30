@@ -56,6 +56,11 @@ class System(ABC):
     def observe(self, state: State) -> jax.Array:
         """The current frame: float32 (height, width) with values in [0, 1]. Pure and jit-able."""
 
+    def render(self, state: State) -> jax.Array | None:
+        """An RGB picture (height, width, 3) in [0, 1] for display, or None to show the
+        frame in a colour map. Measures never see it. Optional."""
+        return None
+
     def soup(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> State:
         """A random initial state under the pattern's rule, for rule-level measures (transient
         length). Default: the "random" pattern if there is one, else the pattern itself."""

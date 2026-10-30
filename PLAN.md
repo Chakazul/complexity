@@ -256,6 +256,32 @@ All have `T = 10`, `kn = 1`, `gn = 1`. What adding them takes:
   died between steps 1000 and 2000 in some runs, and at ×2 / ×3 scale it settles into an
   oscillating ring.
 
+### 4.2b Multi-channel Lenia — `lenia_multi` (2026-10-31)
+
+Ported from the hand-coded Lenium's multi-channel `Lenia` (`vendor/lenium/model.py`:
+`multi_kernel_fft`, `multi_params`, `multi_step`), with Lenium's `aquarium` (Tessellatium
+gyrans: 3 channels, 15 kernels, R = 12, T = 2) vendored verbatim. **Kernels are Gaussian**
+rings `bell(D mod 1, 0.5, 0.15) · b` out to R · r, as in Lenium, Chan's Lenia tutorial and
+Leniabreeder: the Aquarium was found on Gaussian kernels. Parity: identical kernel FFT,
+2.4e-7 after one step on CPU, then chaotic divergence (as for single-channel Lenia).
+Frames are the mean of the channels; the UI shows the channels as RGB (`System.render`).
+
+Two parameter sets, a hair apart. Lenium keeps two kernels' original values as comments;
+restored, they are Leniabreeder's VT049W "Aquarium (self-replicating)", with Lenium's cells.
+Kernel 13 there has rings [1/6, 1, 0] to r = 0.82, i.e. [1/6, 1] to 0.547 against Lenium's
+0.55, and kernel 3 an inner ring of 0 against 1/12. Run here (256²):
+
+| Pattern | Rule | Behaviour |
+|---|---|---|
+| `aquarium` | Lenium | 1 unit self-replicates: 3 by step 100, 24 by 1000, 60 by 2000, ~77 by 8000 |
+| `aquarium_unit` | VT049W | a lone glider that never divides (mass settles at 2.3× the stored cells) |
+| `aquarium_scene` | VT049W | 8 units divide when they collide: 24 by step 500, ~100 by 4000 |
+
+Both end as networks of ~70–110 separate units over 30–38 % of the grid, rotating rings
+and moving C-shapes; neither becomes goo. Uniform random soups die out under both rules
+within 200 steps. So the replication switch sits within ~0.5 % of one kernel's radius:
+the goo search (M3b) should look around these two parameter sets.
+
 ### 4.3 Baselines — `baseline`
 Reference "systems" that calibrate every measure. Expected values are tested (§6).
 - `empty` — all zeros.
@@ -640,8 +666,9 @@ then polishing and sharing.
 
 ### M3b — Multi-scale structural complexity (§5.8), after multi-channel Lenia (M4)
 - [ ] Reference cases: empty and noise (low); goo-like structures (self-organizing, one
-      level); single creatures; **Aquarium** (multi-channel Lenia: self-contained units
-      forming larger networks) and an Aquarium variant whose units self-replicate (highest)
+      level); single creatures (Aquarium unit); **Aquarium** networks: self-replicating
+      (`aquarium`) and dividing on collision (`aquarium_scene`) (highest) — the Aquarium
+      patterns are in (§4.2b), goo is not found yet
 - [ ] Find goo-like structures at parameters near the Aquarium's (experiments by Bert)
 - [ ] Prototype: a structural measure on a pyramid of coarse-grainings, scored high only
       when structure exists at several scales; check it ranks the reference cases
@@ -650,7 +677,8 @@ then polishing and sharing.
 
 ### M4 — More dynamical complex systems (§4.4, PDF §3)
 - [ ] Elementary CA (rule space) + Wuensche's Z; thermodynamic depth on tiny lattices
-- [ ] von Neumann / outer-totalistic CA; larger-than-life and multi-channel Lenia
+- [x] Multi-channel Lenia with the Aquarium (§4.2b)
+- [ ] von Neumann / outer-totalistic CA; larger-than-life
 - [ ] Particle systems: Boids, Particle Life, Particle Lenia, Swarm Chemistry (+ density
       rendering, positions for particle-native measures)
 

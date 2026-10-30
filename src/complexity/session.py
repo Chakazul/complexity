@@ -145,5 +145,12 @@ class Run:
         """Measures whose window is not full yet: their values cover fewer frames."""
         return [m.key for m in self.measures if len(self.frames) < m.window]
 
+    @property
+    def rgb(self) -> bool:
+        """Whether the UI gets an RGB picture (`System.render`) instead of the frame."""
+        return self.system.render(self.state) is not None
+
     def frame_u8(self) -> np.ndarray:
-        return to_uint8(self.host_frames()[-1])
+        """What the UI draws: the frame (h, w) or, for systems that render, RGB (h, w, 3)."""
+        picture = self.system.render(self.state)
+        return to_uint8(np.asarray(picture if picture is not None else self.host_frames()[-1]))
