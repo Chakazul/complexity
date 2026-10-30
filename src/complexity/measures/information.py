@@ -61,6 +61,7 @@ class TransferEntropy(Measure):
     key = "transfer_entropy"
     name = "Transfer entropy"
     unit = "bits/cell/step"
+    group = "Information theory"
     description = (
         "Information a neighbour's state adds about a cell's next state beyond the cell's "
         "own state (Schreiber 2000; local TE for CA: Lizier et al. 2008), averaged over the "
@@ -106,6 +107,7 @@ class BlockEntropy(Measure):
     key = "block_entropy"
     name = "Block entropy"
     unit = "bits/cell"
+    group = "Information theory"
     description = (
         "Shannon entropy of the discretized frame's `block` x `block` patches (every cell's "
         "patch, on the torus), per cell. `block = 1` is the entropy of single cell states; "

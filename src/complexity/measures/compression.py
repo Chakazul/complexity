@@ -91,6 +91,7 @@ class LZMAFrame(Measure):
     key = "lzma"
     name = "Image compression (LZMA)"
     unit = "bits/cell"
+    group = "Compression"
     description = "LZMA size of the current frame's raw bytes (1-D, no image model)."
 
     def compute(self, frames, ctx=NO_CONTEXT) -> float:
@@ -102,6 +103,7 @@ class PNGSize(Measure):
     key = "png"
     name = "Image compression (PNG)"
     unit = "bits/cell"
+    group = "Compression"
     description = "PNG size of the current frame (DEFLATE with 2-D row filters)."
 
     def compute(self, frames, ctx=NO_CONTEXT) -> float:
@@ -113,6 +115,7 @@ class LZMAVideo(Measure):
     key = "video_lzma"
     name = "Video compression (LZMA)"
     unit = "bits/cell/frame"
+    group = "Compression"
     description = "LZMA size of a sliding window of frames; exact repeats across time compress away."
     window = 16
     params = ("window",)
@@ -127,6 +130,7 @@ class H264Video(Measure):
     key = "video_h264"
     name = "Video compression (H.264 lossless)"
     unit = "bits/cell/frame"
+    group = "Compression"
     description = (
         "Lossless x264 (qp 0) size of a sliding window of frames; motion compensation "
         "captures translating structures, including sub-pixel motion."
@@ -144,6 +148,7 @@ class TemporalNovelty(Measure):
     key = "novelty"
     name = "Temporal novelty (video / image)"
     unit = "ratio"
+    group = "Compression"
     description = (
         "Best video bits per frame over best image bits per frame, across the window: "
         "the fraction of each frame that is new. ~0 for static or empty patterns, "

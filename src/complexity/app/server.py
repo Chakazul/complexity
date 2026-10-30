@@ -55,6 +55,7 @@ def catalog():
         ],
         "measures": [
             {"key": key, "name": cls.name, "unit": cls.unit, "description": cls.description,
+             "group": cls.group,
              "window": cls.window, "granularity": cls.granularity, "scope": cls.scope,
              "temporal": cls.temporal, "backend": cls.backend,
              "needs_discrete": cls.needs_discrete, "peaks_at": cls.peaks_at,

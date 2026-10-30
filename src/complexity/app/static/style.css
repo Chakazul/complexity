@@ -115,6 +115,13 @@ button.clear { margin-left: auto; padding: 1px 8px; font-size: 11px; text-transf
 .pick .name { color: var(--text-primary); }
 .pick .meta { color: var(--text-muted); font-size: 12px; }
 .pick .note { color: var(--text-muted); }
+.pick-group {
+  position: sticky; top: -4px; z-index: 1; margin: 0 -4px 2px; padding: 6px 12px 4px;
+  background: var(--bg); font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--text-muted);
+}
+.pick-group:not(:first-child) { margin-top: 6px; }
+.chart h3 { cursor: help; }
 .pick.selected { background: var(--surface-1); }
 #measures .pick.selected { border-color: var(--text-secondary); }
 .pick.full { cursor: not-allowed; }

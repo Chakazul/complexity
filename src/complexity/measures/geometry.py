@@ -27,6 +27,7 @@ class FractalDimension(Measure):
     key = "fractal_dimension"
     name = "Fractal dimension (box counting)"
     unit = "dimension"
+    group = "Geometry"
     description = (
         "Box-counting dimension of the cells above `threshold`: the slope of log(boxes "
         "occupied) against log(1 / box size), for boxes of 2, 4, ... up to a quarter of "

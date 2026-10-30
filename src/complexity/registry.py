@@ -15,9 +15,9 @@ _BUILTIN_MODULES = (
     "complexity.systems.lenia",
     "complexity.systems.life",
     "complexity.systems.baseline",
-    "complexity.measures.compression",
-    "complexity.measures.information",
+    "complexity.measures.compression",  # measure modules in the UI's group order
     "complexity.measures.algorithmic",
+    "complexity.measures.information",
     "complexity.measures.geometry",
     "complexity.measures.dynamics",
 )

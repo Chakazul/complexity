@@ -55,6 +55,7 @@ class Lyapunov(Measure):
     key = "lyapunov"
     name = "Lyapunov exponent"
     unit = "1/step"
+    group = "Dynamics"
     description = (
         "How fast a small perturbation grows, from a twin run of `steps` steps started at "
         "the current state. Continuous states: finite-time estimate of the maximal "

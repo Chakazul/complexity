@@ -53,6 +53,7 @@ class Measure(ABC):
     name: str  # display name
     unit: str  # e.g. "bits/cell"
     description: str = ""
+    group: str = "Other"  # heading in the UI's measure list, e.g. "Information theory"
     window: int = 1
     backend: str = "host"  # "host" or "jax"
     needs_discrete: bool = False

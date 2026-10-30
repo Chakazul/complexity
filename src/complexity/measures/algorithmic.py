@@ -72,6 +72,7 @@ class LempelZiv(Measure):
     key = "lzc"
     name = "Lempel-Ziv complexity"
     unit = "normalized"
+    group = "Algorithmic complexity"
     description = (
         "Lempel-Ziv (1976) phrase count c of the discretized frame read row by row, "
         "normalized as c · log_L(n) / n for n cells and L levels: ~0 for a uniform frame, "
@@ -110,6 +111,7 @@ class EffectiveComplexity(Measure):
     key = "effective_complexity"
     name = "Effective complexity (proxy)"
     unit = "bits/cell"
+    group = "Algorithmic complexity"
     description = (
         "LZMA size of the frame's regular part (Gell-Mann & Lloyd): the frame blurred "
         "(Gaussian, `sigma` cells) and cut into 3 levels, below / within / above the band "
@@ -132,6 +134,7 @@ class LogicalDepth(Measure):
     key = "logical_depth"
     name = "Logical depth (proxy)"
     unit = "ns/cell"
+    group = "Algorithmic complexity"
     description = (
         "Time to decompress the LZMA-compressed frame (8-bit gray), median of `repeats` "
         "runs, per cell: Zenil et al.'s proxy for Bennett's logical depth, the run time of "

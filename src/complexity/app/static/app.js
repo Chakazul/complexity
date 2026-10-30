@@ -78,7 +78,14 @@ function buildRunList() {
 
 function buildMeasureList() {
   const box = $("measures");
+  let group = null;
   for (const m of catalog.measures) {
+    if (m.group !== group) {  // the catalog lists each group's measures together
+      group = m.group;
+      const h = document.createElement("div");
+      h.className = "pick-group"; h.textContent = group;
+      box.append(h);
+    }
     const meta = [m.granularity, m.scope, m.temporal].map((t) => `<span class="tag">${t}</span>`).join("") +
       ` ${m.unit}${m.window > 1 ? ` · window ${m.window}` : ""}`;
     const el = pickItem(m.name, meta, () => {
@@ -261,6 +268,7 @@ function buildCharts() {
     const el = document.createElement("div");
     el.className = "chart";
     el.innerHTML = `<h3>${m.name}</h3><span class="unit">${m.unit} vs. time step</span>`;
+    el.querySelector("h3").title = m.description;  // as in the measure list
     const c = document.createElement("canvas");
     const tip = document.createElement("div");
     tip.className = "tooltip";
