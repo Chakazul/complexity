@@ -322,10 +322,15 @@ function connect() {
   };
 }
 
+// The speed sliders pick an index into these.
+const STEPS_PER_FRAME = [1, 2, 4, 8, 16, 32, 64];
+const MAX_FPS = [1, 2, 4, 8, 15, 30, 60];
+
 function sendSpeed() {
-  $("spt-out").textContent = $("spt").value;
-  $("fps-out").textContent = $("fps").value;
-  ws && ws.readyState === 1 && ws.send(JSON.stringify({ type: "speed", steps_per_tick: +$("spt").value, fps: +$("fps").value }));
+  const steps = STEPS_PER_FRAME[+$("spt").value], fps = MAX_FPS[+$("fps").value];
+  $("spt-out").textContent = steps;
+  $("fps-out").textContent = fps;
+  ws && ws.readyState === 1 && ws.send(JSON.stringify({ type: "speed", steps_per_tick: steps, fps }));
 }
 
 async function main() {
