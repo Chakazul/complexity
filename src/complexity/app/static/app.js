@@ -612,6 +612,10 @@ async function main() {
   $("map-measure").onchange = (e) => { setMap(e.target.value); renderMapControls(); };
   $("clear-runs").onclick = () => { runRows = []; updateSidebar(); };
   $("clear-measures").onclick = () => { selectedMeasures.clear(); updateSidebar(); };
+  $("select-structural").onclick = () => {  // a preset: only the measures not peaking at noise
+    selectedMeasures = new Set(catalog.measures.filter((m) => m.peaks_at !== "randomness").map((m) => m.key));
+    updateSidebar();
+  };
   $("start").onclick = () => { start(); $("start").textContent = "Restart"; };
   $("play").onclick = () => { ws.send(JSON.stringify({ type: playing ? "pause" : "play" })); setPlaying(!playing); };
   $("step").onclick = () => ws.send(JSON.stringify({ type: "step" }));
