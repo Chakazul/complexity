@@ -116,7 +116,17 @@ function onInit(msg) {
   $("empty").style.display = "none";
 }
 
+// Frames per second actually received, over the last second of ticks.
+let tickTimes = [];
+function updateFps() {
+  const now = performance.now();
+  tickTimes = tickTimes.filter((t) => now - t < 1000);
+  $("fps-now").textContent = `${playing ? tickTimes.length : 0} FPS`;
+}
+
 function onTick(msg) {
+  tickTimes.push(performance.now());
+  updateFps();
   history.t.push(msg.t);
   msg.runs.forEach((r, i) => {
     for (const k of active.measures) history.v[k][i].push(k in r.values ? r.values[k] : null);
@@ -332,6 +342,7 @@ async function main() {
   connect();
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderRuns(); active && (buildViews(), buildCharts()); dirty = true; });
   requestAnimationFrame(frameLoop);
+  setInterval(updateFps, 250);
 }
 
 main();

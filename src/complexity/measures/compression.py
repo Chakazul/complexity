@@ -87,17 +87,6 @@ def video_bits(name: str, frames) -> float:
 
 
 @register_measure
-class PNGSize(Measure):
-    key = "png"
-    name = "Image compression (PNG)"
-    unit = "bits/cell"
-    description = "PNG size of the current frame (DEFLATE with 2-D row filters)."
-
-    def compute(self, frames) -> float:
-        return image_bits("png", frames[-1])
-
-
-@register_measure
 class LZMAFrame(Measure):
     key = "lzma"
     name = "Image compression (LZMA)"
@@ -106,6 +95,17 @@ class LZMAFrame(Measure):
 
     def compute(self, frames) -> float:
         return image_bits("lzma", frames[-1])
+
+
+@register_measure
+class PNGSize(Measure):
+    key = "png"
+    name = "Image compression (PNG)"
+    unit = "bits/cell"
+    description = "PNG size of the current frame (DEFLATE with 2-D row filters)."
+
+    def compute(self, frames) -> float:
+        return image_bits("png", frames[-1])
 
 
 @register_measure

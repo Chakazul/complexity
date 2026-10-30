@@ -41,6 +41,13 @@ def advance(system: System, state: State, steps) -> State:
     return lax.fori_loop(0, steps, lambda _, s: system.step(s), state)
 
 
+@partial(jax.jit, static_argnums=0)
+def step_observe(system: System, state: State) -> tuple[State, jax.Array]:
+    """One step and its frame. A Python loop over this never recompiles per step count."""
+    state = system.step(state)
+    return state, system.observe(state)
+
+
 def init_batch(system: System, pattern: str, size: tuple[int, int], rngs: jax.Array) -> State:
     """States for a batch of seeds, stacked on a leading axis (e.g. random soups)."""
     return jax.vmap(lambda rng: system.init(pattern, size, rng))(rngs)
