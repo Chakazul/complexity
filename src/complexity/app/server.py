@@ -62,7 +62,7 @@ def catalog():
              "temporal": cls.temporal, "backend": cls.backend,
              "map": cls.map, "map_unit": cls.map_unit or cls.unit,
              "needs_discrete": cls.needs_discrete, "peaks_at": cls.peaks_at,
-             "params": cls().config(),
+             "params": cls().config(), "choices": cls.choices, "applies_to": cls.applies_to,
              "accepts": [s for s, probe in probes.items() if cls().accepts(probe)]}
             for key, cls in registry.measures().items()
         ],

@@ -96,8 +96,73 @@ function buildMeasureList() {
     });
     el.title = m.description;
     measureItems.set(m.key, el);
-    box.append(el);
+    const row = document.createElement("div");
+    row.className = "pick-row";
+    row.append(el);
+    box.append(row);
+    if (Object.keys(m.params).length) buildSettings(m, row);
   }
+}
+
+// ---------- measure settings ----------
+// A ⚙ beside a measure opens its parameters (window, levels, offset, component, ...).
+// Changed values are kept per browser and sent with the next Start; the server checks them.
+
+let measureParams = {};  // key -> {param: value}, only values that differ from the default
+try { measureParams = JSON.parse(localStorage.getItem("measureParams") || "{}"); } catch {}
+
+const PARAM_HELP = {
+  window: "frames in the sliding window", n_levels: "symbols per cell (empty: auto, the system's states or the measure's default)",
+  offset: "distance to the neighbour", component: "which part of the decomposition to report",
+};
+
+function buildSettings(m, row) {
+  const gear = document.createElement("button");
+  gear.type = "button"; gear.className = "pick-gear"; gear.textContent = "⚙";
+  gear.title = "Settings"; gear.setAttribute("aria-label", `Settings of ${m.name}`);
+  gear.setAttribute("aria-expanded", "false");
+  const panel = document.createElement("div");
+  panel.className = "pick-settings"; panel.hidden = true;
+  for (const [name, def] of Object.entries(m.params)) {
+    const label = document.createElement("label");
+    label.textContent = name.replace(/_/g, " ");
+    label.title = PARAM_HELP[name] || "";
+    let input;
+    if (m.choices[name]) {
+      input = document.createElement("select");
+      for (const c of m.choices[name]) input.add(new Option(c.replace(/_/g, " "), c));
+    } else if (typeof def === "boolean") {
+      input = document.createElement("input"); input.type = "checkbox";
+    } else {
+      input = document.createElement("input"); input.type = "number";
+      input.step = Number.isInteger(def) || def === null ? "1" : "any";
+      if (def === null) input.placeholder = "auto";
+    }
+    const current = measureParams[m.key]?.[name] ?? def;
+    if (input.type === "checkbox") input.checked = current; else input.value = current ?? "";
+    input.onchange = () => {
+      const v = input.type === "checkbox" ? input.checked
+        : input.tagName === "SELECT" ? input.value
+        : input.value === "" ? null : Number(input.value);
+      const p = (measureParams[m.key] ||= {});
+      if (v === def) delete p[name]; else p[name] = v;
+      if (!Object.keys(p).length) delete measureParams[m.key];
+      try { localStorage.setItem("measureParams", JSON.stringify(measureParams)); } catch {}
+      gear.classList.toggle("modified", !!measureParams[m.key]);
+    };
+    label.append(input);
+    panel.append(label);
+  }
+  const note = document.createElement("span");
+  note.className = "hint"; note.textContent = "applies at the next Start";
+  panel.append(note);
+  gear.classList.toggle("modified", !!measureParams[m.key]);
+  gear.onclick = () => {
+    panel.hidden = !panel.hidden;
+    gear.setAttribute("aria-expanded", !panel.hidden);
+  };
+  row.append(gear);
+  row.after(panel);
 }
 
 function toggleRun(system, pattern) {
@@ -130,7 +195,12 @@ function updateSidebar() {
     el.classList.toggle("selected", on);
     el.classList.toggle("na", !applies);
     el.setAttribute("aria-pressed", on);
-    el.title = m.description + (applies ? "" : "\nNot applicable to the selected systems.");
+    // say which selected systems a measure skips, and what it needs
+    const skips = [...new Set(runRows.filter((r) => !m.accepts.includes(r.system))
+      .map((r) => systemByKey(r.system).name))];
+    const needs = m.applies_to ? ` It applies to ${m.applies_to}.` : "";
+    el.title = m.description + (skips.length
+      ? `\n\n${applies ? "Skipped for" : "Not applicable to"} ${skips.join(", ")}.${needs}` : "");
   }
   if (!active) renderMapControls();  // before a start, the menu follows the selection
 }
@@ -177,6 +247,10 @@ function start() {
   pending = { measures, slots: runRows.map((r) => r.slot) };
   ws.send(JSON.stringify({
     type: "start", id: sessionId, measures,
+    measure_params: Object.fromEntries(measures.filter((k) => measureParams[k]).map((k) => {
+      const known = catalog.measures.find((m) => m.key === k).params;  // drop stale saved names
+      return [k, Object.fromEntries(Object.entries(measureParams[k]).filter(([n]) => n in known))];
+    })),
     runs: runRows.map((r) => ({ system: r.system, pattern: r.pattern, size: [size, size] })),
   }));
 }

@@ -610,7 +610,7 @@ then polishing and sharing.
 - [x] Survival tests for each creature; Life goldens for the new
       spaceships (displacement per period) and oscillators (period)
 
-### M3 — Measures (§5.2, §5.3)
+### M3 — Measures (§5.2, §5.3) ✅
 - [x] `Measure` gains `backend`, `needs_discrete`, `ctx`, `peaks_at` and tunable `params`;
       orientation documented in the base class; `RuleMeasure` interface for rule-level
       measures
@@ -630,12 +630,12 @@ then polishing and sharing.
       fields (TE, SC, block entropy, Lyapunov separation) or per tile (compression, LZC,
       PID, FID); shown overlaid on the frame or side by side
 - [x] Overlay or side by side: side by side (Bert, 2026-10-30)
-- [ ] Measure-expectation tests from §6 for every measure; `warming_up` flag for window
-      measures (done so far: orientation and structure tests over all registered measures,
-      TE baselines, per-measure tests for the §5.4 measures; `warming_up` sent per tick and
-      drawn faint in the UI)
-- [ ] UI: new measures in the list, grouped by taxonomy; per-measure parameter controls
-      (window, `n_levels`, `offset`); compatibility hints (why a measure is greyed out)
+- [x] Measure-expectation tests from §6 for every measure (orientation and structure tests
+      over all registered measures, plus per-measure tests); `warming_up` flag for window
+      measures, sent per tick and drawn faint in the UI
+- [x] UI: measures grouped (by kind, with taxonomy tags and popups); per-measure settings
+      behind a ⚙ (typed and checked by the server, kept per browser, applied at the next
+      Start); compatibility hints name the skipped systems and what the measure needs
 
 ### M3b — Multi-scale structural complexity (§5.8), after multi-channel Lenia (M4)
 - [ ] Reference cases: empty and noise (low); goo-like structures (self-organizing, one
@@ -709,3 +709,7 @@ then polishing and sharing.
   patterns from the original Lenia catalogue, center cropping for oversized patterns,
   tests. Integer Lenia split from `lenia` into its own system, `integer_lenia`. Lenia is
   now the first system; the UI starts with Lenia Orbium and Life glider.
+- 2026-10-30 — M3 done: noise baselines and 20 measures (all of the PDF's except TD, IIT,
+  AT; ITI in two forms), heatmaps for the 11 with spatial granularity, rule-level measures
+  cached per rule, per-measure settings in the UI. Open: ITI features on the Aquarium
+  (M3b), multi-scale structural complexity (M3b, after multi-channel Lenia in M4).

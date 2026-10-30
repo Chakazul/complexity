@@ -116,6 +116,7 @@ class LocalIndividuality(Measure):
     max_levels = 4
     radius = 3
     params = ("component", "window", "radius", "n_levels")
+    choices = {"component": COMPONENTS}
     scope = "local"
     temporal = "dynamic"
     map = "local"
@@ -196,6 +197,7 @@ class FeatureIndividuality(Measure):
     levels_q = 4
     shuffles = 20
     params = ("component", "window", "threshold", "levels_q", "shuffles")
+    choices = {"component": COMPONENTS}
     scope = "local"
     temporal = "dynamic"
 

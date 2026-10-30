@@ -112,6 +112,7 @@ class PartialInformation(_Decomposition):
     )
     component = "synergy"
     params = ("component", "window", "offset", "n_levels")
+    choices = {"component": ("synergy", "redundancy", "unique_self", "unique_neighbour")}
 
     def decompose(self, counts):
         return pid(counts)
@@ -130,6 +131,7 @@ class FunctionalDecomposition(_Decomposition):
     )
     component = "synergy"
     params = ("component", "window", "offset", "n_levels")
+    choices = {"component": ("synergy", "self", "neighbour")}
 
     def decompose(self, counts):
         return fid(counts)

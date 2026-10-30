@@ -67,6 +67,8 @@ class Measure(ABC):
     n_levels: int | None = None  # None: n_states if discrete, else DEFAULT_LEVELS
     peaks_at: str = "randomness"  # "randomness", "structure" or "mixed"
     params: tuple[str, ...] = ()
+    choices: dict[str, tuple[str, ...]] = {}  # allowed values of text parameters
+    applies_to: str = ""  # which systems, if not all: shown when a measure is greyed out
     # Classification from Complexity_Measure.pdf §1.1-1.2, shown in the UI.
     granularity: str = "pattern"  # "pattern", "rule" or "system"
     scope: str = "global"  # "local" or "global"
@@ -76,7 +78,30 @@ class Measure(ABC):
         for k, v in params.items():
             if k not in self.params:
                 raise ValueError(f"measure {self.key!r} has no parameter {k!r}")
-            setattr(self, k, v)
+            setattr(self, k, self._cast(k, v))
+
+    def _cast(self, name: str, value):
+        """`value` as the parameter's type (the UI sends text and numbers), checked: numbers
+        positive, levels at least 2, text one of `choices`. None keeps an "auto" default."""
+        default = getattr(type(self), name)
+        if value is None or value == "":
+            if default is None:
+                return None
+            raise ValueError(f"{self.key}: {name} needs a value")
+        if name in self.choices:
+            if value not in self.choices[name]:
+                raise ValueError(f"{self.key}: {name} must be one of {', '.join(self.choices[name])}")
+            return value
+        if isinstance(default, bool):
+            return value if isinstance(value, bool) else str(value).lower() in ("1", "true", "yes", "on")
+        kind = int if default is None else type(default)  # None: n_levels, an int
+        try:
+            value = kind(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{self.key}: {name} must be a{'n integer' if kind is int else ' number'}") from None
+        if value <= 0 or (name == "n_levels" and value < 2):
+            raise ValueError(f"{self.key}: {name} must be {'at least 2' if name == 'n_levels' else 'positive'}")
+        return value
 
     def config(self) -> dict:
         """Current parameter values, recorded with results."""

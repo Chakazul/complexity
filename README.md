@@ -22,11 +22,13 @@ The design and the milestone checklist are in **[PLAN.md](PLAN.md)**. In brief:
 - **M2 (done):** ten creatures from the original Lenia catalogue (Gyrorbium, Scutium,
   Helicium, Geminium, Paraptera, Tetralapillium, Kronium, Hexadentium, Amoebium), and
   16 Game of Life patterns from the same catalogue.
-- **M3 (in progress):** most measures from the PDF. Done: noise baselines, transfer
+- **M3 (done):** most measures from the PDF. Done: noise baselines, transfer
   entropy, LZC, block entropy, fractal dimension, effective complexity, logical depth,
   Lyapunov exponent, statistical complexity, PID, FID, and the rule-level transient
-  length, Langton's λ and functional information. Next: individuality (ITI), then
-  per-measure parameter controls in the UI.
+  length, Langton's λ and functional information, individuality (ITI) in two forms;
+  heatmaps and per-measure settings in the UI.
+- **M3b:** multi-scale structural complexity, with multi-channel Lenia's Aquarium as the
+  reference case.
 - **M4:** more systems: elementary CA, other CA rules, particle systems.
 - **M5:** polishing and sharing: UI, batch experiments and a results site, CI,
   contributor guide, hosted demo.
@@ -63,6 +65,10 @@ by side, each outlined in its series colour; click measures in the Measures list
 local fields for transfer entropy, statistical complexity, block entropy and the Lyapunov
 twin's divergence, per tile for compression, LZC, PID and FID, drawn next to each frame
 with a scale shared across runs.
+
+A ⚙ beside a measure opens its settings (window, levels, offset, component, …); changes
+apply at the next Start and are remembered in the browser. Hover a greyed-out measure to
+see which systems it skips and why.
 
 Each measure shows its current value per run in the table
 and its history as a live chart (hover for values). Measures that do not apply to a

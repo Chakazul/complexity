@@ -354,3 +354,14 @@ def test_individuality_measures():
     run.step(20)
     assert run.measure()[0]["iti_local"] == pytest.approx(0, abs=1e-9)  # nothing else around
     assert run.map("iti_local").shape == (32, 32)
+
+
+def test_parameters_from_the_ui_are_typed_and_checked():
+    m = registry.make_measure("transfer_entropy", window="8", offset=2.0, n_levels="", correct_bias="false")
+    assert m.config() == {"window": 8, "offset": 2, "n_levels": None, "correct_bias": False}
+    assert registry.make_measure("pid", component="redundancy").component == "redundancy"
+    for key, bad in [("transfer_entropy", {"window": 0}), ("transfer_entropy", {"n_levels": 1}),
+                     ("transfer_entropy", {"offset": "x"}), ("pid", {"component": "bogus"}),
+                     ("lzma", {"window": 4}), ("iti_local", {"window": None})]:
+        with pytest.raises(ValueError):
+            registry.make_measure(key, **bad)

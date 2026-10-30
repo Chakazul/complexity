@@ -84,6 +84,7 @@ class Lyapunov(Measure):
     steps = 64
     burn_in = 8
     params = ("steps", "burn_in")
+    applies_to = "systems that can perturb their state (all built-in ones)"
     temporal = "dynamic"
 
     def accepts(self, system) -> bool:

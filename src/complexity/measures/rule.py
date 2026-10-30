@@ -93,6 +93,7 @@ class LangtonLambda(RuleMeasure):
     )
     size = 256
     params = ("size",)
+    applies_to = "discrete rules (Game of Life, Integer Lenia)"
 
     def accepts(self, system) -> bool:
         return (type(system).uniform is not System.uniform
@@ -128,6 +129,7 @@ class FunctionalInformation(RuleMeasure):
     steps = 500
     size = 128
     params = ("samples", "spread", "steps", "size")
+    applies_to = "Lenia and Integer Lenia (it varies their growth parameters m, s)"
     temporal = "dynamic"
 
     def accepts(self, system) -> bool:
