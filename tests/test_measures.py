@@ -17,7 +17,7 @@ def test_video_compression_rewards_repetition():
     rng = np.random.default_rng(0)
     still = [rng.random((64, 64), dtype=np.float32)] * 16
     fresh = [rng.random((64, 64), dtype=np.float32) for _ in range(16)]
-    for key in ("video_lzma", "video_h264", "video_min"):
+    for key in ("video_lzma", "video_h264"):
         m = registry.make_measure(key)
         assert m.compute(still) < 0.5 * m.compute(fresh), key
 
@@ -28,15 +28,6 @@ def test_run_measures_every_registered_pair():
         run.step(3)
         values, _ = run.measure()
         assert set(values) == set(registry.measures()) and all(np.isfinite(list(values.values())))
-
-
-def test_best_of_is_the_minimum_of_its_compressors():
-    run = Run(RunSpec("lenia", "orbium", (64, 64)), ["png", "lzma", "image_min",
-                                                      "video_lzma", "video_h264", "video_min"])
-    run.step(20)
-    v, _ = run.measure()
-    assert v["image_min"] == min(v["png"], v["lzma"])
-    assert v["video_min"] == min(v["video_lzma"], v["video_h264"])
 
 
 def test_novelty_separates_static_from_fresh_frames():

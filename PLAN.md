@@ -212,18 +212,16 @@ are quantized to 8-bit gray first (`round(255 · v)`).
 | `lzma` | 1 | 1-D dictionary compression of raw bytes |
 | `video_lzma` | 16 | temporal repeats compress away |
 | `video_h264` | 16 | lossless x264 (qp 0); motion compensation for translating structures |
-| `image_min` | 1 | best of PNG, LZMA: the tightest per-frame upper bound |
-| `video_min` | 16 | best of the video compressors |
 | `novelty` | 16 | best video ÷ mean best image bits per frame: the fraction of a frame that is new (unit: ratio) |
 
 All run on the host (C libraries), so their frames are transferred from the device.
-Compressed sizes are cached per frame (and per window), so the composite measures and
+Compressed sizes are cached per frame (and per window), so the novelty measure and
 the sliding window do not recompress anything.
 
 **Findings so far** (`scripts/compression_by_grid_size.py`, step 100, grids 128²–512²):
 - LZMA beats PNG on every run and size, including Lenia random soup, which fills the
   grid. PNG's 2-D prediction does not make up for its weaker entropy coder here, so
-  `image_min` is almost always LZMA.
+  the best image compressor is almost always LZMA.
 - Video LZMA beats H.264 everywhere. The gap narrows for continuous Lenia (soup at 512²:
   1.305 vs 1.318 bits/cell/frame). Open question: does H.264 win for larger-R (smoother)
   creatures or longer windows?
@@ -316,7 +314,7 @@ for rule-level analysis of ECA / outer-totalistic rules, ITI (Krakauer).
 - [x] FastAPI + WebSocket server, browser UI (≤ 4 runs, live table and charts, light/dark)
 - [x] `complexity serve | list | run` CLI with CSV output
 - [x] Tests: GoL goldens, Orbium survival, compression sanity
-- [x] Composite compression measures: `image_min`, `video_min`, `novelty`; per-frame cache;
+- [x] Composite compression measure `novelty` (best-of `image_min`/`video_min` dropped); per-frame cache;
       grid-size comparison (`scripts/compression_by_grid_size.py`, findings in §5.1)
 
 ### M1 — JAX engine

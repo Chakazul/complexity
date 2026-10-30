@@ -109,17 +109,6 @@ class LZMAFrame(Measure):
 
 
 @register_measure
-class ImageMin(Measure):
-    key = "image_min"
-    name = "Image compression (best of PNG, LZMA)"
-    unit = "bits/cell"
-    description = "Smallest of the image compressors: the tightest upper bound per frame."
-
-    def compute(self, frames) -> float:
-        return min(image_bits(name, frames[-1]) for name in IMAGE)
-
-
-@register_measure
 class LZMAVideo(Measure):
     key = "video_lzma"
     name = "Video compression (LZMA)"
@@ -146,19 +135,6 @@ class H264Video(Measure):
 
     def compute(self, frames) -> float:
         return video_bits("video_h264", frames)
-
-
-@register_measure
-class VideoMin(Measure):
-    key = "video_min"
-    name = "Video compression (best of LZMA, H.264)"
-    unit = "bits/cell/frame"
-    description = "Smallest of the video compressors: the tightest upper bound per frame."
-    window = 16
-    temporal = "dynamic"
-
-    def compute(self, frames) -> float:
-        return min(video_bits(name, frames) for name in VIDEO)
 
 
 @register_measure
