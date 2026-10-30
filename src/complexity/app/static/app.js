@@ -86,9 +86,10 @@ function buildMeasureList() {
       h.className = "pick-group"; h.textContent = group;
       box.append(h);
     }
-    const meta = [m.granularity, m.scope, m.temporal].map((t) => `<span class="tag">${t}</span>`).join("") +
+    const kind = PEAKS[m.peaks_at];
+    const meta = [kind.tag, m.granularity, m.scope, m.temporal].map((t) => `<span class="tag">${t}</span>`).join("") +
       ` ${m.unit}${m.window > 1 ? ` · window ${m.window}` : ""}`;
-    const el = pickItem(m.name, meta, () => {
+    const el = pickItem(`${kind.icon}${m.name}`, meta, () => {
       selectedMeasures.has(m.key) ? selectedMeasures.delete(m.key) : selectedMeasures.add(m.key);
       updateSidebar();
     });
@@ -131,6 +132,14 @@ function updateSidebar() {
     el.title = m.description + (applies ? "" : "\nNot applicable to the selected systems.");
   }
 }
+
+// Where a measure is highest (PLAN.md §2): randomness measures peak at noise, structural ones
+// are low for both order and noise. Logical depth's proxy does neither reliably.
+const PEAKS = {
+  randomness: { icon: "🎲 ", tag: "randomness" },
+  structure: { icon: "🌿 ", tag: "structural" },
+  mixed: { icon: "", tag: "mixed" },
+};
 
 // Off by default: LZMA compresses tighter than PNG and H.264 on every run measured so far.
 const UNTICKED = new Set(["png", "video_h264"]);
