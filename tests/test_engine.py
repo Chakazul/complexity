@@ -16,7 +16,7 @@ def test_rollout_observes_every_k_steps():
 
 
 def test_rollout_batch_matches_single_rollouts():
-    lenia = registry.make_system("lenia")
+    lenia = registry.make_system("integer_lenia")
     keys = jax.random.split(jax.random.key(0), 3)
     states = engine.init_batch(lenia, "random", (32, 32), keys)
     _, frames = engine.rollout_batch(lenia, states, 10, 5)

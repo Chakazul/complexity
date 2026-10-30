@@ -9,7 +9,7 @@ import jax
 
 from complexity import engine, registry
 
-RUNS = [("life", "random"), ("lenia", "random"), ("lenia", "random_continuous")]
+RUNS = [("life", "random"), ("integer_lenia", "random"), ("lenia", "random")]
 print(f"device: {jax.devices()[0]}")
 print(f"{'run':<26}" + "".join(f"{n:>9}²" for n in (128, 256, 512)) + "   (steps/s)")
 for key, pattern in RUNS:

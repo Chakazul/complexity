@@ -9,6 +9,8 @@ import numpy_reference as ref
 import pytest
 
 from complexity import engine, registry
+from complexity.systems.base import place_center
+from complexity.systems.lenia import CATALOGUE
 from complexity.vendor.lenium import model
 
 KEY = jax.random.key(0)
@@ -40,21 +42,35 @@ def life():
     return registry.make_system("life")
 
 
-def test_glider_translates_after_four_steps(life):
-    start = life.init("glider", (32, 32), KEY)
-    assert np.array_equal(jnp.roll(start, (1, 1), (0, 1)), run(life, start, 4))
-
-
-def test_pulsar_has_period_three(life):
-    start = life.init("pulsar", (32, 32), KEY)
-    assert not np.array_equal(start, run(life, start, 1))
-    assert np.array_equal(start, run(life, start, 3))
-
-
 def test_gosper_gun_emits_gliders(life):
     start = life.init("gosper_glider_gun", (64, 96), KEY)
     assert start.sum() == 36
     assert run(life, start, 30).sum() == 36 + 5  # period 30: the gun plus one glider
+
+
+# (pattern, warm-up steps, period, shift per period); the catalogue spaceships start one
+# cell short of the ship and grow into it within a few steps
+PERIODIC = [
+    ("glider", 0, 4, (1, 1)), ("lwss", 8, 4, (0, 2)), ("mwss", 8, 4, (0, 2)),
+    ("hwss", 8, 4, (0, 2)), ("copperhead", 0, 10, (-1, 0)), ("weekender", 0, 7, (-2, 0)),
+    ("lobster", 0, 7, (-1, 1)), ("sir_robin", 0, 6, (-2, -1)), ("galaxy", 0, 8, (0, 0)),
+    ("pulsar", 0, 3, (0, 0)), ("star_gate", 0, 60, (0, 0)),
+]
+
+
+@pytest.mark.parametrize(("pattern", "warmup", "period", "shift"), PERIODIC)
+def test_catalogue_spaceships_and_oscillators(life, pattern, warmup, period, shift):
+    n = 256 if pattern == "star_gate" else 128
+    start = run(life, life.init(pattern, (n, n), KEY), warmup)
+    assert np.array_equal(jnp.roll(start, shift, (0, 1)), run(life, start, period))
+
+
+@pytest.mark.parametrize("pattern", ["gosper_glider_gun", "sidecar_gun", "pufferfish",
+                                     "switch_engine", "max"])
+def test_guns_puffers_and_spacefillers_grow(life, pattern):
+    n = 256 if pattern == "sidecar_gun" else 128
+    start = life.init(pattern, (n, n), KEY)
+    assert run(life, start, 100).sum() > start.sum()
 
 
 def test_life_matches_numpy_for_200_steps_of_random_soup(life):
@@ -73,12 +89,18 @@ def lenia():
     return registry.make_system("lenia")
 
 
-def test_lenia_n_states_follow_the_pattern(lenia):
-    assert lenia.n_states("min_orbium") == lenia.n_states("random") == 13
-    assert lenia.n_states("orbium") is lenia.n_states("random_continuous") is None
+@pytest.fixture
+def integer_lenia():
+    return registry.make_system("integer_lenia")
 
 
-def test_min_orbium_survives_moves_and_keeps_13_levels(lenia):
+def test_lenia_n_states_follow_the_pattern(lenia, integer_lenia):
+    assert integer_lenia.n_states("min_orbium") == integer_lenia.n_states("random") == 13
+    assert lenia.n_states("orbium") is lenia.n_states("random") is None
+
+
+def test_min_orbium_survives_moves_and_keeps_13_levels(integer_lenia):
+    lenia = integer_lenia
     state = lenia.init("min_orbium", (64, 64), KEY)
     mass0 = int(state.A.sum())
     _, frames = engine.rollout(lenia, state, 500, 50)
@@ -89,7 +111,8 @@ def test_min_orbium_survives_moves_and_keeps_13_levels(lenia):
     assert com_shift(lenia.observe(state), frames[0]) > 3
 
 
-def test_min_orbium_trajectory_is_unchanged(lenia):
+def test_min_orbium_trajectory_is_unchanged(integer_lenia):
+    lenia = integer_lenia
     """Golden from the port, which is bit-identical to the predecessor's IntegerLenia for
     1000 steps (checked against ~/github/lenium.old when porting). Guards the switch from
     vendor/lenium to `import lenium`."""
@@ -117,7 +140,7 @@ def test_integer_fft_potential_is_bit_identical_to_direct(size):
     K = model.integer_kernel(12, 12)
     fK = model.integer_kernel_fft(K, size)
     grids = [jnp.full(size, 12), jax.random.randint(KEY, size, 0, 13)]
-    lenia = registry.make_system("lenia")
+    lenia = registry.make_system("integer_lenia")
     for pattern in ("min_orbium", "random"):
         state = lenia.init(pattern, size, KEY)
         _, frames = engine.rollout(lenia, state, 200, 20)
@@ -138,3 +161,28 @@ def test_gaussian_orbium_survives_and_moves(lenia):
     # Golden mass from the port, which matches the hand-coded Lenium to ~1e-7 per step;
     # float rounding differs across devices, so not exact.
     assert abs(float(frames[-1].sum()) - 72.9739) < 1e-3
+
+
+@pytest.mark.parametrize("pattern", list(CATALOGUE))
+def test_catalogue_creatures_survive(lenia, pattern):
+    n = 256 if pattern == "amoebium_dentalis" else 128
+    state = lenia.init(pattern, (n, n), KEY)
+    mass0 = float(state.A.sum())
+    A = run(lenia, state, 500).A
+    assert 0.8 * mass0 < float(A.sum()) < 1.2 * mass0
+    assert float((A > 0.1).mean()) < 0.2  # still a creature, not a filled grid
+
+
+# ---- every system ----
+
+@pytest.mark.parametrize("system", ["life", "lenia", "integer_lenia"])
+def test_every_pattern_inits_on_a_small_grid(system):
+    sys_ = registry.make_system(system)
+    for pattern in sys_.patterns:
+        assert sys_.init(pattern, (32, 32), KEY) is not None, pattern
+
+
+def test_a_pattern_larger_than_the_grid_is_cropped_to_its_center():
+    pattern = np.arange(25).reshape(5, 5) + 1
+    grid = place_center(jnp.zeros((3, 4), jnp.int32), pattern)
+    assert np.array_equal(grid, pattern[1:4, 0:4])  # rows (5 - 3) // 2 = 1.., columns 0..

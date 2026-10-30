@@ -16,11 +16,11 @@ The design and the milestone checklist are in **[PLAN.md](PLAN.md)**. In brief:
 
 - **M0 (done):** NumPy demo — the systems and measures below, interactive UI, CLI.
 - **M1 (done):** JAX engine for GPU/TPU (CPU JAX supported), Integer Lenia with the
-  *minimum Orbium* as the default Lenia pattern.
-- **M2 (next):** ten creatures from the original Lenia catalogue (Gyrorbium, Scutium,
+  *minimum Orbium*.
+- **M2 (done):** ten creatures from the original Lenia catalogue (Gyrorbium, Scutium,
   Helicium, Geminium, Paraptera, Tetralapillium, Kronium, Hexadentium, Amoebium), and
   16 Game of Life patterns from the same catalogue.
-- **M3:** most measures from the PDF, starting with noise baselines and transfer entropy.
+- **M3 (next):** most measures from the PDF, starting with noise baselines and transfer entropy.
 - **M4:** more systems: elementary CA, other CA rules, particle systems.
 - **M5:** polishing and sharing: UI, batch experiments and a results site, CI,
   contributor guide, hosted demo.
@@ -67,10 +67,15 @@ uv run complexity run life:random --measures png,video_h264 --size 256x256 --eve
 
 | System | Patterns |
 |---|---|
-| `life` — Game of Life (discrete) | Gosper glider gun, glider, pulsar, R-pentomino, acorn, random soup |
-| `lenia` — Lenia (Integer Lenia `P = 12`, or continuous) | minimum Orbium (default, integer), random soup (integer), Orbium (continuous), random soup (continuous) |
+| `lenia` — Lenia (continuous) | Orbium (default), random soup, Gyrorbium gyrans, Scutium solidus, Helicium solidus, Hydrogeminium natans, Paraptera arcus labens, Paraptera cavus furiosus, Tetralapillium metamorpha, Kronium solidus, Hexadentium rotans, Amoebium dentalis |
+| `integer_lenia` — Integer Lenia (`P = 12`, 13 states) | minimum Orbium (default), random soup |
+| `life` — Game of Life (discrete) | glider (default), Gosper glider gun, lightweight / middleweight / heavyweight spaceships, R-pentomino, Copperhead, Galaxy, Weekender, Lobster, Sir Robin, Pufferfish, Switch engine, Max, Sidecar gun, Star gate, pulsar, acorn, random soup |
 
-Lenia uses Gaussian kernel shells and growth, the standard for experiments here.
+Lenia uses Gaussian kernel shells and growth, the standard for experiments here. The
+named creatures and Life patterns come from the original Lenia catalogue
+(`src/complexity/vendor/lenia/`); the creatures were found with a bump kernel core but
+survive on the Gaussian one. A pattern larger than the grid is cropped to its central part;
+Amoebium, Sidecar gun and Star gate need 256² to be whole.
 
 The minimum Orbium is an Integer Lenia glider: 13 cell states (0..12), integer kernel,
 potential and growth, so it suits both discrete measures (13 symbols) and continuous ones.
@@ -83,8 +88,8 @@ HX 370, 24 threads / NVIDIA RTX 5070 Ti Laptop, JAX 0.12):
 | Run | CPU 128² | CPU 256² | CPU 512² | GPU 128² | GPU 256² | GPU 512² |
 |---|---|---|---|---|---|---|
 | `life:random` | 268,058 | 76,348 | 12,531 | 9,773 | 9,819 | 9,887 |
-| `lenia:random` (integer) | 20,082 | 1,343 | 861 | 6,937 | 6,968 | 7,459 |
-| `lenia:random_continuous` | 20,130 | 1,370 | 921 | 6,547 | 7,177 | 7,338 |
+| `integer_lenia:random` | 20,082 | 1,343 | 861 | 6,937 | 6,968 | 7,459 |
+| `lenia:random` | 20,130 | 1,370 | 921 | 6,547 | 7,177 | 7,338 |
 
 On the GPU every step costs about the same up to 512² (the step is launch-bound); the CPU
 wins on small grids. Either way the host-side compression measures, not the simulation,
@@ -166,6 +171,7 @@ src/complexity/
   systems/               base.py, life.py, lenia.py (JAX)
   measures/              base.py, compression.py
   vendor/lenium/         code and data copied from Lenium, with source notes
+  vendor/lenia/          patterns and RLE decoder from the original Lenia, with source notes
   app/server.py          FastAPI + WebSocket streaming
   app/static/            browser UI (no build step, no JS dependencies)
 ```
@@ -178,4 +184,6 @@ published yet. The parts needed (patterns `orbium` and `min-orbium`, Lenia and I
 Lenia) are copied into [src/complexity/vendor/lenium/](src/complexity/vendor/lenium/),
 whose README records where each file came from. Integer Lenia is bit-identical to Lenium
 for 1000 steps of `min_orbium`. Once Lenium is published, the directory is replaced by `import lenium`, and
-the golden tests check that behaviour is unchanged.
+the golden tests check that behaviour is unchanged. The other creatures and the Life
+patterns come from the original Lenia catalogue, copied into
+[src/complexity/vendor/lenia/](src/complexity/vendor/lenia/) with its RLE decoder.

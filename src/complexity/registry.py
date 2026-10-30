@@ -12,8 +12,8 @@ SYSTEMS: dict[str, type] = {}
 MEASURES: dict[str, type] = {}
 
 _BUILTIN_MODULES = (
-    "complexity.systems.life",
     "complexity.systems.lenia",
+    "complexity.systems.life",
     "complexity.measures.compression",
 )
 _loaded = False

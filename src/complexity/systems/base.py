@@ -58,8 +58,11 @@ class System(ABC):
 
 
 def place_center(grid: jax.Array, pattern) -> jax.Array:
-    """`grid` with `pattern` written into its center."""
+    """`grid` with `pattern` written into its center. A pattern larger than the grid is
+    cropped to its central part."""
     pattern = jnp.asarray(pattern, grid.dtype)
+    (h, H), (w, W) = zip(pattern.shape, grid.shape)
+    pattern = pattern[max(0, (h - H) // 2) :][:H, max(0, (w - W) // 2) :][:, :W]
     h, w = pattern.shape
     y, x = (grid.shape[0] - h) // 2, (grid.shape[1] - w) // 2
     return grid.at[y : y + h, x : x + w].set(pattern)

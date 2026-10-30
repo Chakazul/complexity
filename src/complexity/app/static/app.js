@@ -57,6 +57,7 @@ function renderRuns() {
   renderMeasures();
 }
 
+
 function addRun(system, pattern) {
   const used = new Set(runRows.map((r) => r.slot));
   const slot = [0, 1, 2, 3].find((s) => !used.has(s));
@@ -335,8 +336,8 @@ function sendSpeed() {
 
 async function main() {
   catalog = await (await fetch("/api/catalog")).json();
-  addRun("life", "gosper_glider_gun");
   addRun("lenia", "orbium");
+  addRun("life", "glider");
   renderRuns();
   $("add-run").onclick = () => { addRun("life", "random"); renderRuns(); };
   $("start").onclick = () => { start(); $("start").textContent = "Restart"; };

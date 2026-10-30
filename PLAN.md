@@ -134,37 +134,41 @@ the online demo. A static results site (GitHub Pages) is generated from `results
 
 ### 4.1 Game of Life — `life`
 Conway B3/S23 on a torus, `n_states = 2`. Step = sum of 8 rolled copies, in JAX.
-Patterns: Gosper glider gun, glider, pulsar (period 3), R-pentomino, acorn, random soup.
+Patterns: the 16 catalogue patterns below, pulsar (period 3), acorn, random soup.
 
-**Catalogue patterns (M2).** The last 16 entries of the Lenia catalogue
+**Catalogue patterns (M2, done).** The last 16 entries of the Lenia catalogue
 (`animals.json` [598:614]) are Life patterns, stored in Lenia as `kn = 4` rules. Their
-cells are standard Life RLE, so the existing decoder in `life.py` reads them as-is:
+cells are standard Life RLE, decoded by the vendored Lenia RLE decoder (§4.2):
 
 | Pattern | Kind | Cells |
 |---|---|---|
 | Glider | diagonal c/4 | 3×3 |
-| Lightweight / middleweight / heavyweight spaceship | orthogonal c/2 | 4×5, 4×6, 4×7 |
+| Lightweight / middleweight / heavyweight spaceship | orthogonal c/2; stored one cell short, they grow into the ship in a few steps | 4×5, 4×6, 4×7 |
 | Glider gun (Gosper) | gun | 9×36 |
 | R-pentomino | methuselah, 1103 steps | 3×3 |
 | Copperhead | orthogonal c/10 | 13×11 |
 | Galaxy | oscillator, period 8 | 9×9 |
 | Weekender | orthogonal 2c/7 | 11×16 |
 | Lobster | diagonal c/7 | 26×26 |
-| Sir Robin | oblique (2,1)c/6 | 77×31 |
+| Sir Robin | oblique (2,1)c/6 | 79×31 |
 | Pufferfish | puffer c/2 | 12×15 |
 | Switch engine | puffer c/12 | 4×16 |
 | Max | spacefiller | 27×27 |
 | Sidecar gun | gun | 142×213 |
-| Star gate | oscillator | 122×155 |
+| Star gate | oscillator, period 60 | 126×155 |
 
-Glider, Gosper gun and R-pentomino already exist; keep the current keys and check the
-cells match. Pulsar, acorn and random soup stay. Sir Robin needs ≥ 128²; Sidecar gun and
-Star gate need 256² (`min_size`, as for the Lenia creatures). On a torus, puffers and
-spacefillers wrap around and eventually collide with their own output; that is expected.
+Glider and Gosper gun are cell-for-cell the earlier ones; the R-pentomino is the earlier
+one rotated or mirrored. They keep their keys; the glider is the default Life pattern.
+Patterns are not restricted by grid size: one larger than the grid is cropped to its
+central part (so Sir Robin needs 128² and Sidecar gun and Star gate 256² to be whole). On a
+torus, puffers and spacefillers wrap around and eventually collide with their own output;
+that is expected.
 
-### 4.2 Lenia — `lenia`
-One system covering continuous and Integer Lenia via the quantization level `P`
-(`P = 0` → continuous, `n_states = None`; `P > 0` → `n_states = P + 1`).
+### 4.2 Lenia — `lenia` and `integer_lenia`
+Two systems sharing one model; the pattern's quantization level `P` selects the variant
+(`P = 0` → continuous, `n_states = None`; `P > 0` → `n_states = P + 1`). `lenia` holds the
+continuous patterns (Orbium, its random soup, the catalogue creatures); `integer_lenia`
+holds the minimum Orbium and its random soup. They were one system until 2026-10-30.
 
 **Base library: the hand-coded Lenium** (`~/github/lenium.old`, commit `9acb864`, identical
 to `~/github/lenia-ref/code/lenium`). `~/github/lenium` is a newer, agent-written rewrite
@@ -173,7 +177,7 @@ experiments here, unless an experiment says otherwise: kernel rings
 `bell(D mod 1, 0.5, 0.15)`, growth `2·bell(U, m, s) − 1`, with
 `bell(x, m, s) = exp(-((x − m)/s)² / 2)`.
 
-- **Default pattern: minimum Orbium** (`min_orbium`): Integer Lenia, `R = 12, T = 10,
+- **Integer Lenia's default pattern: minimum Orbium** (`min_orbium`): `R = 12, T = 10,
   P = 12`, one ring (`b = [1]`), `m = 0.15, s = 0.015`, Gaussian kernel shell and growth,
   integer cells `0..12`. Its 13 exact levels make it usable by both discrete measures
   (13 symbols) and continuous ones.
@@ -196,9 +200,9 @@ experiments here, unless an experiment says otherwise: kernel rings
   - A float approximation (rounding only the state) was prototyped here. On 64²,
     `min_orbium` survived 500 steps with stable mass, exactly 13 levels, and movement.
     The faithful port must reproduce at least that; the golden tests are set from the port.
-- Other patterns: random soup at `P = 12`, and the continuous Orbium (`P = 0`) of the
+- Other patterns: random soup at `P = 12` (`integer_lenia:random`), and the continuous Orbium (`P = 0`) of the
   hand-coded Lenium (`patterns["orbium"]`, Gaussian, `R = 13`), with its continuous random
-  soup (`random_continuous`). Continuous Lenia is ported from the hand-coded `Lenia` class.
+  soup (`lenia:random`, formerly `random_continuous`). Continuous Lenia is ported from the hand-coded `Lenia` class.
   It replaced M0's polynomial Orbium (2026-10-29), so the M0 NumPy Lenia parity test was
   dropped.
 - Patterns are centered at `(N − n) // 2`, as for Life; the predecessor uses
@@ -211,7 +215,7 @@ experiments here, unless an experiment says otherwise: kernel rings
   vendored code with `import lenium` (add the dependency, delete `vendor/lenium/`, and keep
   the golden tests as the check that behaviour is unchanged).
 
-**Creature patterns (M2).** Ten continuous creatures from the original Lenia catalogue,
+**Creature patterns (M2, done).** Ten continuous creatures from the original Lenia catalogue,
 `~/github/lenia-ref/code/Lenia/Python/animals.json` (614 entries; the Python `LeniaND.py`
 is the reference implementation). Where the request named only a genus, the species below
 is a proposal (the genus's first catalogue entry, or its best-known one):
@@ -227,7 +231,7 @@ is a proposal (the genus's first catalogue entry, or its best-known one):
 | Tetralapillium metamorpha | 2L4m | 18 | 1, 1/2 | 0.2 | 0.022 | 22×23 | second of two entries; the first dies by step 750 on either kernel core |
 | Kronium solidus | K4s | 18 | 1, 1/3 | 0.24 | 0.029 | 23×23 | genus pick (46 entries) |
 | Hexadentium rotans | 2D6r | 18 | 1, 3/4 | 0.27 | 0.039 | 35×35 | genus pick |
-| Amoebium dentalis | 3Ad | 27 | 1, 5/6, 1/3 | 0.28 | 0.031 | 70×67 | genus pick; needs ≥ 256² |
+| Amoebium dentalis | 3Ad | 27 | 1, 5/6, 1/3 | 0.28 | 0.031 | 70×67 | genus pick; 256² to be whole and roomy |
 
 All have `T = 10`, `kn = 1`, `gn = 1`. What adding them takes:
 - **Kernel core.** `kn = 1` is the original *exponential bump* core,
@@ -237,15 +241,19 @@ All have `T = 10`, `kn = 1`, `gn = 1`. What adding them takes:
   on the bump core. So no kernel-core parameter is needed. `gn = 1` is the Gaussian growth
   already in use; ring weights `b` (fractions) and the radius convention (`D = dist / R`,
   ring `⌊D · len(b)⌋`) already match.
-- **RLE decoder.** Cells are RLE strings, so port `Board.rle2arr` / `ch2val` from
-  `LeniaND.py` (2-D only), with its source noted. The decoder vendored in `1588585` came
-  from the agent rewrite and is not reused.
-- **Grid size.** A creature needs a grid of several kernel diameters; record a minimum
-  size per pattern (`min_size`), and have the UI raise the grid size (or warn) when it is
-  too small. Amoebium (R = 27) needs 256².
-- **Tests.** Each creature survives 500 steps at its minimum size: mass stays within
-  ±20 %, and it neither dies out nor fills the grid. A creature that fails gets its source
-  parameters checked against `LeniaND.py` before any tuning.
+- **Vendored** in `src/complexity/vendor/lenia/`: the 26 catalogue entries verbatim
+  (`animals.json`, with their original indices) and `Board.rle2arr` / `ch2val` from
+  `LeniaND.py`, reduced to 2-D. The decoder vendored in `1588585` came from the agent
+  rewrite and is not reused.
+- **Grid size.** No minimum: every grid size is allowed, and a pattern larger than the grid
+  is cropped to its central part (`place_center`). Whether a cropped or cramped creature
+  survives is part of what one can explore. A per-pattern minimum size was tried and
+  dropped (2026-10-30).
+- **Tests.** Each creature survives 500 steps at 128² (Amoebium 256²): mass within ±20 %
+  and under 20 % of the grid above 0.1. Over 2000 steps all ten stay within 0.76–1.08 of
+  their start mass. Tetralapillium metamorpha is metastable: at 128² it has
+  died between steps 1000 and 2000 in some runs, and at ×2 / ×3 scale it settles into an
+  oscillating ring.
 
 ### 4.3 Baselines — `baseline`
 Reference "systems" that calibrate every measure. Expected values are tested (§6).
@@ -423,11 +431,11 @@ Priority from here (set 2026-10-30): Lenia patterns, then measures, then more sy
 then polishing and sharing.
 
 ### M2 — Lenia creatures and Life catalogue patterns (§4.1, §4.2)
-- [ ] Port the 2-D RLE decoder from `LeniaND.py`, with source notes
-- [ ] The ten creatures in the vendored patterns, with `min_size`
-- [ ] UI: grid size follows the selected patterns' `min_size` (raise or warn)
-- [ ] The 16 Life patterns from the end of `animals.json` (§4.1), with `min_size`
-- [ ] Survival tests for each creature at its minimum size; Life goldens for the new
+- [x] Port the 2-D RLE decoder from `LeniaND.py`, with source notes
+- [x] The ten creatures in the vendored patterns
+- [x] Patterns larger than the grid are cropped to their center (no minimum grid size)
+- [x] The 16 Life patterns from the end of `animals.json` (§4.1)
+- [x] Survival tests for each creature; Life goldens for the new
       spaceships (displacement per period) and oscillators (period)
 
 ### M3 — Measures (§5.2, §5.3)
@@ -496,3 +504,7 @@ then polishing and sharing.
   16 Life patterns, M3
   measures (almost all of the PDF's; IIT, TD, AT deferred), M4 more systems, M5 polishing
   and sharing.
+- 2026-10-30 — M2 done: ten Lenia creatures (run on the Gaussian kernel) and 16 Life
+  patterns from the original Lenia catalogue, center cropping for oversized patterns,
+  tests. Integer Lenia split from `lenia` into its own system, `integer_lenia`. Lenia is
+  now the first system; the UI starts with Lenia Orbium and Life glider.
