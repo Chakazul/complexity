@@ -21,18 +21,17 @@
   --heat-hi: #5c1d06;
   /* tag tints by what a tag describes: heatmap, peak kind, granularity, scope, time */
   --tag-heatmap: #fde4e2; --tag-heatmap-border: #f4c4c0;
-  --tag-randomness: #fdf0d8; --tag-randomness-border: #f0d9a8;
-  --tag-structural: #e1f3e1; --tag-structural-border: #bfe0bf;
+  --tag-randomness: #fdf4d9; --tag-randomness-border: #efdfae;
+  --tag-structural: #f5df9c; --tag-structural-border: #e2c35f;
   --tag-mixed: #ecebe7; --tag-mixed-border: #d9d8d2;
   --tag-granularity: #e3edfb; --tag-granularity-border: #c3d6f2;
   --tag-scope: #dff2f1; --tag-scope-border: #b9dfdc;
   --tag-temporal: #ece6f7; --tag-temporal-border: #d3c7ec;
-  /* pairs share a hue; the second value is a step darker: static/dynamic,
-     global/local, pattern/rule/system */
+  /* pairs share a hue; the more desired value is a step darker: dynamic, local, pattern,
+     structural (yellow, over randomness) */
   --tag-v-dynamic: #ddd3f0; --tag-v-dynamic-border: #c4b5e4;
   --tag-v-local: #cbe9e7; --tag-v-local-border: #a6d6d2;
-  --tag-v-rule: #d3e3f8; --tag-v-rule-border: #b2cbef;
-  --tag-v-system: #c4d8f3; --tag-v-system-border: #a2c0ea;
+  --tag-v-pattern: #c4d8f3; --tag-v-pattern-border: #a2c0ea;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -54,16 +53,15 @@
     --heat-mid: #d95926;
     --heat-hi: #ffd2b8;
     --tag-heatmap: #3d2422; --tag-heatmap-border: #5a3330;
-    --tag-randomness: #3a3020; --tag-randomness-border: #55462b;
-    --tag-structural: #1f3322; --tag-structural-border: #2e4a32;
+    --tag-randomness: #2f2b1d; --tag-randomness-border: #463f29;
+    --tag-structural: #4d4220; --tag-structural-border: #6b5c2c;
     --tag-mixed: #2a2a28; --tag-mixed-border: #3a3a37;
     --tag-granularity: #1f2c3f; --tag-granularity-border: #2d405c;
     --tag-scope: #1c3433; --tag-scope-border: #294b49;
     --tag-temporal: #2c2540; --tag-temporal-border: #40365c;
     --tag-v-dynamic: #3a3155; --tag-v-dynamic-border: #504575;
     --tag-v-local: #25443f; --tag-v-local-border: #335e58;
-    --tag-v-rule: #263852; --tag-v-rule-border: #344d70;
-    --tag-v-system: #2e4466; --tag-v-system-border: #3d5a85;
+    --tag-v-pattern: #2e4466; --tag-v-pattern-border: #3d5a85;
   }
 }
 :root[data-theme="dark"] {
@@ -85,16 +83,15 @@
   --heat-mid: #d95926;
   --heat-hi: #ffd2b8;
   --tag-heatmap: #3d2422; --tag-heatmap-border: #5a3330;
-  --tag-randomness: #3a3020; --tag-randomness-border: #55462b;
-  --tag-structural: #1f3322; --tag-structural-border: #2e4a32;
+  --tag-randomness: #2f2b1d; --tag-randomness-border: #463f29;
+  --tag-structural: #4d4220; --tag-structural-border: #6b5c2c;
   --tag-mixed: #2a2a28; --tag-mixed-border: #3a3a37;
   --tag-granularity: #1f2c3f; --tag-granularity-border: #2d405c;
   --tag-scope: #1c3433; --tag-scope-border: #294b49;
   --tag-temporal: #2c2540; --tag-temporal-border: #40365c;
   --tag-v-dynamic: #3a3155; --tag-v-dynamic-border: #504575;
   --tag-v-local: #25443f; --tag-v-local-border: #335e58;
-  --tag-v-rule: #263852; --tag-v-rule-border: #344d70;
-  --tag-v-system: #2e4466; --tag-v-system-border: #3d5a85;
+  --tag-v-pattern: #2e4466; --tag-v-pattern-border: #3d5a85;
 }
 
 * { box-sizing: border-box; }
@@ -199,8 +196,7 @@ button.clear { margin-left: auto; padding: 4px 14px; font-size: 13px; text-trans
 .tag-temporal { background: var(--tag-temporal); border-color: var(--tag-temporal-border); }
 .tag-v-dynamic { background: var(--tag-v-dynamic); border-color: var(--tag-v-dynamic-border); }
 .tag-v-local { background: var(--tag-v-local); border-color: var(--tag-v-local-border); }
-.tag-v-rule { background: var(--tag-v-rule); border-color: var(--tag-v-rule-border); }
-.tag-v-system { background: var(--tag-v-system); border-color: var(--tag-v-system-border); }
+.tag-v-pattern { background: var(--tag-v-pattern); border-color: var(--tag-v-pattern-border); }
 
 main { padding: 16px 20px 40px; min-width: 0; }
 .views { display: flex; flex-wrap: wrap; gap: 16px; }
