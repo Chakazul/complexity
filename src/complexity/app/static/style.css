@@ -27,6 +27,12 @@
   --tag-granularity: #e3edfb; --tag-granularity-border: #c3d6f2;
   --tag-scope: #dff2f1; --tag-scope-border: #b9dfdc;
   --tag-temporal: #ece6f7; --tag-temporal-border: #d3c7ec;
+  /* pairs share a hue; the second value is a step darker: static/dynamic,
+     global/local, pattern/rule/system */
+  --tag-v-dynamic: #ddd3f0; --tag-v-dynamic-border: #c4b5e4;
+  --tag-v-local: #cbe9e7; --tag-v-local-border: #a6d6d2;
+  --tag-v-rule: #d3e3f8; --tag-v-rule-border: #b2cbef;
+  --tag-v-system: #c4d8f3; --tag-v-system-border: #a2c0ea;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -54,6 +60,10 @@
     --tag-granularity: #1f2c3f; --tag-granularity-border: #2d405c;
     --tag-scope: #1c3433; --tag-scope-border: #294b49;
     --tag-temporal: #2c2540; --tag-temporal-border: #40365c;
+    --tag-v-dynamic: #3a3155; --tag-v-dynamic-border: #504575;
+    --tag-v-local: #25443f; --tag-v-local-border: #335e58;
+    --tag-v-rule: #263852; --tag-v-rule-border: #344d70;
+    --tag-v-system: #2e4466; --tag-v-system-border: #3d5a85;
   }
 }
 :root[data-theme="dark"] {
@@ -81,6 +91,10 @@
   --tag-granularity: #1f2c3f; --tag-granularity-border: #2d405c;
   --tag-scope: #1c3433; --tag-scope-border: #294b49;
   --tag-temporal: #2c2540; --tag-temporal-border: #40365c;
+  --tag-v-dynamic: #3a3155; --tag-v-dynamic-border: #504575;
+  --tag-v-local: #25443f; --tag-v-local-border: #335e58;
+  --tag-v-rule: #263852; --tag-v-rule-border: #344d70;
+  --tag-v-system: #2e4466; --tag-v-system-border: #3d5a85;
 }
 
 * { box-sizing: border-box; }
@@ -183,6 +197,10 @@ button.clear { margin-left: auto; padding: 4px 14px; font-size: 13px; text-trans
 .tag-granularity { background: var(--tag-granularity); border-color: var(--tag-granularity-border); }
 .tag-scope { background: var(--tag-scope); border-color: var(--tag-scope-border); }
 .tag-temporal { background: var(--tag-temporal); border-color: var(--tag-temporal-border); }
+.tag-v-dynamic { background: var(--tag-v-dynamic); border-color: var(--tag-v-dynamic-border); }
+.tag-v-local { background: var(--tag-v-local); border-color: var(--tag-v-local-border); }
+.tag-v-rule { background: var(--tag-v-rule); border-color: var(--tag-v-rule-border); }
+.tag-v-system { background: var(--tag-v-system); border-color: var(--tag-v-system-border); }
 
 main { padding: 16px 20px 40px; min-width: 0; }
 .views { display: flex; flex-wrap: wrap; gap: 16px; }
