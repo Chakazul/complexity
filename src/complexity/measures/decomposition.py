@@ -83,6 +83,7 @@ class _Decomposition(Measure):
     granularity = "system"
     scope = "local"
     temporal = "dynamic"
+    map = "tile"
 
     def levels(self, n_states):
         """At most `max_levels` symbols: the tables have L³ entries."""

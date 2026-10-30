@@ -415,6 +415,37 @@ FD, EC, LD, LE), then rule-level (TL, LL, FI), then the medium ones (SC, PID, FI
   neighbours inside the creature, e = its neighbours outside, which estimates well but is
   a new reading of the measure. Needs a decision.
 
+### 5.7 Heatmaps (M3, done)
+
+Which measures have granularity in space (a map), time (a series) and rule (2026-10-30):
+all frame measures give a time series; TL, LL and FI are per rule only. Spatial maps come
+in two kinds. **Local fields**, one value per cell, averaged over the window: local
+transfer entropy (Lizier), local statistical complexity −log2 P(causal state) (Shalizi),
+local block surprisal −log2 p(block), and the Lyapunov twin's separation field. **Per
+tile**, the measure applied to tiles of the frame (coarser): compression, LZC, effective
+complexity, PID, FID. Fractal dimension and logical depth are left out (too few boxes per
+tile; timing noise), and effective complexity too (a 2-cell blur leaves nothing on an
+8×8 tile). Tiles are about 1/16 of the grid, at least 8 cells, and each tile shows its
+excess over an empty tile: LZMA spends ~8 bits/cell of format overhead on an 8×8 tile.
+The local maps average to the measure's value (tested). The Lyapunov map is 0 to 1 in both
+kinds of system: damage (discrete), or log10 growth over its 5-decade range (continuous).
+The UI computes the map of one chosen measure per tick (`{"type": "map"}` message). Colour: one orange ramp for magnitude (dataviz: sequential = one hue);
+overlay draws the frame in gray under orange with opacity rising with the value, side by
+side draws the ramp from the surface colour; the scale is shared across runs per tick.
+
+### 5.8 Multi-scale structural complexity (M3b, planned)
+
+The goal measure (Bert, 2026-10-30): a dynamic spatial map of complexity, possibly coarser
+than the simulation, low for empty and noise, high for self-organizing patterns, and
+highest for **small self-contained units forming larger networks**, above a patch of goo
+(self-organizing, but at one level). No measure in §5 has the last property: local
+statistical complexity and local information dynamics are structural but single-scale.
+Candidate: compute a structural measure (EC, local SC or local TE) on a pyramid of
+coarse-grainings (1, 2, 4, 8, … cells), each against its own noise baseline, and score
+high only when structure exists at several scales (minimum or product across scales;
+related to Bar-Yam's complexity profile). Reference cases are the Aquarium of multi-channel
+Lenia and its self-replicating variant, against goo-like structures at nearby parameters.
+
 ### 5.5 Rule-level measures: decisions and first values (M3, done)
 
 - **Interface.** `RuleMeasure` is a `Measure` subclass with `compute_rule(system, pattern,
@@ -561,12 +592,26 @@ then polishing and sharing.
       (§5.5)
 - [x] Statistical complexity (SC), PID, FID (§5.6)
 - [ ] Individuality (ITI): needs a design decision (§5.6)
+- [x] Heatmaps (§5.7): a spatial map for every measure with spatial granularity, local
+      fields (TE, SC, block entropy, Lyapunov separation) or per tile (compression, LZC,
+      PID, FID); shown overlaid on the frame or side by side
+- [ ] Choose overlay or side by side (or keep both) after trying them (Bert)
 - [ ] Measure-expectation tests from §6 for every measure; `warming_up` flag for window
       measures (done so far: orientation and structure tests over all registered measures,
       TE baselines, per-measure tests for the §5.4 measures; `warming_up` sent per tick and
       drawn faint in the UI)
 - [ ] UI: new measures in the list, grouped by taxonomy; per-measure parameter controls
       (window, `n_levels`, `offset`); compatibility hints (why a measure is greyed out)
+
+### M3b — Multi-scale structural complexity (§5.8), after multi-channel Lenia (M4)
+- [ ] Reference cases: empty and noise (low); goo-like structures (self-organizing, one
+      level); single creatures; **Aquarium** (multi-channel Lenia: self-contained units
+      forming larger networks) and an Aquarium variant whose units self-replicate (highest)
+- [ ] Find goo-like structures at parameters near the Aquarium's (experiments by Bert)
+- [ ] Prototype: a structural measure on a pyramid of coarse-grainings, scored high only
+      when structure exists at several scales; check it ranks the reference cases
+- [ ] Compare with causal emergence / ΦID (Rosas, Mediano et al. 2020) and O-information
+      on per-unit macro variables
 
 ### M4 — More dynamical complex systems (§4.4, PDF §3)
 - [ ] Elementary CA (rule space) + Wuensche's Z; thermodynamic depth on tiny lattices

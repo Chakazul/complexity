@@ -56,6 +56,29 @@ def transfer_entropy(symbols: jax.Array, n_valid, n_levels: int, offset: int,
     return jnp.maximum(te / 4, 0.0)
 
 
+@partial(jax.jit, static_argnums=(2, 3))
+def local_transfer_entropy(symbols: jax.Array, n_valid, n_levels: int, offset: int) -> jax.Array:
+    """Local transfer entropy (Lizier et al. 2008) per cell, averaged over the window's
+    valid steps and the 4 directions: log2 p(y' | y, x) / p(y' | y) for each sample, with
+    the probabilities of `transfer_entropy` (no bias correction); (height, width)."""
+    L = n_levels
+    y_next, y = symbols[1:], symbols[:-1]
+    t = jnp.arange(y.shape[0])[:, None, None]
+    w = jnp.broadcast_to(t >= y.shape[0] - (n_valid - 1), y.shape).astype(jnp.float32)
+    nxt = y_next * L + y
+    c_next = jnp.bincount(nxt.ravel(), w.ravel(), length=L * L)
+    total = jnp.zeros(y.shape[1:])
+    for shift in ((offset, 0), (-offset, 0), (0, offset), (0, -offset)):
+        x = jnp.roll(y, shift, (1, 2))
+        joint, pair = nxt * L + x, y * L + x
+        c_joint = jnp.bincount(joint.ravel(), w.ravel(), length=L**3)
+        c_pair = jnp.bincount(pair.ravel(), w.ravel(), length=L * L)
+        c_past = jnp.bincount(y.ravel(), w.ravel(), length=L)
+        ratio = c_joint[joint] * c_past[y] / (c_pair[pair] * c_next[nxt])
+        total += jnp.sum(jnp.where(w > 0, jnp.log2(jnp.where(w > 0, ratio, 1)), 0), axis=0)
+    return total / (4 * jnp.maximum(n_valid - 1, 1))
+
+
 @register_measure
 class TransferEntropy(Measure):
     key = "transfer_entropy"
@@ -80,22 +103,41 @@ class TransferEntropy(Measure):
     scope = "local"
     temporal = "dynamic"
 
-    def compute(self, frames, ctx=NO_CONTEXT) -> float:
+    map = "local"
+
+    def _padded(self, frames):
+        """A filling window padded to the full shape (no recompile), and its valid length."""
         n = frames.shape[0]
-        if n < 2:
-            return 0.0
-        if n < self.window:  # a filling window: pad to the full shape, count only n frames
+        if n < self.window:  # count only the n real frames
             frames = jnp.concatenate([jnp.zeros_like(frames[:1]).repeat(self.window - n, 0), frames])
+        return frames, n
+
+    def compute(self, frames, ctx=NO_CONTEXT) -> float:
+        if frames.shape[0] < 2:
+            return 0.0
+        frames, n = self._padded(frames)
         return float(transfer_entropy(frames, n, ctx.n_levels, self.offset, self.correct_bias))
+
+    def compute_map(self, frames, ctx=NO_CONTEXT) -> np.ndarray:
+        if frames.shape[0] < 2:
+            return np.zeros(frames.shape[1:], np.float32)
+        frames, n = self._padded(frames)
+        return np.asarray(local_transfer_entropy(frames, n, ctx.n_levels, self.offset))
+
+
+def block_codes(symbols: np.ndarray, n_levels: int, block: int) -> np.ndarray:
+    """The `block` x `block` patch at every cell (on the torus) as one integer."""
+    codes = np.zeros(symbols.shape, np.int64)
+    for dy in range(block):
+        for dx in range(block):
+            codes = codes * n_levels + np.roll(symbols, (-dy, -dx), (0, 1))
+    return codes
 
 
 def block_entropy(symbols: np.ndarray, n_levels: int, block: int) -> float:
     """Entropy of the `block` x `block` blocks at every cell (overlapping, on the torus),
     with the Miller-Madow correction, in bits per cell."""
-    codes = np.zeros(symbols.shape, np.int64)
-    for dy in range(block):
-        for dx in range(block):
-            codes = codes * n_levels + np.roll(symbols, (-dy, -dx), (0, 1))
+    codes = block_codes(symbols, n_levels, block)
     _, counts = np.unique(codes, return_counts=True)
     n = codes.size
     h = np.log2(n) - np.sum(counts * np.log2(counts)) / n + (len(counts) - 1) / (2 * n * np.log(2))
@@ -118,5 +160,15 @@ class BlockEntropy(Measure):
     block = 2
     params = ("block", "n_levels")
 
+    map = "local"
+
     def compute(self, frames, ctx=NO_CONTEXT) -> float:
         return block_entropy(frames[-1], ctx.n_levels, self.block)
+
+    def compute_map(self, frames, ctx=NO_CONTEXT) -> np.ndarray:
+        """Local surprisal of each cell's block, -log2 p(block) / block², whose mean is
+        the plug-in block entropy."""
+        codes = block_codes(frames[-1], ctx.n_levels, self.block)
+        _, inverse, counts = np.unique(codes, return_inverse=True, return_counts=True)
+        p = counts[inverse.reshape(codes.shape)] / codes.size
+        return (-np.log2(p) / self.block**2).astype(np.float32)

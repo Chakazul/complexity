@@ -41,9 +41,9 @@ def _g_stat(a: np.ndarray, states: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return g, (total > 0).sum(1) - 1
 
 
-def causal_states(symbols: np.ndarray, n_levels: int, alpha: float) -> tuple[np.ndarray, np.ndarray]:
-    """(causal state of each distinct past, how often each past occurs). `symbols` is
-    (time, height, width) on a torus."""
+def causal_states(symbols: np.ndarray, n_levels: int, alpha: float):
+    """(causal state of each distinct past, how often each past occurs, which distinct past
+    each cell and step has). `symbols` is (time, height, width) on a torus."""
     past = _code(symbols[:-1], _PAST, n_levels).ravel()
     future = _code(symbols[1:], _FUTURE, n_levels).ravel()
     pasts, past_idx = np.unique(past, return_inverse=True)
@@ -62,7 +62,7 @@ def causal_states(symbols: np.ndarray, n_levels: int, alpha: float) -> tuple[np.
         else:
             state[i] = len(sums)
             sums = np.vstack([sums, table[i]])
-    return state, counts
+    return state, counts, past_idx
 
 
 @register_measure
@@ -87,6 +87,7 @@ class StatisticalComplexity(Measure):
     params = ("window", "alpha", "n_levels")
     scope = "local"
     temporal = "dynamic"
+    map = "local"
 
     def levels(self, n_states):
         return self.n_levels or min(n_states or self.max_levels, self.max_levels)
@@ -95,7 +96,18 @@ class StatisticalComplexity(Measure):
         symbols = np.stack(frames)
         if len(symbols) < 2:
             return 0.0
-        state, counts = causal_states(symbols, ctx.n_levels, self.alpha)
+        state, counts, _ = causal_states(symbols, ctx.n_levels, self.alpha)
         p = np.bincount(state, weights=counts) / counts.sum()
         p = p[p > 0]
         return float(max(-np.sum(p * np.log2(p)), 0.0))  # not -0.0
+
+    def compute_map(self, frames, ctx=NO_CONTEXT) -> np.ndarray:
+        """Local statistical complexity, -log2 P(causal state) per cell (Shalizi et al.
+        2006), averaged over the window; its mean is the measure's value."""
+        symbols = np.stack(frames)
+        if len(symbols) < 2:
+            return np.zeros(symbols.shape[1:], np.float32)
+        state, counts, past_idx = causal_states(symbols, ctx.n_levels, self.alpha)
+        p = np.bincount(state, weights=counts) / counts.sum()
+        local = -np.log2(p[state[past_idx]]).reshape(symbols[:-1].shape)
+        return np.maximum(local.mean(0), 0).astype(np.float32)

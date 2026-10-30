@@ -16,6 +16,9 @@
   --series-4: #eda100;
   --series-5: #dd78c4;
   --series-6: #6038a6;
+  /* heatmap: one orange ramp (dataviz sequential), from the surface at 0 */
+  --heat-mid: #eb6834;
+  --heat-hi: #5c1d06;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -34,6 +37,8 @@
     --series-4: #a5931b;
     --series-5: #f52ab6;
     --series-6: #6c469f;
+    --heat-mid: #d95926;
+    --heat-hi: #ffd2b8;
   }
 }
 :root[data-theme="dark"] {
@@ -52,6 +57,8 @@
   --series-4: #a5931b;
   --series-5: #f52ab6;
   --series-6: #6c469f;
+  --heat-mid: #d95926;
+  --heat-hi: #ffd2b8;
 }
 
 * { box-sizing: border-box; }
@@ -134,6 +141,24 @@ main { padding: 16px 20px 40px; min-width: 0; }
 .views { display: flex; flex-wrap: wrap; gap: 16px; }
 .view { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
 .view canvas { display: block; width: 256px; height: 256px; image-rendering: pixelated; border-radius: 4px; background: #000; }
+.view-row { display: flex; gap: 8px; }
+.frame-wrap { position: relative; }
+.frame-wrap canvas, .view-row canvas.heat-side { display: block; image-rendering: pixelated; border-radius: 4px; }
+.frame-wrap canvas.heat-overlay { position: absolute; inset: 0; pointer-events: none; }
+canvas.heat-side { background: var(--surface-1); outline: 1px solid var(--border); }
+.views:not(.heat-overlay-mode) canvas.heat-overlay, .views:not(.heat-side-mode) canvas.heat-side { display: none; }
+.heat-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 10px; }
+.heat-controls label.inline { margin: 0; }
+.heat-controls select { max-width: 150px; }
+.seg { display: inline-flex; }
+.seg button { border-radius: 0; padding: 3px 9px; font-size: 12px; color: var(--text-secondary); }
+.seg button:first-child { border-radius: 6px 0 0 6px; }
+.seg button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--surface-1); color: var(--text-primary); font-weight: 600; }
+.seg button:disabled { opacity: .5; }
+.heat-legend { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.heat-legend .bar { width: 160px; height: 10px; border-radius: 3px; border: 1px solid var(--border); }
+.heat-legend b { color: var(--text-primary); font-weight: 600; }
 .view .cap { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; }
 
 table { border-collapse: collapse; margin: 18px 0 4px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; font-variant-numeric: tabular-nums; }

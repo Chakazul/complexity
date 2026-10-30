@@ -70,6 +70,7 @@ def lz76(symbols: np.ndarray) -> int:
 @register_measure
 class LempelZiv(Measure):
     key = "lzc"
+    map = "tile"
     name = "Lempel-Ziv complexity"
     unit = "normalized"
     group = "Algorithmic complexity"

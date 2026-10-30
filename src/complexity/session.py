@@ -116,6 +116,31 @@ class Run:
             ms[m.key] = (time.perf_counter() - t0) * 1000
         return values, ms
 
+    def map_tile(self) -> int:
+        """Tile size for per-tile maps: about 16 tiles across, at least 8 cells."""
+        return max(8, min(self.size) // 16)
+
+    def map(self, key: str) -> np.ndarray | None:
+        """The spatial map of measure `key` at the current step (PLAN.md §5.7), float32
+        (height, width) for local measures or (height / tile, width / tile) per tile; None
+        if the measure has no map or does not run here."""
+        m = next((m for m in self.measures if m.key == key), None)
+        if m is None or m.map is None:
+            return None
+        ctx = self.contexts[m.key]
+        if m.map == "local":
+            if m.needs_state:
+                rng = jax.random.fold_in(self.rng, self.t + 1)
+                return m.compute_state_map(self.system, self.state, rng, ctx)
+            return m.compute_map(self._frames_for(m), ctx)
+        # per tile, as the excess over an empty tile: on small tiles a compressor's fixed
+        # overhead (~8 bits/cell on 8x8) would otherwise swamp the differences
+        frames, t = self._frames_for(m), self.map_tile()
+        h, w = (d // t for d in self.size)
+        empty = m.compute([np.zeros((t, t), f.dtype) for f in frames], ctx)
+        return np.array([[m.compute([f[i * t:(i + 1) * t, j * t:(j + 1) * t] for f in frames], ctx)
+                          for j in range(w)] for i in range(h)], np.float32) - empty
+
     def warming_up(self) -> list[str]:
         """Measures whose window is not full yet: their values cover fewer frames."""
         return [m.key for m in self.measures if len(self.frames) < m.window]

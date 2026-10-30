@@ -302,3 +302,24 @@ def test_statistical_complexity():
     soup = measured("life", "random", steps=50, size=(64, 64))["statistical_complexity"]
     gun = measured("life", "gosper_glider_gun", steps=50, size=(64, 64))["statistical_complexity"]
     assert soup > gun > 0
+
+
+@pytest.mark.parametrize("key", ["transfer_entropy", "block_entropy", "statistical_complexity"])
+def test_local_maps_average_to_the_value(key):
+    run = Run(RunSpec("life", "random", (64, 64)), [key])
+    run.step(20)
+    value = run.measure()[0][key]
+    heat = run.map(key)
+    assert heat.shape == (64, 64)
+    tol = 0.02 if key == "block_entropy" else 1e-4  # block entropy's value is bias corrected
+    assert heat.mean() == pytest.approx(value, abs=tol)
+
+
+def test_tile_maps_are_excess_over_an_empty_tile():
+    run = Run(RunSpec("life", "glider", (64, 64)), ["lzma", "lzc", "lyapunov"])
+    run.step(4)
+    heat = run.map("lzma")
+    assert heat.shape == (8, 8)  # tiles of 8 cells
+    assert np.count_nonzero(heat) in (1, 2, 3, 4) and heat.min() == 0  # only around the glider
+    assert run.map("lyapunov").max() <= 1
+    assert run.map("png") is None  # not running

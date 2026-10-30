@@ -6,11 +6,13 @@ Protocol (JSON messages):
      "measure_params"?: {key: {param: value}}}
     {"type": "play"} | {"type": "pause"} | {"type": "step"}
     {"type": "speed", "steps_per_tick": int, "fps": int}
+    {"type": "map", "measure": key | null}  (heatmap of one measure, PLAN.md §5.7)
   server -> client (init and tick echo the start's id, so the client can drop stale ticks)
     {"type": "init", "id": int, "runs": [{"label", "system", "n_states", "height", "width", "measures",
                                "skipped", "config": {key: {param: value}}}]}
     {"type": "tick", "id": int, "t": int, "runs": [{"frame": base64 uint8, "values": {}, "ms": {},
-                                          "warming_up": [keys]}]}
+                                          "warming_up": [keys],
+                                          "map"?: {"h", "w", "data": base64 float32}}]}
     {"type": "error", "message": str}
 """
 
@@ -58,6 +60,7 @@ def catalog():
              "group": cls.group,
              "window": cls.window, "granularity": cls.granularity, "scope": cls.scope,
              "temporal": cls.temporal, "backend": cls.backend,
+             "map": cls.map, "map_unit": cls.map_unit or cls.unit,
              "needs_discrete": cls.needs_discrete, "peaks_at": cls.peaks_at,
              "params": cls().config(),
              "accepts": [s for s, probe in probes.items() if cls().accepts(probe)]}
@@ -70,6 +73,7 @@ class Session:
     def __init__(self, runs: list[dict], measures: list[str], measure_params: dict | None = None,
                  id: int = 0):
         self.id = id
+        self.map_key: str | None = None
         self.runs = [
             Run(RunSpec(r["system"], r["pattern"], r.get("size"), r.get("seed", 0)), measures,
                 measure_params)
@@ -91,8 +95,12 @@ class Session:
             run.step(steps)
             values, ms = run.measure()
             frame = base64.b64encode(run.frame_u8().tobytes()).decode()
-            out.append({"frame": frame, "values": values, "ms": ms,
-                        "warming_up": run.warming_up()})
+            item = {"frame": frame, "values": values, "ms": ms, "warming_up": run.warming_up()}
+            heat = run.map(self.map_key) if self.map_key else None
+            if heat is not None:
+                item["map"] = {"h": heat.shape[0], "w": heat.shape[1],
+                               "data": base64.b64encode(heat.astype("<f4").tobytes()).decode()}
+            out.append(item)
         return {"type": "tick", "id": self.id, "t": self.runs[0].t if self.runs else 0, "runs": out}
 
 
@@ -126,6 +134,7 @@ async def websocket_endpoint(ws: WebSocket):
                     async with lock:
                         state["session"] = Session(msg["runs"], msg["measures"],
                                                    msg.get("measure_params"), msg.get("id", 0))
+                        state["session"].map_key = state.get("map")
                     await ws.send_json(state["session"].init_message())
                     await tick(0)
                     state["playing"] = True
@@ -135,6 +144,12 @@ async def websocket_endpoint(ws: WebSocket):
                     state["playing"] = False
                 elif kind == "step" and state["session"] and not state["playing"]:
                     await tick(1)
+                elif kind == "map":
+                    state["map"] = msg.get("measure")
+                    if state["session"]:
+                        state["session"].map_key = state["map"]
+                    if state["session"] and not state["playing"]:
+                        await tick(0)  # show it now, also when paused
                 elif kind == "speed":
                     state["steps"] = max(1, int(msg.get("steps_per_tick", 1)))
                     state["fps"] = max(1, int(msg.get("fps", 30)))

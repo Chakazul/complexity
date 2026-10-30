@@ -11,6 +11,7 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from complexity import engine
 from complexity.measures.base import NO_CONTEXT, Measure
@@ -50,6 +51,19 @@ def divergence_rate(system: System, state, rng: jax.Array, steps: int, burn_in: 
     return jnp.maximum(jnp.log(d_burn / d_init) / burn_in, jnp.log(d / d_burn) / (steps - burn_in))
 
 
+@partial(jax.jit, static_argnums=(0, 3, 4))
+def separation_field(system: System, state, rng: jax.Array, steps: int, discrete: bool):
+    """Where the twin run has diverged after `steps` steps, 0 to 1: 1 where cells differ
+    (discrete); log10(1 + |difference| / 1e-5) / 5 (continuous: the orders of magnitude
+    grown beyond the perturbation's size, out of the 5 up to a difference of 1)."""
+    twin = system.perturb(state, rng)
+    a = system.observe(engine.advance(system, state, steps))
+    b = system.observe(engine.advance(system, twin, steps))
+    if discrete:
+        return (a != b).astype(jnp.float32)
+    return jnp.log10(1 + jnp.abs(b - a) / 1e-5) / 5
+
+
 @register_measure
 class Lyapunov(Measure):
     key = "lyapunov"
@@ -65,6 +79,8 @@ class Lyapunov(Measure):
         "after changing one active cell. Positive = chaotic."
     )
     needs_state = True
+    map = "local"
+    map_unit = "divergence (0-1)"
     steps = 64
     burn_in = 8
     params = ("steps", "burn_in")
@@ -75,6 +91,11 @@ class Lyapunov(Measure):
 
     def compute(self, frames, ctx=NO_CONTEXT) -> float:
         raise TypeError("lyapunov needs the system state: use compute_state")
+
+    def compute_state_map(self, system, state, rng, ctx=NO_CONTEXT) -> np.ndarray:
+        """The twin's separation field after `steps` steps (see `separation_field`)."""
+        discrete = ctx.n_states is not None
+        return np.asarray(separation_field(system, state, rng, self.steps, discrete))
 
     def compute_state(self, system, state, rng, ctx=NO_CONTEXT) -> float:
         discrete = ctx.n_states is not None

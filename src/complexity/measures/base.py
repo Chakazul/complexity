@@ -47,6 +47,10 @@ class Measure(ABC):
     `needs_discrete`, int32 symbols 0..ctx.n_levels-1 (see `discretize`).
 
     Attributes named in `params` are tunable: `make_measure(key, window=32)`.
+
+    `map` says how the measure gives a spatial map (PLAN.md §5.7): "local" measures
+    implement `compute_map` (or `compute_state_map`), one value per cell; "tile" measures
+    are applied by the run to tiles of the frame; None: no map.
     """
 
     key: str  # registry key, e.g. "png"
@@ -58,6 +62,8 @@ class Measure(ABC):
     backend: str = "host"  # "host" or "jax"
     needs_discrete: bool = False
     needs_state: bool = False
+    map: str | None = None  # "local", "tile" or None
+    map_unit: str = ""  # unit of the map if it differs from `unit`
     n_levels: int | None = None  # None: n_states if discrete, else DEFAULT_LEVELS
     peaks_at: str = "randomness"  # "randomness", "structure" or "mixed"
     params: tuple[str, ...] = ()
@@ -83,6 +89,10 @@ class Measure(ABC):
     def accepts(self, system) -> bool:
         """Whether this measure applies to `system`; override to restrict it."""
         return True
+
+    def compute_map(self, frames, ctx: Context = NO_CONTEXT) -> np.ndarray:
+        """For `map = "local"`: a (height, width) map whose mean is about `compute`'s value."""
+        raise NotImplementedError
 
     @abstractmethod
     def compute(self, frames, ctx: Context = NO_CONTEXT) -> float:

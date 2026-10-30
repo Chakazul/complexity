@@ -30,6 +30,13 @@
           <input id="spt" type="range" min="0" max="6" value="0"></label>
         <label>Max FPS <output id="fps-out">30</output>
           <input id="fps" type="range" min="0" max="6" value="5"></label>
+        <div class="heat-controls">
+          <label class="inline">Heatmap <select id="map-measure"><option value="">Off</option></select></label>
+          <div class="seg" id="map-layout" role="group" aria-label="Heatmap layout">
+            <button type="button" data-layout="overlay">Overlay</button>
+            <button type="button" data-layout="side">Side by side</button>
+          </div>
+        </div>
         <label class="inline">Grid size <select id="size"><option>256</option><option>128</option><option selected>64</option><option>32</option></select></label>
       </section>
       <section>
@@ -44,6 +51,7 @@
       </section>
     </aside>
     <main>
+      <div id="heat-legend" class="heat-legend" hidden></div>
       <div id="views" class="views"></div>
       <div id="table-wrap"></div>
       <div id="charts" class="charts"></div>

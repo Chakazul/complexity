@@ -89,6 +89,7 @@ def video_bits(name: str, frames) -> float:
 @register_measure
 class LZMAFrame(Measure):
     key = "lzma"
+    map = "tile"
     name = "Image compression (LZMA)"
     unit = "bits/cell"
     group = "Compression"
@@ -101,6 +102,7 @@ class LZMAFrame(Measure):
 @register_measure
 class PNGSize(Measure):
     key = "png"
+    map = "tile"
     name = "Image compression (PNG)"
     unit = "bits/cell"
     group = "Compression"
@@ -113,6 +115,7 @@ class PNGSize(Measure):
 @register_measure
 class LZMAVideo(Measure):
     key = "video_lzma"
+    map = "tile"
     name = "Video compression (LZMA)"
     unit = "bits/cell/frame"
     group = "Compression"
