@@ -87,8 +87,9 @@ function buildMeasureList() {
       box.append(h);
     }
     const kind = PEAKS[m.peaks_at];
-    const meta = [kind.tag, m.granularity, m.scope, m.temporal, ...(m.map ? ["heatmap"] : [])]
-      .map((t) => `<span class="tag" title="${TAG_HELP[t] || ""}">${t}</span>`).join("") +
+    const tags = [[kind.tag, kind.tag], [m.granularity, "granularity"], [m.scope, "scope"],
+      [m.temporal, "temporal"], ...(m.map ? [["heatmap", "heatmap"]] : [])];
+    const meta = tags.map(([t, cls]) => `<span class="tag tag-${cls}" title="${TAG_HELP[t] || ""}">${t}</span>`).join("") +
       ` ${m.unit}${m.window > 1 ? ` · window ${m.window}` : ""}`;
     const el = pickItem(`${kind.icon}${m.name}`, meta, () => {
       selectedMeasures.has(m.key) ? selectedMeasures.delete(m.key) : selectedMeasures.add(m.key);

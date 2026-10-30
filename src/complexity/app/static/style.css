@@ -19,8 +19,14 @@
   /* heatmap: one orange ramp (dataviz sequential), from the surface at 0 */
   --heat-mid: #eb6834;
   --heat-hi: #5c1d06;
-  --tag-bg: #e7edf6;  /* light blue-gray, set apart from the list and item backgrounds */
-  --tag-border: #d2dbe8;
+  /* tag tints by what a tag describes: heatmap, peak kind, granularity, scope, time */
+  --tag-heatmap: #fde4e2; --tag-heatmap-border: #f4c4c0;
+  --tag-randomness: #fdf0d8; --tag-randomness-border: #f0d9a8;
+  --tag-structural: #e1f3e1; --tag-structural-border: #bfe0bf;
+  --tag-mixed: #ecebe7; --tag-mixed-border: #d9d8d2;
+  --tag-granularity: #e3edfb; --tag-granularity-border: #c3d6f2;
+  --tag-scope: #dff2f1; --tag-scope-border: #b9dfdc;
+  --tag-temporal: #ece6f7; --tag-temporal-border: #d3c7ec;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -41,8 +47,13 @@
     --series-6: #6c469f;
     --heat-mid: #d95926;
     --heat-hi: #ffd2b8;
-    --tag-bg: #252e3a;
-    --tag-border: #34404f;
+    --tag-heatmap: #3d2422; --tag-heatmap-border: #5a3330;
+    --tag-randomness: #3a3020; --tag-randomness-border: #55462b;
+    --tag-structural: #1f3322; --tag-structural-border: #2e4a32;
+    --tag-mixed: #2a2a28; --tag-mixed-border: #3a3a37;
+    --tag-granularity: #1f2c3f; --tag-granularity-border: #2d405c;
+    --tag-scope: #1c3433; --tag-scope-border: #294b49;
+    --tag-temporal: #2c2540; --tag-temporal-border: #40365c;
   }
 }
 :root[data-theme="dark"] {
@@ -63,8 +74,13 @@
   --series-6: #6c469f;
   --heat-mid: #d95926;
   --heat-hi: #ffd2b8;
-  --tag-bg: #252e3a;
-  --tag-border: #34404f;
+  --tag-heatmap: #3d2422; --tag-heatmap-border: #5a3330;
+  --tag-randomness: #3a3020; --tag-randomness-border: #55462b;
+  --tag-structural: #1f3322; --tag-structural-border: #2e4a32;
+  --tag-mixed: #2a2a28; --tag-mixed-border: #3a3a37;
+  --tag-granularity: #1f2c3f; --tag-granularity-border: #2d405c;
+  --tag-scope: #1c3433; --tag-scope-border: #294b49;
+  --tag-temporal: #2c2540; --tag-temporal-border: #40365c;
 }
 
 * { box-sizing: border-box; }
@@ -159,7 +175,14 @@ button.clear { margin-left: auto; padding: 4px 14px; font-size: 13px; text-trans
 .pick.full .name { color: var(--text-muted); }
 .pick.na .name { color: var(--text-muted); text-decoration: line-through; }
 .swatch { width: 10px; height: 10px; border-radius: 3px; }
-.tag { display: inline-block; padding: 0 5px; margin-right: 3px; border-radius: 4px; border: 1px solid var(--tag-border); background: var(--tag-bg); font-size: 11px; color: var(--text-secondary); }
+.tag { display: inline-block; padding: 0 5px; margin-right: 3px; border-radius: 4px; border: 1px solid var(--border); font-size: 11px; color: var(--text-secondary); }
+.tag-heatmap { background: var(--tag-heatmap); border-color: var(--tag-heatmap-border); }
+.tag-randomness { background: var(--tag-randomness); border-color: var(--tag-randomness-border); }
+.tag-structural { background: var(--tag-structural); border-color: var(--tag-structural-border); }
+.tag-mixed { background: var(--tag-mixed); border-color: var(--tag-mixed-border); }
+.tag-granularity { background: var(--tag-granularity); border-color: var(--tag-granularity-border); }
+.tag-scope { background: var(--tag-scope); border-color: var(--tag-scope-border); }
+.tag-temporal { background: var(--tag-temporal); border-color: var(--tag-temporal-border); }
 
 main { padding: 16px 20px 40px; min-width: 0; }
 .views { display: flex; flex-wrap: wrap; gap: 16px; }
