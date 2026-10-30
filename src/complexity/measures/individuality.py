@@ -92,71 +92,6 @@ def local_samples(symbols: np.ndarray, n_levels: int, radius: int):
     return nxt, cur * (8 * (L - 1) + 1) + same_sum, e, labels > 0
 
 
-@register_measure
-class LocalIndividuality(Measure):
-    key = "iti_local"
-    name = "Individuality (local)"
-    unit = "bits/cell"
-    group = "Individuality"
-    description = (
-        "A local adaptation of Krakauer et al.'s information theory of individuality: for "
-        "every cell of a creature (connected cells above the lowest level), how much its "
-        "next state is determined by itself and its neighbours in the same creature (S) "
-        "versus its other neighbours, background or other creatures (E). `component`: "
-        "organismal A* = I(S'; S) (default), colonial A = I(S'; S | E), driven "
-        "nC = I(S'; E | S). S is the cell's state and the summed state of its neighbours in "
-        "the creature, E the state of other creatures' cells within `radius`. Per creature "
-        "cell, over the window; at most 4 levels. 0 for empty frames, ~0 for noise. In Life "
-        "nC is 0: a cell's next state depends on its 3x3 only, all in its own creature."
-    )
-    window = 16
-    needs_discrete = True
-    peaks_at = "structure"
-    component = "organismal"
-    max_levels = 4
-    radius = 3
-    params = ("component", "window", "radius", "n_levels")
-    choices = {"component": COMPONENTS}
-    scope = "local"
-    temporal = "dynamic"
-    map = "local"
-
-    def levels(self, n_states):
-        return self.n_levels or min(n_states or self.max_levels, self.max_levels)
-
-    def _joint(self, frames, L):
-        s1, s, e, member = local_samples(np.stack(frames), L, self.radius)
-        joint = np.zeros((L, L * (8 * (L - 1) + 1), L + 1))
-        np.add.at(joint, (s1[member], s[member], e[member]), 1)
-        return joint, (s1, s, e, member)
-
-    def compute(self, frames, ctx=NO_CONTEXT) -> float:
-        if len(frames) < 2:
-            return 0.0
-        joint, _ = self._joint(frames, ctx.n_levels)
-        return decompose(joint)[self.component] if joint.sum() else 0.0
-
-    def compute_map(self, frames, ctx=NO_CONTEXT) -> np.ndarray:
-        """Pointwise values (log2 of the probability ratios inside the chosen component),
-        averaged over the steps each cell is part of a creature; 0 elsewhere."""
-        if len(frames) < 2:
-            return np.zeros(np.shape(frames[-1]), np.float32)
-        joint, (s1, s, e, member) = self._joint(frames, ctx.n_levels)
-        if not joint.sum():
-            return np.zeros(s1.shape[1:], np.float32)
-        p = joint / joint.sum()
-        with np.errstate(divide="ignore", invalid="ignore"):
-            p_s1s, p_s, p_s1 = p.sum(2), p.sum((0, 2)), p.sum((1, 2))
-            p_s1se, p_se, p_s1e, p_e = p, p.sum(0), p.sum(1), p.sum((0, 1))
-            ratio = {
-                "organismal": p_s1s[s1, s] / p_s[s] / p_s1[s1],
-                "colonial": (p_s1se[s1, s, e] / p_se[s, e]) / (p_s1e[s1, e] / p_e[e]),
-                "driven": (p_s1se[s1, s, e] / p_se[s, e]) / (p_s1s[s1, s] / p_s[s]),
-            }[self.component]
-            local = np.where(member, np.log2(np.where(member, ratio, 1)), 0)
-        return (local.sum(0) / np.maximum(member.sum(0), 1)).astype(np.float32)
-
-
 def creature_features(frame: np.ndarray, threshold: float) -> tuple[float, float]:
     """(mass of the largest creature, mass of everything else) in a frame."""
     labels = torus_label(frame > threshold)
@@ -228,3 +163,68 @@ class FeatureIndividuality(Measure):
 
         surrogate = np.mean([value(rng.permutation(s[1:])) for _ in range(self.shuffles)])
         return max(value(s[1:]) - surrogate, 0.0)
+
+
+@register_measure
+class LocalIndividuality(Measure):
+    key = "iti_local"
+    name = "Individuality (local)"
+    unit = "bits/cell"
+    group = "Individuality"
+    description = (
+        "A local adaptation of Krakauer et al.'s information theory of individuality: for "
+        "every cell of a creature (connected cells above the lowest level), how much its "
+        "next state is determined by itself and its neighbours in the same creature (S) "
+        "versus its other neighbours, background or other creatures (E). `component`: "
+        "organismal A* = I(S'; S) (default), colonial A = I(S'; S | E), driven "
+        "nC = I(S'; E | S). S is the cell's state and the summed state of its neighbours in "
+        "the creature, E the state of other creatures' cells within `radius`. Per creature "
+        "cell, over the window; at most 4 levels. 0 for empty frames, ~0 for noise. In Life "
+        "nC is 0: a cell's next state depends on its 3x3 only, all in its own creature."
+    )
+    window = 16
+    needs_discrete = True
+    peaks_at = "structure"
+    component = "organismal"
+    max_levels = 4
+    radius = 3
+    params = ("component", "window", "radius", "n_levels")
+    choices = {"component": COMPONENTS}
+    scope = "local"
+    temporal = "dynamic"
+    map = "local"
+
+    def levels(self, n_states):
+        return self.n_levels or min(n_states or self.max_levels, self.max_levels)
+
+    def _joint(self, frames, L):
+        s1, s, e, member = local_samples(np.stack(frames), L, self.radius)
+        joint = np.zeros((L, L * (8 * (L - 1) + 1), L + 1))
+        np.add.at(joint, (s1[member], s[member], e[member]), 1)
+        return joint, (s1, s, e, member)
+
+    def compute(self, frames, ctx=NO_CONTEXT) -> float:
+        if len(frames) < 2:
+            return 0.0
+        joint, _ = self._joint(frames, ctx.n_levels)
+        return decompose(joint)[self.component] if joint.sum() else 0.0
+
+    def compute_map(self, frames, ctx=NO_CONTEXT) -> np.ndarray:
+        """Pointwise values (log2 of the probability ratios inside the chosen component),
+        averaged over the steps each cell is part of a creature; 0 elsewhere."""
+        if len(frames) < 2:
+            return np.zeros(np.shape(frames[-1]), np.float32)
+        joint, (s1, s, e, member) = self._joint(frames, ctx.n_levels)
+        if not joint.sum():
+            return np.zeros(s1.shape[1:], np.float32)
+        p = joint / joint.sum()
+        with np.errstate(divide="ignore", invalid="ignore"):
+            p_s1s, p_s, p_s1 = p.sum(2), p.sum((0, 2)), p.sum((1, 2))
+            p_s1se, p_se, p_s1e, p_e = p, p.sum(0), p.sum(1), p.sum((0, 1))
+            ratio = {
+                "organismal": p_s1s[s1, s] / p_s[s] / p_s1[s1],
+                "colonial": (p_s1se[s1, s, e] / p_se[s, e]) / (p_s1e[s1, e] / p_e[e]),
+                "driven": (p_s1se[s1, s, e] / p_se[s, e]) / (p_s1s[s1, s] / p_s[s]),
+            }[self.component]
+            local = np.where(member, np.log2(np.where(member, ratio, 1)), 0)
+        return (local.sum(0) / np.maximum(member.sum(0), 1)).astype(np.float32)

@@ -90,7 +90,7 @@ function buildMeasureList() {
     const tags = [[kind.tag, kind.tag], [m.granularity, "granularity"], [m.scope, "scope"],
       [m.temporal, "temporal"], ...(m.map ? [["heatmap", "heatmap"]] : [])];
     const meta = tags.map(([t, cls]) => `<span class="tag tag-${cls} tag-v-${t}" title="${TAG_HELP[t] || ""}">${t}</span>`).join("") +
-      ` ${m.unit}${m.window > 1 ? ` · window ${m.window}` : ""}`;
+      ` ${m.unit}`;  // window and other parameters are under the ⚙
     const el = pickItem(`${kind.icon}${m.name}`, meta, () => {
       selectedMeasures.has(m.key) ? selectedMeasures.delete(m.key) : selectedMeasures.add(m.key);
       updateSidebar();
