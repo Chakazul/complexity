@@ -44,6 +44,13 @@ def from_catalogue(a: dict) -> dict:
             "kernels": [{"b": b, "m": p["m"], "s": p["s"]}], "cells": [rle2arr(a["cells"])]}
 
 
+# shown after the name in the pattern list
+BEHAVIOUR = {
+    "gyrorbium_gyrans": "gyrating", "helicium_solidus": "rotating",
+    "paraptera_cavus_furiosus": "chaotic", "tetralapillium_metamorpha": "chaotic",
+    "hexadentium_rotans": "rotating", "amoebium_dentalis": "chaotic",
+}
+
 CREATURES = {**LENIUM, **{k: from_catalogue(ANIMALS[i]) for k, i in CATALOGUE.items()}}
 
 
@@ -68,7 +75,8 @@ class Lenia(System):
     patterns = {
         "orbium": "Orbium",
         "random": "Random soup (Orbium params)",
-        **{k: CREATURES[k]["name"] for k in CATALOGUE},
+        **{k: CREATURES[k]["name"] + (f" ({BEHAVIOUR[k]})" if k in BEHAVIOUR else "")
+           for k in CATALOGUE},
     }
     # pattern -> (creature, random soup?)
     sources = {

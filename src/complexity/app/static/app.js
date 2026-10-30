@@ -108,7 +108,8 @@ function start() {
 let pendingSlots = [];
 
 function onInit(msg) {
-  active.runs = msg.runs.map((r, i) => ({ ...r, slot: pendingSlots[i] }));
+  // Labels under the views, in the table and the charts drop "(…)" descriptions.
+  active.runs = msg.runs.map((r, i) => ({ ...r, label: r.label.replace(/\s*\([^)]*\)/g, ""), slot: pendingSlots[i] }));
   active.measures = active.measures.filter((k) => active.runs.some((r) => r.measures.includes(k)));
   history = { t: [], v: Object.fromEntries(active.measures.map((k) => [k, active.runs.map(() => [])])) };
   buildViews();
@@ -161,7 +162,7 @@ function buildViews() {
     const scale = Math.max(1, Math.floor(256 / Math.max(r.width, r.height)));
     c.style.width = `${r.width * scale}px`; c.style.height = `${r.height * scale}px`;
     el.innerHTML = `<div class="cap"><span class="swatch" style="background:${seriesColor(r.slot)}"></span>
-      <span>${r.label}</span><span class="t" id="t${i}">t = 0</span></div>`;
+      <span>${r.label}</span></div>`;
     el.prepend(c);
     box.append(el);
     r.ctx = c.getContext("2d");
@@ -178,7 +179,6 @@ function drawFrame(i, b64) {
     px[p * 4] = lut[v]; px[p * 4 + 1] = lut[v + 1]; px[p * 4 + 2] = lut[v + 2]; px[p * 4 + 3] = 255;
   }
   r.ctx.putImageData(r.image, 0, 0);
-  $(`t${i}`).textContent = `t = ${history.t[history.t.length - 1]}`;
 }
 
 function renderTable(msg) {
