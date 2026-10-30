@@ -405,8 +405,15 @@ then polishing and sharing.
       (`aquarium`) and dividing on collision (`aquarium_scene`) (highest) — the Aquarium
       patterns are in (§4.2b), goo is not found yet
 - [ ] Find goo-like structures at parameters near the Aquarium's (experiments by Bert)
-- [ ] Prototype: a structural measure on a pyramid of coarse-grainings, scored high only
-      when structure exists at several scales; check it ranks the reference cases
+- [ ] Prototype the complexity field C = S × D on coarse tiles and a sliding window
+      (docs/measures.md §8.1b): S spatial structure across scales, D temporal dynamics, each
+      scaled between empty and matched noise; probabilities pooled over tiles / runs
+- [ ] Check it ranks the reference cases: empty, noise, frozen noise < still structure <
+      goo < single creature < Aquarium networks
+- [ ] Hot regions: threshold + connected components in space and time (position, extent,
+      peak, integral); boxes in the UI; export
+- [ ] Run summaries (mean, max, 95th percentile of C) to compare simulation conditions,
+      batched over seeds and parameters (with the M5 experiment runner)
 - [ ] Compare with causal emergence / ΦID (Rosas, Mediano et al. 2020) and O-information
       on per-unit macro variables
 

@@ -556,6 +556,38 @@ self-replicate (`aquarium`) or divide on collision (`aquarium_scene`) (highest).
 PLAN.md §4.2b for the Aquarium: Lenium's and Leniabreeder's parameter sets differ by ~0.5 %
 in one kernel's radius, and that switches self-replication on and off.
 
+### 8.1b Use of the goal measure (Bert, 2026-10-31)
+
+Measure a simulation, live or offline, and indicate **which regions — spatiotemporal
+ranges — have high spatial (structural) and temporal (dynamic) complexity**, in order to:
+1. **pick out high-complexity objects** (regions and their tracks), and
+2. **compare simulation conditions** by their average and maximum complexity.
+
+Spatial and temporal blurring and delay are acceptable.
+
+**Proposed design** (to prototype in M3b):
+- A **complexity field C(x, y, t)** on coarse tiles (e.g. 8×8 cells) over a sliding window
+  (e.g. 16–32 frames), updated every few steps. The allowed blur and delay are what make
+  per-tile estimates reliable.
+- Two components per tile and window, each scaled between its value on empty and on
+  matched noise so that values compare across systems:
+  - **S, spatial (structural)**: structure that noise with the same statistics cannot
+    explain, at several scales (1, 2, 4, 8 cells): the noise-band coarse-graining of EC, or
+    local statistical complexity, per scale (§8.1).
+  - **D, temporal (dynamic)**: change that is neither absent nor random: local TE or
+    predictable change. 0 for still structure and frozen noise, ~0 for iid noise, high for
+    coherent motion and transformation.
+- **C = S × D**: a region must be both; still structure (high S, no D) and churning noise
+  (high D, no S) score low.
+- **Estimation**: probabilities pooled over all tiles and the recent window, or over many
+  runs of the same conditions; local values then read per tile (§2.3).
+- **Outputs**: the C heatmap; **hot regions** (C above a threshold, connected in space and
+  time: position, extent, peak, integral; boxes in the UI, exportable); **run summaries**
+  (mean, maximum, 95th percentile over space and time) for comparing conditions, batched
+  over seeds and parameters (M5 experiments).
+- **Validation ranking**, lowest to highest: empty, iid noise, frozen noise; still structure;
+  goo / chaotic soup; a single glider or creature; Aquarium networks.
+
 ### 8.2 Other proposals
 
 - **Local information dynamics** (Lizier): local active information storage, transfer and
