@@ -188,10 +188,17 @@ def test_a_pattern_larger_than_the_grid_is_cropped_to_its_center():
     assert np.array_equal(grid, pattern[1:4, 0:4])  # rows (5 - 3) // 2 = 1.., columns 0..
 
 
-def _units(system, state) -> int:
+def _units(system, state, min_mass: float = 5) -> int:
+    """Creatures (connected cells above 0.1, on the torus) with at least `min_mass`, so
+    passing debris does not count."""
+    from scipy import ndimage
+
     from complexity.measures.individuality import torus_label
 
-    return len(np.unique(torus_label(np.asarray(system.observe(state)) > 0.1))) - 1
+    frame = np.asarray(system.observe(state))
+    labels = torus_label(frame > 0.1)
+    ids = np.unique(labels)[1:]
+    return int(np.sum(ndimage.sum(frame, labels, ids) >= min_mass)) if len(ids) else 0
 
 
 def test_multi_channel_kernels_and_maps():
@@ -215,10 +222,13 @@ def test_vt049w_differs_from_lenium_in_two_kernels():
 
 
 def test_aquarium_self_replicates_and_the_vt049w_unit_does_not():
+    # Lenia is chaotic and GPU FFTs are not bit-reproducible, so test what replication
+    # means at a time it is unambiguous (~24 units by step 1000), not exact counts
     lm = registry.make_system("lenia_multi")
     aquarium = lm.init("aquarium", (256, 256), jax.random.key(0))
-    assert _units(lm, engine.advance(lm, aquarium, 300)) >= 3
+    later = engine.advance(lm, aquarium, 1000)
+    assert float(later.A.sum() / aquarium.A.sum()) > 5 and _units(lm, later) >= 10
     unit = lm.init("aquarium_unit", (128, 128), jax.random.key(0))
     later = engine.advance(lm, unit, 500)
     assert _units(lm, later) == 1
-    assert 0.8 < float(later.A.sum() / unit.A.sum()) < 3  # grows into its adult size, ~2.3x
+    assert 2.0 < float(later.A.sum() / unit.A.sum()) < 2.6  # grows into its adult size, ~2.3x
