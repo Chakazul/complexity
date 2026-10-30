@@ -2,13 +2,15 @@
 
 Protocol (JSON messages):
   client -> server
-    {"type": "start", "runs": [{"system", "pattern", "size"?, "seed"?}], "measures": [keys]}
+    {"type": "start", "runs": [{"system", "pattern", "size"?, "seed"?}], "measures": [keys],
+     "measure_params"?: {key: {param: value}}}
     {"type": "play"} | {"type": "pause"} | {"type": "step"}
     {"type": "speed", "steps_per_tick": int, "fps": int}
   server -> client
     {"type": "init", "runs": [{"label", "system", "n_states", "height", "width", "measures",
-                               "skipped"}]}
-    {"type": "tick", "t": int, "runs": [{"frame": base64 uint8, "values": {}, "ms": {}}]}
+                               "skipped", "config": {key: {param: value}}}]}
+    {"type": "tick", "t": int, "runs": [{"frame": base64 uint8, "values": {}, "ms": {},
+                                          "warming_up": [keys]}]}
     {"type": "error", "message": str}
 """
 
@@ -54,7 +56,9 @@ def catalog():
         "measures": [
             {"key": key, "name": cls.name, "unit": cls.unit, "description": cls.description,
              "window": cls.window, "granularity": cls.granularity, "scope": cls.scope,
-             "temporal": cls.temporal,
+             "temporal": cls.temporal, "backend": cls.backend,
+             "needs_discrete": cls.needs_discrete, "peaks_at": cls.peaks_at,
+             "params": cls().config(),
              "accepts": [s for s, probe in probes.items() if cls().accepts(probe)]}
             for key, cls in registry.measures().items()
         ],
@@ -62,9 +66,10 @@ def catalog():
 
 
 class Session:
-    def __init__(self, runs: list[dict], measures: list[str]):
+    def __init__(self, runs: list[dict], measures: list[str], measure_params: dict | None = None):
         self.runs = [
-            Run(RunSpec(r["system"], r["pattern"], r.get("size"), r.get("seed", 0)), measures)
+            Run(RunSpec(r["system"], r["pattern"], r.get("size"), r.get("seed", 0)), measures,
+                measure_params)
             for r in runs
         ]
 
@@ -72,7 +77,8 @@ class Session:
         return {"type": "init", "runs": [
             {"label": r.spec.label, "system": r.spec.system, "n_states": r.n_states,
              "height": r.size[0], "width": r.size[1],
-             "measures": [m.key for m in r.measures], "skipped": r.skipped}
+             "measures": [m.key for m in r.measures], "skipped": r.skipped,
+             "config": {m.key: m.config() for m in r.measures}}
             for r in self.runs
         ]}
 
@@ -82,7 +88,8 @@ class Session:
             run.step(steps)
             values, ms = run.measure()
             frame = base64.b64encode(run.frame_u8().tobytes()).decode()
-            out.append({"frame": frame, "values": values, "ms": ms})
+            out.append({"frame": frame, "values": values, "ms": ms,
+                        "warming_up": run.warming_up()})
         return {"type": "tick", "t": self.runs[0].t if self.runs else 0, "runs": out}
 
 
@@ -114,7 +121,8 @@ async def websocket_endpoint(ws: WebSocket):
             try:
                 if kind == "start":
                     async with lock:
-                        state["session"] = Session(msg["runs"], msg["measures"])
+                        state["session"] = Session(msg["runs"], msg["measures"],
+                                                   msg.get("measure_params"))
                     await ws.send_json(state["session"].init_message())
                     await tick(0)
                     state["playing"] = True

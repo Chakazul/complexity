@@ -19,7 +19,7 @@ import av
 import numpy as np
 from PIL import Image
 
-from complexity.measures.base import Measure, to_uint8
+from complexity.measures.base import NO_CONTEXT, Measure, to_uint8
 from complexity.registry import register_measure
 
 # Compressed sizes keyed by (compressor, frame ids). The cache holds the frames themselves,
@@ -93,7 +93,7 @@ class LZMAFrame(Measure):
     unit = "bits/cell"
     description = "LZMA size of the current frame's raw bytes (1-D, no image model)."
 
-    def compute(self, frames) -> float:
+    def compute(self, frames, ctx=NO_CONTEXT) -> float:
         return image_bits("lzma", frames[-1])
 
 
@@ -104,7 +104,7 @@ class PNGSize(Measure):
     unit = "bits/cell"
     description = "PNG size of the current frame (DEFLATE with 2-D row filters)."
 
-    def compute(self, frames) -> float:
+    def compute(self, frames, ctx=NO_CONTEXT) -> float:
         return image_bits("png", frames[-1])
 
 
@@ -115,9 +115,10 @@ class LZMAVideo(Measure):
     unit = "bits/cell/frame"
     description = "LZMA size of a sliding window of frames; exact repeats across time compress away."
     window = 16
+    params = ("window",)
     temporal = "dynamic"
 
-    def compute(self, frames) -> float:
+    def compute(self, frames, ctx=NO_CONTEXT) -> float:
         return video_bits("video_lzma", frames)
 
 
@@ -131,9 +132,10 @@ class H264Video(Measure):
         "captures translating structures, including sub-pixel motion."
     )
     window = 16
+    params = ("window",)
     temporal = "dynamic"
 
-    def compute(self, frames) -> float:
+    def compute(self, frames, ctx=NO_CONTEXT) -> float:
         return video_bits("video_h264", frames)
 
 
@@ -148,9 +150,10 @@ class TemporalNovelty(Measure):
         "~1 for fresh noise."
     )
     window = 16
+    params = ("window",)
     temporal = "dynamic"
 
-    def compute(self, frames) -> float:
+    def compute(self, frames, ctx=NO_CONTEXT) -> float:
         image = np.mean([min(image_bits(name, f) for name in IMAGE) for f in frames])
         video = min(video_bits(name, frames) for name in VIDEO)
         return float(video / image) if image > 1e-3 else 0.0

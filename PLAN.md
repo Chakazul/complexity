@@ -260,8 +260,9 @@ Reference "systems" that calibrate every measure. Expected values are tested (§
 - `empty` — all zeros.
 - `frozen_noise` — one random frame repeated (static randomness).
 - `iid_noise` — a new random frame every step (dynamic randomness).
-- `noise_levels` parameter selects binary, 13-level or continuous noise to match the
-  system being compared.
+- The noise kind matches the system being compared: binary, 13-level or continuous. It is
+  part of the pattern key (`iid_noise_binary`, `frozen_noise_13`, …) rather than a system
+  parameter, so the UI and CLI pick it like any pattern (done, M3).
 
 ### 4.4 Later systems (backlog)
 Elementary CA (rule space, for LL / WZ / TL), larger-than-life and multi-channel Lenia,
@@ -329,13 +330,24 @@ T_{X→Y} = H(Y_{t+1} | Y_t) − H(Y_{t+1} | Y_t, X_t)
 
 - Estimator: plug-in from a joint histogram of `(y', y, x)` with `n_levels³` bins
   (`jnp.bincount` with static length), computed in JAX. GoL: 8 bins; min Orbium: 2197 bins
-  against ≈ 250 k samples per window at 128².
+  against ≈ 250 k samples per window at 128². **Miller–Madow correction** on each entropy
+  (`correct_bias`, on by default): the plug-in bias on 13-level iid noise at 128² is
+  0.0055 bits, as large as min Orbium's TE (0.006), and the correction removes it exactly
+  when all bins are occupied. Values are clipped at 0.
+- A filling window is zero-padded to the full shape with the padding weighted out, so the
+  start of a run does not recompile once per window length.
 - Parameters: `window = 16`, `offset = 1`, `n_levels = n_states` for discrete systems
   (default 8 for continuous ones).
 - Unit: bits per cell per step. Orientation: higher = more information flow = more complex.
 - Known limits, to state in the UI description:
   - `k = 1` mixes information storage into the flow; a larger `k` is a later parameter.
-  - Plug-in bias grows with bins / samples; check it against `iid_noise`.
+  - Plug-in bias grows with bins / samples; corrected (above) and checked against
+    `iid_noise`.
+- **First values** (128², step 100, after correction): empty, frozen and iid noise 0;
+  Life glider 0.0005, Gosper gun 0.0038, pulsar 0.0022, random soup 0.025; min Orbium
+  0.0061, Integer Lenia soup 0.0098; Orbium 0.0054, Lenia soup 0.0065. Like compression of
+  an isolated object, per-cell TE of a single glider or creature shrinks with grid size,
+  and soups beat single objects because more of the grid is active.
   - For smooth fields (Lenia), `offset = 1` may be too short; `offset` is exposed for
     exploration (e.g. `≈ R/4`).
 
@@ -439,16 +451,19 @@ then polishing and sharing.
       spaceships (displacement per period) and oscillators (period)
 
 ### M3 — Measures (§5.2, §5.3)
-- [ ] `Measure` gains `backend`, `needs_discrete`, `ctx`; orientation documented in the
-      base class; `RuleMeasure` interface for rule-level measures
-- [ ] Baseline system (`empty`, `frozen_noise`, `iid_noise`, with noise levels)
-- [ ] Transfer entropy in JAX (`offset`, `n_levels`, `window` parameters)
+- [x] `Measure` gains `backend`, `needs_discrete`, `ctx`, `peaks_at` and tunable `params`;
+      orientation documented in the base class; `RuleMeasure` interface for rule-level
+      measures
+- [x] Baseline system (`empty`, `frozen_noise`, `iid_noise`, with noise levels)
+- [x] Transfer entropy in JAX (`offset`, `n_levels`, `window` parameters; Miller–Madow
+      bias correction)
 - [ ] LZC, block entropy (SE), fractal dimension (FD), effective complexity proxy (EC),
       logical depth proxy (LD), Lyapunov exponent (LE)
 - [ ] Rule-level: transient length (TL), Langton's λ (LL), functional information (FI)
 - [ ] Statistical complexity (SC), PID, FID, individuality (ITI)
 - [ ] Measure-expectation tests from §6 for every measure; `warming_up` flag for window
-      measures
+      measures (done so far: orientation and structure tests over all registered measures,
+      TE baselines; `warming_up` sent per tick and drawn faint in the UI)
 - [ ] UI: new measures in the list, grouped by taxonomy; per-measure parameter controls
       (window, `n_levels`, `offset`); compatibility hints (why a measure is greyed out)
 
@@ -460,8 +475,8 @@ then polishing and sharing.
 
 ### M5 — Polishing and sharing
 - [x] UI: device (CPU, or GPU and its name) in the header; collapsible side panel
-- [ ] UI: "compiling…" state on start; baselines
-      selectable as systems; dim warm-up points; export the session as CSV; record to MP4
+- [ ] UI: "compiling…" state on start; export the session as CSV; record to MP4
+      (baselines are selectable as systems and warm-up points are dimmed since M3)
 - [ ] `experiments/*.toml` config format and `complexity experiment <config>`; batched
       seeds via `vmap`; results in `results/<name>/` with metadata sidecar
 - [ ] First study: all measures × (GoL, Lenia creatures, baselines, new systems) × 10 seeds

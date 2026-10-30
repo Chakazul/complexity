@@ -1,12 +1,29 @@
-"""The interface every complexity measure implements."""
+"""The interfaces every complexity measure implements (PLAN.md §3.3)."""
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from dataclasses import dataclass
 
 import jax.numpy as jnp
 import numpy as np
+
+# Coarse-graining of continuous frames for measures that need symbols, unless the measure's
+# `n_levels` says otherwise.
+DEFAULT_LEVELS = 8
+
+
+@dataclass(frozen=True)
+class Context:
+    """What a measure may know about the run besides its frames."""
+
+    n_states: int | None = None  # the system's discrete states, None if continuous
+    n_levels: int | None = None  # symbols in discretized frames (set for `needs_discrete`)
+    system: str = ""
+    pattern: str = ""
+
+
+NO_CONTEXT = Context()  # a continuous system, no discretization
 
 
 class Measure(ABC):
@@ -14,7 +31,18 @@ class Measure(ABC):
 
     `window = 1` makes a static (per-frame) measure; `window > 1` a dynamic one that sees
     a sliding window of consecutive frames, oldest first. Before the window fills, the
-    measure receives the frames available so far.
+    measure receives the frames available so far, and the run flags its value as warming up.
+
+    Orientation: higher value = more complex by this measure's definition (PLAN.md §2). A
+    quantity that runs the other way is negated or inverted in `compute`, and the
+    `description` says so. `peaks_at` says where the measure is highest: "randomness"
+    (compression, entropy) or "structure" (transfer entropy); the tests check both.
+
+    `backend = "host"` measures receive a list of NumPy frames; `backend = "jax"` measures a
+    device array (window, height, width). Frames are float32 in [0, 1], or, with
+    `needs_discrete`, int32 symbols 0..ctx.n_levels-1 (see `discretize`).
+
+    Attributes named in `params` are tunable: `make_measure(key, window=32)`.
     """
 
     key: str  # registry key, e.g. "png"
@@ -22,18 +50,58 @@ class Measure(ABC):
     unit: str  # e.g. "bits/cell"
     description: str = ""
     window: int = 1
+    backend: str = "host"  # "host" or "jax"
+    needs_discrete: bool = False
+    n_levels: int | None = None  # None: n_states if discrete, else DEFAULT_LEVELS
+    peaks_at: str = "randomness"  # "randomness" or "structure"
+    params: tuple[str, ...] = ()
     # Classification from Complexity_Measure.pdf §1.1-1.2, shown in the UI.
     granularity: str = "pattern"  # "pattern", "rule" or "system"
     scope: str = "global"  # "local" or "global"
     temporal: str = "static"  # "static" or "dynamic"
+
+    def __init__(self, **params):
+        for k, v in params.items():
+            if k not in self.params:
+                raise ValueError(f"measure {self.key!r} has no parameter {k!r}")
+            setattr(self, k, v)
+
+    def config(self) -> dict:
+        """Current parameter values, recorded with results."""
+        return {k: getattr(self, k) for k in self.params}
+
+    def levels(self, n_states: int | None) -> int:
+        """Symbols this measure uses on a system with `n_states` (None if continuous)."""
+        return self.n_levels or n_states or DEFAULT_LEVELS
 
     def accepts(self, system) -> bool:
         """Whether this measure applies to `system`; override to restrict it."""
         return True
 
     @abstractmethod
-    def compute(self, frames: Sequence[np.ndarray]) -> float:
-        """Frames are float32 (height, width) in [0, 1], oldest first."""
+    def compute(self, frames, ctx: Context = NO_CONTEXT) -> float:
+        """Frames oldest first; see the class docstring for their type."""
+
+
+class RuleMeasure(ABC):
+    """A property of a rule (system and its parameters), not of a frame: transient length,
+    Langton's lambda, functional information (PLAN.md §5.3). Computed once per (system,
+    pattern) from the rule table or from batched runs, and shown as a constant per run."""
+
+    key: str
+    name: str
+    unit: str
+    description: str = ""
+    granularity: str = "rule"
+    scope: str = "global"
+    temporal: str = "static"
+
+    def accepts(self, system) -> bool:
+        return True
+
+    @abstractmethod
+    def compute(self, system, pattern: str) -> float:
+        """The measure's value for `system` running `pattern`'s parameters."""
 
 
 def to_uint8(frame: np.ndarray) -> np.ndarray:

@@ -8,7 +8,8 @@ systems in scope.
 
 Current demo: **Game of Life** and **Lenia** (continuous and Integer Lenia), simulated in
 **JAX** (CPU, GPU or TPU), measured by **image and video compression** as proxies for
-algorithmic (Kolmogorov) complexity.
+algorithmic (Kolmogorov) complexity and by **transfer entropy** (local information flow),
+with **noise baselines** to calibrate each measure.
 
 ## Status and roadmap
 
@@ -20,7 +21,9 @@ The design and the milestone checklist are in **[PLAN.md](PLAN.md)**. In brief:
 - **M2 (done):** ten creatures from the original Lenia catalogue (Gyrorbium, Scutium,
   Helicium, Geminium, Paraptera, Tetralapillium, Kronium, Hexadentium, Amoebium), and
   16 Game of Life patterns from the same catalogue.
-- **M3 (next):** most measures from the PDF, starting with noise baselines and transfer entropy.
+- **M3 (in progress):** most measures from the PDF. Done: noise baselines, transfer
+  entropy. Next: LZC, block entropy, fractal dimension, effective complexity, logical
+  depth, Lyapunov exponent; then rule-level and the harder ones.
 - **M4:** more systems: elementary CA, other CA rules, particle systems.
 - **M5:** polishing and sharing: UI, batch experiments and a results site, CI,
   contributor guide, hosted demo.
@@ -70,6 +73,10 @@ uv run complexity run life:random --measures png,video_h264 --size 256x256 --eve
 | `lenia` — Lenia (continuous) | Orbium (default), random soup, Gyrorbium gyrans, Scutium solidus, Helicium solidus, Hydrogeminium natans, Paraptera arcus labens, Paraptera cavus furiosus, Tetralapillium metamorpha, Kronium solidus, Hexadentium rotans, Amoebium dentalis |
 | `integer_lenia` — Integer Lenia (`P = 12`, 13 states) | minimum Orbium (default), random soup |
 | `life` — Game of Life (discrete) | glider (default), Gosper glider gun, lightweight / middleweight / heavyweight spaceships, R-pentomino, Copperhead, Galaxy, Weekender, Lobster, Sir Robin, Pufferfish, Switch engine, Max, Sidecar gun, Star gate, pulsar, acorn, random soup |
+| `baseline` — reference frames | empty (default); iid noise (new every step) and frozen noise (one frame held), each binary, 13-level or continuous |
+
+The baselines calibrate the measures: compare a system with noise of its own kind (binary
+for Life, 13 levels for Integer Lenia, continuous for Lenia).
 
 Lenia uses Gaussian kernel shells and growth, the standard for experiments here. The
 named creatures and Life patterns come from the original Lenia catalogue
@@ -116,8 +123,19 @@ you what kind of structure a pattern has; the minimum is the tightest bound. Bit
 cell are size-invariant only for space-filling patterns; isolated objects get "cheaper"
 on larger grids, so compare them at equal size.
 
-Window measures see fewer frames until the window fills, so their first ~16 steps are a
-warm-up transient.
+| `transfer_entropy` | transfer entropy, bits/cell/step | 16 | information a neighbour adds about a cell's next state; see below |
+
+**Transfer entropy** (Schreiber 2000; for CA, Lizier et al. 2008) runs in JAX on the
+device, on frames discretized to `n_levels` symbols (Life 2, Integer Lenia 13, continuous
+Lenia 8 by default). It is averaged over the 4 neighbours at distance `offset`, all cells
+and the window's steps, with history length 1. It is low at both ends: 0 for empty, still
+and frozen patterns, ~0 for iid noise (the Miller–Madow bias correction removes the
+plug-in bias, which for 13 levels on 128² is as large as the minimum Orbium's signal), and
+highest for moving structure. Like compression of an isolated object, its per-cell value
+shrinks as the grid grows.
+
+Window measures see fewer frames until the window fills; the UI draws those warm-up values
+faint.
 
 ## Adding a system or a measure
 
@@ -143,19 +161,23 @@ class MySystem(System):
 ```
 
 A **measure** ([measures/base.py](src/complexity/measures/base.py)) implements
-`compute(frames)`, receiving the last `window` frames (NumPy, on the host), oldest first,
-and returns a value where higher means more complex (see Conventions). Override
-`accepts(system)` to restrict it. Measures that need symbols use
-`discretize(frames, n_levels)` from `measures/base.py`, which is exact for discrete systems
-and a uniform coarse-graining for continuous ones. Tag it with `granularity`, `scope` and `temporal`
-following the classification in the PDF.
+`compute(frames, ctx)`, receiving the last `window` frames oldest first, and returns a
+value where higher means more complex (see Conventions). With `backend = "host"` (default)
+the frames are a list of NumPy arrays; with `backend = "jax"` a device array
+`(window, H, W)`. With `needs_discrete = True` they arrive as int32 symbols
+`0..ctx.n_levels - 1` (`discretize`): exact for discrete systems, a uniform coarse-graining
+for continuous ones (`n_levels`, default 8). Set `peaks_at = "structure"` if the measure is
+highest for structure rather than randomness; the tests then check that a glider stream
+beats noise. Attributes listed in `params` are tunable (`make_measure("transfer_entropy",
+offset=2)`). Override `accepts(system)` to restrict it, and tag it with `granularity`,
+`scope` and `temporal` following the classification in the PDF.
 
 ```python
 @register_measure
 class MyMeasure(Measure):
     key, name, unit = "mine", "My measure", "bits"
     window = 1
-    def compute(self, frames): ...
+    def compute(self, frames, ctx): ...
 ```
 
 Add a test in [tests/](tests/) and run `uv run --extra dev pytest`.
@@ -168,8 +190,8 @@ src/complexity/
   engine.py              rollout (lax.scan), rollout_batch (vmap), advance
   session.py             Run: one system + its measures + a device frame buffer (UI and CLI)
   cli.py                 complexity serve | list | info | run
-  systems/               base.py, life.py, lenia.py (JAX)
-  measures/              base.py, compression.py
+  systems/               base.py, life.py, lenia.py, baseline.py (JAX)
+  measures/              base.py, compression.py, information.py (JAX)
   vendor/lenium/         code and data copied from Lenium, with source notes
   vendor/lenia/          patterns and RLE decoder from the original Lenia, with source notes
   app/server.py          FastAPI + WebSocket streaming

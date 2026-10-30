@@ -12,7 +12,7 @@ let ws = null;
 let playing = false;
 let runRows = [];      // [{slot, system, pattern}] in the sidebar
 let active = null;     // the started session: {runs: [{slot, label, ...}], measures: [...]}
-let history = null;    // {t: [], v: {measureKey: [[run0 values], [run1 values], ...]}}
+let history = null;    // {t: [], v: {measureKey: [[run0 values], ...]}, w: same shape, true = warming up}
 let charts = {};
 let dirty = false;
 
@@ -111,7 +111,8 @@ function onInit(msg) {
   // Labels under the views, in the table and the charts drop "(…)" descriptions.
   active.runs = msg.runs.map((r, i) => ({ ...r, label: r.label.replace(/\s*\([^)]*\)/g, ""), slot: pendingSlots[i] }));
   active.measures = active.measures.filter((k) => active.runs.some((r) => r.measures.includes(k)));
-  history = { t: [], v: Object.fromEntries(active.measures.map((k) => [k, active.runs.map(() => [])])) };
+  const perRun = () => Object.fromEntries(active.measures.map((k) => [k, active.runs.map(() => [])]));
+  history = { t: [], v: perRun(), w: perRun() };
   buildViews();
   buildCharts();
   setPlaying(true);
@@ -131,12 +132,15 @@ function onTick(msg) {
   updateFps();
   history.t.push(msg.t);
   msg.runs.forEach((r, i) => {
-    for (const k of active.measures) history.v[k][i].push(k in r.values ? r.values[k] : null);
+    for (const k of active.measures) {
+      history.v[k][i].push(k in r.values ? r.values[k] : null);
+      history.w[k][i].push(r.warming_up.includes(k));
+    }
     drawFrame(i, r.frame);
   });
   if (history.t.length > MAX_POINTS) {
     history.t.shift();
-    for (const k of active.measures) for (const s of history.v[k]) s.shift();
+    for (const k of active.measures) for (const s of [...history.v[k], ...history.w[k]]) s.shift();
   }
   renderTable(msg);
   dirty = true;
@@ -189,6 +193,8 @@ function renderTable(msg) {
     active.runs.map((r, i) => {
       const v = msg.runs[i].values[m.key];
       return v === undefined ? `<td title="not applicable">n/a</td>`
+        : msg.runs[i].warming_up.includes(m.key)
+        ? `<td class="warming" title="window still filling: ${m.window} frames needed">${v.toFixed(4)}<span class="ms">${msg.runs[i].ms[m.key].toFixed(0)} ms</span></td>`
         : `<td>${v.toFixed(4)}<span class="ms">${msg.runs[i].ms[m.key].toFixed(0)} ms</span></td>`;
     }).join("") + "</tr>").join("");
   $("table-wrap").innerHTML = `<table>${head}${rows}</table>`;
@@ -239,7 +245,7 @@ function drawChart(chart) {
   const g = c.getContext("2d");
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, W, H);
-  const ts = history.t, series = history.v[chart.key];
+  const ts = history.t, series = history.v[chart.key], warming = history.w[chart.key];
   if (!ts.length) return;
   const pad = { l: 46, r: 10, t: 8, b: 22 };
   let lo = Infinity, hi = -Infinity;
@@ -265,17 +271,20 @@ function drawChart(chart) {
   g.textAlign = "center"; g.textBaseline = "top";
   for (const t of niceTicks(t0, t1, 5)) if (t >= t0 && t <= t1) g.fillText(t, X(t), H - pad.b + 6);
 
-  g.lineWidth = 2; g.lineJoin = "round";
+  g.lineWidth = 2; g.lineJoin = g.lineCap = "round";
   series.forEach((s, i) => {
+    // Warm-up values (window still filling) are drawn faint: they cover fewer frames.
     g.strokeStyle = seriesColor(active.runs[i].slot);
-    g.beginPath();
-    let pen = false;
-    for (let k = 0; k < s.length; k++) {
-      if (s[k] === null) { pen = false; continue; }
-      pen ? g.lineTo(X(ts[k]), Y(s[k])) : g.moveTo(X(ts[k]), Y(s[k]));
-      pen = true;
+    for (const faint of [true, false]) {
+      g.globalAlpha = faint ? 0.3 : 1;
+      g.beginPath();
+      for (let k = 1; k < s.length; k++) {
+        if (s[k] === null || s[k - 1] === null || warming[i][k] !== faint) continue;
+        g.moveTo(X(ts[k - 1]), Y(s[k - 1])); g.lineTo(X(ts[k]), Y(s[k]));
+      }
+      g.stroke();
     }
-    g.stroke();
+    g.globalAlpha = 1;
   });
 
   if (chart.hover !== null && chart.hover >= pad.l) {
