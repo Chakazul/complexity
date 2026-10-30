@@ -87,7 +87,7 @@ function buildMeasureList() {
       box.append(h);
     }
     const kind = PEAKS[m.peaks_at];
-    const meta = [kind.tag, m.granularity, m.scope, m.temporal]
+    const meta = [kind.tag, m.granularity, m.scope, m.temporal, ...(m.map ? ["heatmap"] : [])]
       .map((t) => `<span class="tag" title="${TAG_HELP[t] || ""}">${t}</span>`).join("") +
       ` ${m.unit}${m.window > 1 ? ` · window ${m.window}` : ""}`;
     const el = pickItem(`${kind.icon}${m.name}`, meta, () => {
@@ -225,9 +225,11 @@ const TAG_HELP = {
   global: "Global: computed from the whole frame at once.",
   static: "Static: one frame (or the rule) at a time.",
   dynamic: "Dynamic: uses changes over time (a window of frames, or runs of the system).",
+  heatmap: "Has a spatial map: choose it under Heatmap (Run section) to see where the value comes from.",
 };
 
-// Off by default: LZMA compresses tighter than PNG and H.264 on every run measured so far.
+// Off by default: LZMA compresses tighter than PNG and H.264 on every run measured so far;
+// rule-level measures take seconds on the first tick.
 const UNTICKED = new Set(["png", "video_h264"]);
 
 // ---------- session ----------
@@ -445,7 +447,7 @@ function buildCharts() {
     const m = catalog.measures.find((x) => x.key === key);
     const el = document.createElement("div");
     el.className = "chart";
-    el.innerHTML = `<h3>${m.name}</h3><span class="unit">${m.unit} vs. time step</span>`;
+    el.innerHTML = `<h3>${PEAKS[m.peaks_at].icon}${m.name}</h3><span class="unit">${m.unit} vs. time step</span>`;
     el.querySelector("h3").title = m.description;  // as in the measure list
     const c = document.createElement("canvas");
     const tip = document.createElement("div");
@@ -593,7 +595,8 @@ async function main() {
     ["lenia", "paraptera_arcus_labens"], ["lenia", "paraptera_cavus_furiosus"],
     ["lenia", "tetralapillium_metamorpha"], ["baseline", "iid_noise_continuous"],
   ]) addRun(system, pattern);
-  selectedMeasures = new Set(catalog.measures.map((m) => m.key).filter((k) => !UNTICKED.has(k)));
+  selectedMeasures = new Set(catalog.measures
+    .filter((m) => !UNTICKED.has(m.key) && m.granularity !== "rule").map((m) => m.key));
   buildRunList();
   buildMeasureList();
   updateSidebar();
