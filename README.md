@@ -61,8 +61,10 @@ by side, each outlined in its series colour; click measures in the Measures list
 **Start**. Click an item again to deselect it, or **Clear** to deselect a whole list.
 **Heatmap** (Run section) shows where one measure's value comes from, as a map per run:
 local fields for transfer entropy, statistical complexity, block entropy and the Lyapunov
-twin's divergence, per tile for compression, LZC, PID and FID. **Overlay** draws it over
-the frame (shown in gray), **Side by side** next to it; the scale is shared across runs. Each measure shows its current value per run in the table
+twin's divergence, per tile for compression, LZC, PID and FID, drawn next to each frame
+with a scale shared across runs.
+
+Each measure shows its current value per run in the table
 and its history as a live chart (hover for values). Measures that do not apply to a
 selected system are struck through.
 

@@ -19,13 +19,12 @@ let dirty = false;
 // Viridis, sampled at 9 stops, for continuous states; binary states draw black/white.
 const VIRIDIS = ["#440154", "#472d7b", "#3b528b", "#2c728e", "#21918c", "#28ae80", "#5ec962", "#addc30", "#fde725"]
   .map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
-const LUT = { continuous: new Uint8Array(256 * 3), discrete: new Uint8Array(256 * 3), gray: new Uint8Array(256 * 3) };
+const LUT = { continuous: new Uint8Array(256 * 3), discrete: new Uint8Array(256 * 3) };
 for (let i = 0; i < 256; i++) {
   const x = (i / 255) * (VIRIDIS.length - 1), k = Math.min(Math.floor(x), VIRIDIS.length - 2), f = x - k;
   for (let c = 0; c < 3; c++) {
     LUT.continuous[i * 3 + c] = VIRIDIS[k][c] * (1 - f) + VIRIDIS[k + 1][c] * f;
     LUT.discrete[i * 3 + c] = i > 127 ? 255 : 0;
-    LUT.gray[i * 3 + c] = i;  // under a heatmap overlay, so the heat colour reads
   }
 }
 
@@ -183,12 +182,12 @@ function start() {
 }
 
 // ---------- heatmaps (PLAN.md §5.7) ----------
-// One measure's spatial map per run, overlaid on the frame (frame in gray, orange with
-// opacity rising with the value) or beside it (orange ramp from the surface colour). The
-// scale is shared across runs: 0 to the largest value this tick; negatives show as 0.
+// One measure's spatial map per run, beside its frame: an orange ramp from the surface
+// colour at 0. The scale is shared across runs: 0 to the largest value this tick;
+// negatives show as 0. (An overlay on the frame was tried and dropped, 2026-10-30.)
 
-let mapKey = "", mapLayout = "overlay";
-try { mapKey = localStorage.getItem("mapKey") || ""; mapLayout = localStorage.getItem("mapLayout") || "overlay"; } catch {}
+let mapKey = "";
+try { mapKey = localStorage.getItem("mapKey") || ""; } catch {}
 
 function mapMeasures() {
   const chosen = active ? active.measures : catalog.measures.map((m) => m.key).filter((k) => selectedMeasures.has(k));
@@ -200,12 +199,7 @@ function renderMapControls() {
   if (mapKey && !options.some((m) => m.key === mapKey)) setMap("");
   sel.innerHTML = `<option value="">Off</option>` +
     options.map((m) => `<option value="${m.key}"${m.key === mapKey ? " selected" : ""}>${m.name}${m.map === "tile" ? " (tiles)" : ""}</option>`).join("");
-  for (const b of $("map-layout").querySelectorAll("button")) {
-    b.setAttribute("aria-pressed", b.dataset.layout === mapLayout);
-    b.disabled = !mapKey;
-  }
-  $("views").classList.toggle("heat-overlay-mode", !!mapKey && mapLayout === "overlay");
-  $("views").classList.toggle("heat-side-mode", !!mapKey && mapLayout === "side");
+  $("views").classList.toggle("heat-on", !!mapKey);
   if (!mapKey) $("heat-legend").hidden = true;
 }
 
@@ -234,26 +228,21 @@ function drawMaps(msg) {
   const maps = msg.runs.map((r) => (r.map ? { ...r.map, v: decodeMap(r.map) } : null));
   let hi = 0;
   for (const m of maps) if (m) for (const v of m.v) if (v > hi) hi = v;
-  const scale = hi > 0 ? hi : 1, ramp = heatRamp(), overlay = mapLayout === "overlay";
+  const scale = hi > 0 ? hi : 1, ramp = heatRamp();
   maps.forEach((m, i) => {
     const r = active.runs[i];
     if (!m) {  // the measure does not run here (or has no map for this system)
-      for (const cv of [r.overlay, r.side]) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);
+      r.heat.getContext("2d").clearRect(0, 0, r.heat.width, r.heat.height);
       return;
     }
-    const canvas = overlay ? r.overlay : r.side;
+    const canvas = r.heat;
     if (canvas.width !== m.w || canvas.height !== m.h) { canvas.width = m.w; canvas.height = m.h; }
     const g = canvas.getContext("2d"), img = g.createImageData(m.w, m.h), px = img.data;
     for (let p = 0; p < m.v.length; p++) {
       const t = Math.min(1, Math.max(0, m.v[p] / scale));
-      if (overlay) {
-        px.set(ramp.mid, p * 4);
-        px[p * 4 + 3] = Math.round(230 * t);
-      } else {
-        const [a, b, f] = t < 0.5 ? [ramp.lo, ramp.mid, t * 2] : [ramp.mid, ramp.hi, t * 2 - 1];
-        for (let c = 0; c < 3; c++) px[p * 4 + c] = a[c] + (b[c] - a[c]) * f;
-        px[p * 4 + 3] = 255;
-      }
+      const [a, b, f] = t < 0.5 ? [ramp.lo, ramp.mid, t * 2] : [ramp.mid, ramp.hi, t * 2 - 1];
+      for (let c = 0; c < 3; c++) px[p * 4 + c] = a[c] + (b[c] - a[c]) * f;
+      px[p * 4 + 3] = 255;
     }
     g.putImageData(img, 0, 0);
   });
@@ -261,8 +250,7 @@ function drawMaps(msg) {
   const legend = $("heat-legend");
   legend.hidden = !maps.some(Boolean);
   if (!legend.hidden) {
-    const bar = overlay ? `linear-gradient(90deg, transparent, ${css("--heat-mid")})`
-      : `linear-gradient(90deg, ${css("--surface-1")}, ${css("--heat-mid")}, ${css("--heat-hi")})`;
+    const bar = `linear-gradient(90deg, ${css("--surface-1")}, ${css("--heat-mid")}, ${css("--heat-hi")})`;
     legend.innerHTML = `<span>Heatmap: <b>${m.name}</b>${m.map === "tile" ? " (per tile, above an empty tile)" : ""}</span>
       <span>0</span><span class="bar" style="background:${bar}"></span><span>${+hi.toPrecision(3)} ${m.map_unit}</span>`;
   }
@@ -298,7 +286,7 @@ function onTick(msg) {
       history.v[k][i].push(k in r.values ? r.values[k] : null);
       history.w[k][i].push(r.warming_up.includes(k));
     }
-    drawFrame(i, r.frame, !!r.map && mapLayout === "overlay");
+    drawFrame(i, r.frame);
   });
   if (mapKey) drawMaps(msg);
   if (history.t.length > MAX_POINTS) {
@@ -326,15 +314,13 @@ function buildViews() {
     el.className = "view";
     const scale = Math.max(1, Math.floor(256 / Math.max(r.width, r.height)));
     const w = `${r.width * scale}px`, h = `${r.height * scale}px`;
-    el.innerHTML = `<div class="view-row"><div class="frame-wrap"><canvas class="frame"></canvas>
-      <canvas class="heat-overlay"></canvas></div><canvas class="heat-side"></canvas></div>
+    el.innerHTML = `<div class="view-row"><canvas class="frame"></canvas><canvas class="heat"></canvas></div>
       <div class="cap"><span class="swatch" style="background:${seriesColor(r.slot)}"></span>
       <span>${r.label}</span></div>`;
     const c = el.querySelector("canvas.frame");
     c.width = r.width; c.height = r.height;
     for (const x of el.querySelectorAll("canvas")) { x.style.width = w; x.style.height = h; }
-    r.overlay = el.querySelector("canvas.heat-overlay");
-    r.side = el.querySelector("canvas.heat-side");
+    r.heat = el.querySelector("canvas.heat");
     box.append(el);
     r.ctx = c.getContext("2d");
     r.image = r.ctx.createImageData(r.width, r.height);
@@ -342,9 +328,9 @@ function buildViews() {
   });
 }
 
-function drawFrame(i, b64, gray = false) {
+function drawFrame(i, b64) {
   const r = active.runs[i];
-  const raw = atob(b64), px = r.image.data, lut = gray ? LUT.gray : r.lut;
+  const raw = atob(b64), px = r.image.data, lut = r.lut;
   for (let p = 0; p < raw.length; p++) {
     const v = raw.charCodeAt(p) * 3;
     px[p * 4] = lut[v]; px[p * 4 + 1] = lut[v + 1]; px[p * 4 + 2] = lut[v + 2]; px[p * 4 + 3] = 255;
@@ -538,14 +524,6 @@ async function main() {
   buildMeasureList();
   updateSidebar();
   $("map-measure").onchange = (e) => { setMap(e.target.value); renderMapControls(); };
-  for (const b of $("map-layout").querySelectorAll("button")) {
-    b.onclick = () => {
-      mapLayout = b.dataset.layout;
-      try { localStorage.setItem("mapLayout", mapLayout); } catch {}
-      renderMapControls();
-      sendMap();  // redraws now, also when paused
-    };
-  }
   $("clear-runs").onclick = () => { runRows = []; updateSidebar(); };
   $("clear-measures").onclick = () => { selectedMeasures.clear(); updateSidebar(); };
   $("start").onclick = () => { start(); $("start").textContent = "Restart"; };

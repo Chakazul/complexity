@@ -429,9 +429,20 @@ tile; timing noise), and effective complexity too (a 2-cell blur leaves nothing 
 excess over an empty tile: LZMA spends ~8 bits/cell of format overhead on an 8×8 tile.
 The local maps average to the measure's value (tested). The Lyapunov map is 0 to 1 in both
 kinds of system: damage (discrete), or log10 growth over its 5-decade range (continuous).
-The UI computes the map of one chosen measure per tick (`{"type": "map"}` message). Colour: one orange ramp for magnitude (dataviz: sequential = one hue);
-overlay draws the frame in gray under orange with opacity rising with the value, side by
-side draws the ramp from the surface colour; the scale is shared across runs per tick.
+The UI computes the map of one chosen measure per tick (`{"type": "map"}` message).
+Colour: one orange ramp for magnitude (dataviz: sequential = one hue), from the surface
+colour at 0; the scale is shared across runs per tick. Drawn **side by side** with the
+frame: an overlay (frame in gray, orange over it) was tried and dropped, since it hid the
+structure it was explaining (Bert, 2026-10-30).
+
+What gives a measure a per-cell map: being computed from the run's frames (pattern level)
+and being an **average of a per-cell quantity**, so the map's mean is the measure (local
+TE, −log2 P(causal state), block surprisal). The `local` tag is a hint, not a guarantee:
+PID's I_min takes a minimum over distributions and has no per-cell form (pointwise PID
+would: Finn & Lizier 2018), so it gets tiles. `dynamic` and `structural` are not needed
+for a map (block entropy is static and randomness-peaked) but make it useful for the
+goal in §5.8: dark on noise and empty, following what structures do. TE and SC have all
+four properties.
 
 ### 5.8 Multi-scale structural complexity (M3b, planned)
 
@@ -595,7 +606,7 @@ then polishing and sharing.
 - [x] Heatmaps (§5.7): a spatial map for every measure with spatial granularity, local
       fields (TE, SC, block entropy, Lyapunov separation) or per tile (compression, LZC,
       PID, FID); shown overlaid on the frame or side by side
-- [ ] Choose overlay or side by side (or keep both) after trying them (Bert)
+- [x] Overlay or side by side: side by side (Bert, 2026-10-30)
 - [ ] Measure-expectation tests from §6 for every measure; `warming_up` flag for window
       measures (done so far: orientation and structure tests over all registered measures,
       TE baselines, per-measure tests for the §5.4 measures; `warming_up` sent per tick and
