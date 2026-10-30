@@ -102,6 +102,8 @@ class TransferEntropy(Measure):
     params = ("window", "offset", "n_levels", "correct_bias")
     scope = "local"
     temporal = "dynamic"
+    subject = "trajectory"
+    estimated_from = "run"
 
     map = "local"
 
@@ -159,6 +161,8 @@ class BlockEntropy(Measure):
     needs_discrete = True
     block = 2
     params = ("block", "n_levels")
+    granularity = "system"  # Shannon entropy belongs to a distribution (docs/measures.md §2.3)
+    scope = "local"  # its pointwise form, the surprisal, is the map
 
     map = "local"
 

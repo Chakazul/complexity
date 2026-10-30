@@ -123,6 +123,8 @@ class LZMAVideo(Measure):
     window = 16
     params = ("window",)
     temporal = "dynamic"
+    subject = "trajectory"  # a window of frames
+    estimated_from = "run"
 
     def compute(self, frames, ctx=NO_CONTEXT) -> float:
         return video_bits("video_lzma", frames)
@@ -141,6 +143,8 @@ class H264Video(Measure):
     window = 16
     params = ("window",)
     temporal = "dynamic"
+    subject = "trajectory"  # a window of frames
+    estimated_from = "run"
 
     def compute(self, frames, ctx=NO_CONTEXT) -> float:
         return video_bits("video_h264", frames)
@@ -160,6 +164,8 @@ class TemporalNovelty(Measure):
     window = 16
     params = ("window",)
     temporal = "dynamic"
+    subject = "trajectory"  # a window of frames
+    estimated_from = "run"
 
     def compute(self, frames, ctx=NO_CONTEXT) -> float:
         image = np.mean([min(image_bits(name, f) for name in IMAGE) for f in frames])

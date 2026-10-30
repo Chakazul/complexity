@@ -6,7 +6,7 @@ behind each implementation, first values, and the questions and answers that sha
 The project plan and milestones are in [PLAN.md](../PLAN.md); background on the measures
 is in [assets/Complexity_Measure.pdf](../assets/Complexity_Measure.pdf) (cited as "the PDF").
 
-Contents: 1 Purpose · 2 Conventions · 3 Catalogue · 4 Granularity and heatmaps ·
+Contents: 1 Purpose · 2 Conventions (2.3 reanalysis of granularity) · 3 Catalogue · 4 Granularity and heatmaps ·
 5 Measures in detail · 6 Validation · 7 First values · 8 The goal measure and proposals ·
 9 Questions and answers · 10 Open questions
 
@@ -49,54 +49,128 @@ This is the classic split between measures of randomness (Kolmogorov complexity 
 called algorithmic randomness) and measures of structured complexity, which are low at both
 ends (Grassberger 1986; Crutchfield & Young 1989; Gell-Mann & Lloyd 1996). See §9, Q1.
 
-### 2.2 Taxonomy tags (from the PDF)
+### 2.2 Tags
 
-| Dimension | Values | Meaning |
+Three taxonomy tags say what a measure **is** in the literature (from the PDF, corrected by
+the reanalysis in §2.3); two more say what **this implementation computes**.
+
+| Tag | Values | Meaning |
 |---|---|---|
-| granularity | pattern / rule / system | a particular configuration (the run's frames) / the rule itself, from runs of its own / a whole system or family of rules |
-| scope | local / global | built from small neighbourhoods, then averaged / computed from the whole frame |
-| temporal | static / dynamic | one frame (or the rule) at a time / changes over time |
+| granularity | pattern / rule / system | a property of a configuration / of the dynamical law / of a distribution, ensemble or family |
+| scope | local / global | has a pointwise or neighbourhood form / defined on the whole configuration |
+| temporal | static / dynamic | one configuration (or a rule table) / needs change over time |
+| subject | instance / trajectory / rule / ensemble | what the implementation measures: one frame / a stretch of the run / the rule / an ensemble |
+| estimated from | object / run / ensemble | the data it uses: that frame / this run / an ensemble of runs |
 | heatmap | — | has a spatial map (§4) |
 
-The UI colours tags by dimension; in each pair the value preferred for the goal in §8 is a
-step darker: pattern, local, dynamic, structural. The tags follow how a measure is computed
-here, which differs from the PDF in places: the PDF calls SC, TE and LE rule-level, but here
-they are computed from the run's frames, so they are tagged pattern-level.
+The UI shows the first three and heatmap as coloured tags (in each pair the value preferred
+for the goal in §8 is a step darker: pattern, local, dynamic, structural), and the last two
+in each measure's tooltip. Which measures are computed once per rule (and so are off by
+default) is a property of the code (`RuleMeasure`, `per_rule` in the catalog), not of the
+granularity tag: FID and the Lyapunov exponent are rule-level measures computed per frame.
+
+### 2.3 Reanalysis of granularity (2026-10-31)
+
+The taxonomy was re-derived from the literature, independently of the PDF and of earlier
+decisions here, and compared with both.
+
+**Refined axes.** Subject: *instance* (one configuration or object), *trajectory* (a finite
+run from a given state), *process or rule* (the dynamics averaged over initial states,
+usually as a long-time limit), *ensemble* (a family of configurations or rules). Space:
+*global*, *regional* (per object or patch), *pointwise* (a per-cell form exists). Time:
+*snapshot*, *window*, *asymptotic*.
+
+**Main distinction.** Algorithmic measures (AC, LZ, LD, EC, AT) are properties of
+**individual objects**. Information-theoretic measures (SE, TE, SC, PID, FID, ITI, IIT) are
+properties of **probability distributions** — ensembles or stationary processes. Estimated
+from one frame or one run, the cells and steps stand in for the ensemble, which assumes
+spatial and temporal stationarity and quietly turns "the rule" into "this run". One
+granularity tag cannot express that, hence the subject and estimated-from tags.
+
+| Measure | Subject | Space | Time | Literature |
+|---|---|---|---|---|
+| AC (Kolmogorov, Chaitin) | instance | global; regional via BDM (Zenil) | snapshot (space-time if applied to a run) | defined for a finite object; compression is an upper bound |
+| LZ76 | instance (a sequence); asymptotically the source | global, 1-D (2-D needs an arbitrary scan) | snapshot | normalized LZ estimates the entropy rate: a randomness estimate |
+| SE (Shannon) | ensemble (a distribution) | global; pointwise as surprisal −log p | snapshot, or entropy rate | block-entropy convergence gives entropy density and excess entropy (Crutchfield & Feldman) |
+| LE (Lyapunov) | process or rule (ergodic: almost every orbit); finite-time: a trajectory | global; local / comoving forms (Kaneko; damage spreading, Bagnoli et al.) | asymptotic; finite-time gives a series | a long-time limit of the dynamics |
+| FD | instance (a set) | global; pointwise via local dimension, multifractal spectra | snapshot (space-time diagrams have their own) | |
+| EC (Gell-Mann & Lloyd) | instance relative to an ensemble | global | snapshot | needs a coarse-graining; cousins: Kolmogorov structure function, sophistication |
+| SC, C_μ (Crutchfield & Young) | process | global; pointwise as local SC (Shalizi et al. 2006) | asymptotic (infinite past) | causal states from an ensemble or long run, local values on one realization |
+| LD (Bennett) | instance | global | snapshot (it measures computation time; grows over a run) | |
+| TD (Lloyd & Pagels) | a state with its history | global | the history | depends on the process that produced the state |
+| TL (Hudcová & Mikolov) | rule | global | whole trajectory | classifies rules by how transients grow with system size |
+| PID (Williams & Beer) | ensemble (a joint distribution) | as the variables; pointwise variants (Finn & Lizier) | dynamic only with time-lagged variables | rule-level from a rule table, trajectory-level from a run |
+| FID (Bohm et al.) | **rule** (the input–output function) | the function's inputs | one-step mapping | uniform inputs make it a property of the function |
+| TE (Schreiber; Lizier) | process (a pair of stationary processes) | pointwise (local TE) | window or asymptotic | averages characterize rules, local values locate gliders |
+| IIT, Φ (Tononi) | a system in a state | **whole system** (its most integrated subset) | one step | defined over partitions of the whole system |
+| ITI (Krakauer et al.) | an individual vs its environment | regional | window or asymptotic | needs an identified individual |
+| AT (Cronin, Walker et al.) | instance (an object); with copy number, a population | regional | snapshot (encodes a construction history) | |
+| FI (Hazen, Szostak) | ensemble of configurations, for a function | global | snapshot (dynamic if the function is run) | |
+| LL (Langton) | rule (table) | global over a local rule | static | |
+| WZ (Wuensche) | rule (table) | global over a local rule | static | |
+
+**Comparison with the PDF and these notes before the reanalysis.** Agreement for AC and
+compression, LZC, FD, EC, TL, LL, WZ and ITI. Corrections:
+- **FID is rule-level** (both said system): it is defined on the function, with uniform inputs.
+- **Block entropy is local** (these notes said global, while giving it a per-cell map), and
+  its granularity is the distribution's: system, as in the PDF's §1.1.
+- **IIT is not local** (the PDF said local): Φ is defined over partitions of the whole system.
+- **The Lyapunov exponent is rule-level** (these notes said pattern, after the finite-time
+  implementation): the exponent belongs to the dynamics; the implementation's subject is a
+  trajectory (now its own tag).
+- **Functional information is ensemble-level** (both said rule): Hazen's FI is a fraction of
+  an ensemble of configurations; here the ensemble is rules near the pattern's own (system).
+
+Partly right, now resolved by the subject tag: SC and TE (the PDF's rule-level fits the
+averages and canonical C_μ; the pattern-level local fields of Shalizi and Lizier are what is
+computed here, so they keep pattern); PID (system, dynamic only through time-lagged
+variables). The PDF is internally inconsistent: its §1.1 and its per-measure lines disagree
+for SE ("system" vs "system / pattern") and TE ("rule" vs "rule / pattern"), and it tags LD
+dynamic, mixing computation time with observed dynamics; TD's subject is a state with its
+history, and AT is per object (regional), not global.
+
+For the goal (§8), a dynamic spatial map must be the pointwise form of a measure, estimated
+from a run (trajectory, window, pointwise): local TE, local SC, local information dynamics.
+Their probabilities and causal states would better come from an ensemble of runs of the
+rule than from one 16-frame window — a limitation of the current SC.
+
+Caveat: from knowledge of the literature, not re-checked against the papers.
 
 ## 3. Catalogue
 
-All 18 measures of the PDF, plus the variants added here and the proposals. "Map": local
-= one value per cell; tile = per tile of the frame (§4).
+All 18 measures of the PDF, plus the variants added here and the proposals. Tags are
+granularity, scope, temporal (§2.2); "computed" is subject / estimated from. "Map": local =
+one value per cell; tile = per tile of the frame (§4).
 
-| PDF | Measure | Key | Kind | Tags | Map | Status |
-|---|---|---|---|---|---|---|
-| AC | Algorithmic complexity, by compression | `lzma`, `png`, `video_lzma`, `video_h264`, `novelty` | 🎲 | pattern, global, static (video: dynamic) | tile (not H.264, novelty) | implemented |
-| AC | Lempel–Ziv complexity | `lzc` | 🎲 | pattern, global, static | tile | implemented |
-| EC | Effective complexity (proxy) | `effective_complexity` | 🌿 | pattern, global, static | — | implemented |
-| LD | Logical depth (proxy) | `logical_depth` | mixed | pattern, global, static | — | implemented |
-| SC | Statistical complexity (local) | `statistical_complexity` | 🌿 | pattern, local, dynamic | local | implemented |
-| TE | Transfer entropy | `transfer_entropy` | 🌿 | pattern, local, dynamic | local | implemented |
-| SE | Shannon (block) entropy | `block_entropy` | 🎲 | pattern, global, static | local | implemented |
-| PID | Partial information decomposition | `pid` | 🌿 | system, local, dynamic | tile | implemented |
-| FID | Functional information decomposition | `fid` | 🌿 | system, local, dynamic | tile | implemented |
-| ITI | Individuality, as in the paper | `iti_features` | 🌿 | pattern, local, dynamic | — | implemented |
-| ITI | Individuality, local adaptation | `iti_local` | 🌿 | pattern, local, dynamic | local | implemented |
-| FD | Fractal dimension | `fractal_dimension` | 🎲 | pattern, global, static | — | implemented |
-| LE | Lyapunov exponent | `lyapunov` | 🎲 | pattern, global, dynamic | local | implemented |
-| TL | Transient length | `transient_length` | 🎲 | rule, global, dynamic | — | implemented |
-| LL | Langton's λ | `langton_lambda` | 🎲 | rule, global, static | — | implemented |
-| FI | Functional information | `functional_information` | 🌿 | rule, global, dynamic | — | implemented |
-| TD | Thermodynamic depth | — | — | — | — | deferred (§5.8) |
-| IIT | Integrated information | — | — | — | — | deferred (§5.8) |
-| AT | Assembly index | — | — | — | — | deferred (§5.8) |
-| WZ | Wuensche's Z | — | — | — | — | with elementary CA, M4 (§5.8) |
-| — | Multi-scale structural complexity | — | 🌿 | pattern, local, dynamic | local | proposed: the goal measure (§8) |
-| — | Local information dynamics (storage, transfer, modification) | — | 🌿 | pattern, local, dynamic | local | proposed (§8.2) |
-| — | Causal emergence / integrated information decomposition (ΦID) | — | 🌿 | pattern | per unit | proposed (§8.2) |
-| — | O-information | — | 🌿 | pattern, local | local | proposed (§8.2) |
-| — | Pointwise PID | — | 🌿 | system, local, dynamic | local | proposed (§8.2) |
-| — | Logical depth, better proxies | — | 🌿? | pattern, global | — | proposed (§5.2.3) |
-| — | Assembly copy number × index | — | 🌿 | pattern | per object | proposed (§8.2) |
+| PDF | Measure | Key | Kind | Tags | Computed | Map | Status |
+|---|---|---|---|---|---|---|---|
+| AC | Algorithmic complexity, by compression | `lzma`, `png`, `video_lzma`, `video_h264`, `novelty` | 🎲 | pattern, global, static (video: dynamic) | instance / object (video: trajectory / run) | tile (not H.264, novelty) | implemented |
+| AC | Lempel–Ziv complexity | `lzc` | 🎲 | pattern, global, static | instance / object | tile | implemented |
+| EC | Effective complexity (proxy) | `effective_complexity` | 🌿 | pattern, global, static | instance / object | — | implemented |
+| LD | Logical depth (proxy) | `logical_depth` | mixed | pattern, global, static | instance / object | — | implemented |
+| SC | Statistical complexity (local) | `statistical_complexity` | 🌿 | pattern, local, dynamic | trajectory / run | local | implemented |
+| TE | Transfer entropy | `transfer_entropy` | 🌿 | pattern, local, dynamic | trajectory / run | local | implemented |
+| SE | Shannon (block) entropy | `block_entropy` | 🎲 | system, local, static | instance / object | local | implemented |
+| PID | Partial information decomposition | `pid` | 🌿 | system, local, dynamic | trajectory / run | tile | implemented |
+| FID | Functional information decomposition | `fid` | 🌿 | rule, local, dynamic | rule / run | tile | implemented |
+| ITI | Individuality, as in the paper | `iti_features` | 🌿 | pattern, local, dynamic | trajectory / run | — | implemented |
+| ITI | Individuality, local adaptation | `iti_local` | 🌿 | pattern, local, dynamic | trajectory / run | local | implemented |
+| FD | Fractal dimension | `fractal_dimension` | 🎲 | pattern, global, static | instance / object | — | implemented |
+| LE | Lyapunov exponent | `lyapunov` | 🎲 | rule, global, dynamic | trajectory / run | local | implemented |
+| TL | Transient length | `transient_length` | 🎲 | rule, global, dynamic | rule / ensemble | — | implemented |
+| LL | Langton's λ | `langton_lambda` | 🎲 | rule, global, static | rule / ensemble | — | implemented |
+| FI | Functional information | `functional_information` | 🌿 | system, global, dynamic | ensemble / ensemble | — | implemented |
+| TD | Thermodynamic depth | — | — | pattern, global, dynamic | — | — | deferred (§5.8) |
+| IIT | Integrated information | — | — | system, global, dynamic | — | — | deferred (§5.8) |
+| AT | Assembly index | — | — | pattern, local (regional), static | — | — | deferred (§5.8) |
+| WZ | Wuensche's Z | — | — | rule, global, static | — | — | with elementary CA, M4 (§5.8) |
+| — | Multi-scale structural complexity | — | 🌿 | pattern, local, dynamic | trajectory / run (better: ensemble) | local | proposed: the goal measure (§8) |
+| — | Local information dynamics (storage, transfer, modification) | — | 🌿 | pattern, local, dynamic | trajectory / run | local | proposed (§8.2) |
+| — | Causal emergence / integrated information decomposition (ΦID) | — | 🌿 | pattern | trajectory / run | per unit | proposed (§8.2) |
+| — | O-information | — | 🌿 | system, local | trajectory / run | local | proposed (§8.2) |
+| — | Pointwise PID | — | 🌿 | system, local, dynamic | trajectory / run | local | proposed (§8.2) |
+| — | Logical depth, better proxies | — | 🌿? | pattern, global | instance / object | — | proposed (§5.2.3) |
+| — | Assembly copy number × index | — | 🌿 | pattern | instance / object | per object | proposed (§8.2) |
 
 Code: `src/complexity/measures/` — `compression.py`, `algorithmic.py` (LZC, EC, LD),
 `causal.py` (SC), `information.py` (TE, block entropy), `decomposition.py` (PID, FID),
@@ -396,7 +470,8 @@ An absolute box (m ∈ [0.05, 0.5], s ∈ [0.005, 0.1]) gave ~6 bits for every c
   entropy over a state's possible histories; computable only for tiny lattices. Revisit
   with elementary CA (M4).
 - **Integrated information (IIT; Tononi).** Φ is exponential in system size: only ~3×3
-  binary patches are tractable (`pyphi`), and a patch's Φ is not the system's.
+  binary patches are tractable (`pyphi`), and a patch's Φ is not the system's. It is a
+  whole-system measure, not a local one as the PDF tags it (§2.3).
 - **Assembly index (AT; Cronin, Walker).** The libraries target molecules and strings, and
   the index is exponential in object size. Revisit for small discrete patches, with copy
   number (§8.2).
@@ -568,6 +643,15 @@ multi-channel kernels as Gaussian rings `bell(D mod 1, 0.5, 0.15) · b`, so the 
 found on Gaussian kernels. The ten catalogue creatures were found on the bump core
 (`kn = 1`) but run here on the Gaussian shell, which they survive (PLAN.md §4.2).
 
+**Q11. Is the granularity right — spatial, temporal, and subject (pattern / rule /
+system)?**
+Re-derived from the literature on 2026-10-31, without the PDF or these notes (§2.3). Most
+tags agreed. Fixed: FID is rule-level; block entropy is local (and system-level); IIT is not
+local; the Lyapunov exponent is rule-level; functional information is ensemble-level. The
+deeper finding is that information measures are properties of distributions: estimated from
+one run they describe the run, not the rule, which one granularity tag cannot say — so each
+measure now also states its subject and what it is estimated from.
+
 ## 10. Open questions
 
 - Multi-scale structural complexity: which base measure, which combination across scales
@@ -577,4 +661,5 @@ found on Gaussian kernels. The ten catalogue creatures were found on the bump co
 - Transfer entropy for smooth fields: offset ≈ R/4, and history length k > 1.
 - Validate statistical complexity against `emic` on 1-D series.
 - Logical depth: does dividing time by compressed size make it reliably structural?
-- Taxonomy: keep tags as computed here, or follow the PDF's (SC, TE, LE rule-level)?
+- Estimate causal states and probabilities from an ensemble of runs of the rule, then read
+  local values on one run (§2.3), instead of from one 16-frame window.

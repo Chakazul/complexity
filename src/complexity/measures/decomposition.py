@@ -83,6 +83,8 @@ class _Decomposition(Measure):
     granularity = "system"
     scope = "local"
     temporal = "dynamic"
+    subject = "trajectory"
+    estimated_from = "run"
     map = "tile"
 
     def levels(self, n_states):
@@ -132,6 +134,8 @@ class FunctionalDecomposition(_Decomposition):
     component = "synergy"
     params = ("component", "window", "offset", "n_levels")
     choices = {"component": ("synergy", "self", "neighbour")}
+    granularity = "rule"  # a property of the input-output function (docs/measures.md §2.3)
+    subject = "rule"
 
     def decompose(self, counts):
         return fid(counts)

@@ -29,6 +29,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from complexity import registry
+from complexity.measures.base import RuleMeasure
 from complexity.session import Run, RunSpec
 
 STATIC = Path(__file__).parent / "static"
@@ -61,6 +62,8 @@ def catalog():
              "window": cls.window, "granularity": cls.granularity, "scope": cls.scope,
              "temporal": cls.temporal, "backend": cls.backend,
              "map": cls.map, "map_unit": cls.map_unit or cls.unit,
+             "subject": cls.subject, "estimated_from": cls.estimated_from,
+             "per_rule": issubclass(cls, RuleMeasure),
              "needs_discrete": cls.needs_discrete, "peaks_at": cls.peaks_at,
              "params": cls().config(), "choices": cls.choices, "applies_to": cls.applies_to,
              "accepts": [s for s, probe in probes.items() if cls().accepts(probe)]}

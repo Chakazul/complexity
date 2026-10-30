@@ -84,6 +84,9 @@ class Lyapunov(Measure):
     steps = 64
     burn_in = 8
     params = ("steps", "burn_in")
+    granularity = "rule"  # the exponent belongs to the dynamics (docs/measures.md §2.3)
+    subject = "trajectory"  # a finite-time estimate from the current state
+    estimated_from = "run"
     applies_to = "systems that can perturb their state (all built-in ones)"
     temporal = "dynamic"
 

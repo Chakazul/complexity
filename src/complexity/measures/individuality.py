@@ -135,6 +135,8 @@ class FeatureIndividuality(Measure):
     choices = {"component": COMPONENTS}
     scope = "local"
     temporal = "dynamic"
+    subject = "trajectory"
+    estimated_from = "run"
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -192,6 +194,8 @@ class LocalIndividuality(Measure):
     choices = {"component": COMPONENTS}
     scope = "local"
     temporal = "dynamic"
+    subject = "trajectory"
+    estimated_from = "run"
     map = "local"
 
     def levels(self, n_states):

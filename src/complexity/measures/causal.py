@@ -87,6 +87,8 @@ class StatisticalComplexity(Measure):
     params = ("window", "alpha", "n_levels")
     scope = "local"
     temporal = "dynamic"
+    subject = "trajectory"  # local causal states of this run's window
+    estimated_from = "run"
     map = "local"
 
     def levels(self, n_states):

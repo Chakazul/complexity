@@ -69,10 +69,16 @@ class Measure(ABC):
     params: tuple[str, ...] = ()
     choices: dict[str, tuple[str, ...]] = {}  # allowed values of text parameters
     applies_to: str = ""  # which systems, if not all: shown when a measure is greyed out
-    # Classification from Complexity_Measure.pdf §1.1-1.2, shown in the UI.
+    # Classification from Complexity_Measure.pdf §1.1-1.2, as corrected by the reanalysis
+    # in docs/measures.md §2.3: what the measure is, in the literature. Shown as UI tags.
     granularity: str = "pattern"  # "pattern", "rule" or "system"
     scope: str = "global"  # "local" or "global"
     temporal: str = "static"  # "static" or "dynamic"
+    # What this implementation computes (docs/measures.md §2.3): the property of an
+    # "instance" (one frame), a "trajectory" (a stretch of a run), a "rule" or an
+    # "ensemble"; estimated from one "object", one "run" or an "ensemble" of runs.
+    subject: str = "instance"
+    estimated_from: str = "object"
 
     def __init__(self, **params):
         for k, v in params.items():
@@ -132,6 +138,8 @@ class RuleMeasure(Measure):
 
     granularity = "rule"
     group = "Rule-level"
+    subject = "rule"
+    estimated_from = "ensemble"
 
     def compute(self, frames, ctx: Context = NO_CONTEXT) -> float:
         raise TypeError(f"{self.key} is a rule measure: use compute_rule")

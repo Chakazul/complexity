@@ -124,6 +124,8 @@ class FunctionalInformation(RuleMeasure):
         "(a lower bound)."
     )
     peaks_at = "structure"
+    granularity = "system"  # Hazen: a fraction of an ensemble of configurations
+    subject = "ensemble"  # rules near the pattern's own
     samples = 128
     spread = 0.5
     steps = 500
