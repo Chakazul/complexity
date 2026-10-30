@@ -63,6 +63,9 @@ function addRun(system, pattern) {
   runRows.push({ slot, system, pattern });
 }
 
+// Off by default: LZMA compresses tighter than PNG and H.264 on every run measured so far.
+const UNTICKED = new Set(["png", "video_h264"]);
+
 function renderMeasures() {
   const box = $("measures");
   const checked = new Set([...box.querySelectorAll("input:checked")].map((i) => i.value));
@@ -75,7 +78,7 @@ function renderMeasures() {
     el.title = m.description + (applies ? "" : "\nNot applicable to the selected systems.");
     const cb = document.createElement("input");
     cb.type = "checkbox"; cb.value = m.key;
-    cb.checked = first ? true : checked.has(m.key);
+    cb.checked = first ? !UNTICKED.has(m.key) : checked.has(m.key);
     cb.disabled = !applies;
     const name = document.createElement("span");
     name.className = "name"; name.textContent = m.name;
