@@ -99,10 +99,10 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 h2 { display: flex; align-items: baseline; gap: 6px; }
 button.clear { margin-left: auto; padding: 1px 8px; font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--text-secondary); }
 
-/* Pick lists: square, scrollable; a selected item gets a coloured border (its series
-   colour for systems). Items keep a transparent 2px border so selecting does not shift. */
+/* Pick lists: two thirds as tall as wide, scrollable; a selected item gets a coloured
+   border (its series colour for systems). Items keep a transparent 2px border so selecting does not shift. */
 .picklist {
-  aspect-ratio: 1; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;
+  aspect-ratio: 3 / 2; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg); padding: 4px;
 }
 .pick {
