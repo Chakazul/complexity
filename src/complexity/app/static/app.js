@@ -35,27 +35,30 @@ for (let i = 0; i < 256; i++) {
 
 function systemByKey(key) { return catalog.systems.find((s) => s.key === key); }
 
-// "Helicium solidus (rotating)" -> ["Helicium solidus", "rotating"]
-function splitNote(name) {
-  const m = name.match(/^(.*?)\s*\(([^)]*)\)$/);
-  return m ? [m[1], m[2]] : [name, ""];
-}
-
 const runKey = (system, pattern) => `${system}:${pattern}`;
 const runItems = new Map();      // runKey -> item element
 const measureItems = new Map();  // measure key -> item element
 let selectedMeasures = new Set();
 
-function pickItem(title, meta, onClick) {
+// An item: a name, an optional muted "(note)" after it, and an optional meta line under it.
+function pickItem(title, meta, onClick, note = "") {
   const el = document.createElement("button");
   el.type = "button";
   el.className = "pick";
   el.setAttribute("aria-pressed", "false");
   const name = document.createElement("span");
   name.className = "name"; name.textContent = title;
-  const sub = document.createElement("span");
-  sub.className = "meta"; sub.innerHTML = meta;
-  el.append(name, sub);
+  if (note) {
+    const n = document.createElement("span");
+    n.className = "note"; n.textContent = ` (${note})`;
+    name.append(n);
+  }
+  el.append(name);
+  if (meta) {
+    const sub = document.createElement("span");
+    sub.className = "meta"; sub.innerHTML = meta;
+    el.append(sub);
+  }
   el.onclick = onClick;
   return el;
 }
@@ -64,10 +67,9 @@ function buildRunList() {
   const box = $("runs");
   for (const sys of catalog.systems) {
     for (const [pattern, full] of Object.entries(sys.patterns)) {
-      const [name, note] = splitNote(full);
-      const el = pickItem(`${sys.name} · ${name}`, note ? `<span class="tag">${note}</span>` : "",
-        () => toggleRun(sys.key, pattern));
-      if (!note) el.classList.add("plain");
+      // "Helicium solidus (rotating)": the note stays in the list, not in run labels
+      const [, name, note] = full.match(/^(.*?)(?:\s*\(([^)]*)\))?$/);
+      const el = pickItem(`${sys.name} · ${name}`, "", () => toggleRun(sys.key, pattern), note);
       runItems.set(runKey(sys.key, pattern), el);
       box.append(el);
     }

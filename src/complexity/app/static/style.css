@@ -113,7 +113,7 @@ button.clear { margin-left: auto; padding: 1px 8px; font-size: 11px; text-transf
 .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .pick .name { color: var(--text-primary); }
 .pick .meta { color: var(--text-muted); font-size: 12px; }
-.pick.plain .meta { display: none; }
+.pick .note { color: var(--text-muted); }
 .pick.selected { background: var(--surface-1); }
 #measures .pick.selected { border-color: var(--text-secondary); }
 .pick.full { cursor: not-allowed; }
