@@ -24,8 +24,9 @@ The design and the milestone checklist are in **[PLAN.md](PLAN.md)**. In brief:
   16 Game of Life patterns from the same catalogue.
 - **M3 (in progress):** most measures from the PDF. Done: noise baselines, transfer
   entropy, LZC, block entropy, fractal dimension, effective complexity, logical depth,
-  Lyapunov exponent, and the rule-level transient length, Langton's λ and functional
-  information. Next: statistical complexity, PID, FID, individuality.
+  Lyapunov exponent, statistical complexity, PID, FID, and the rule-level transient
+  length, Langton's λ and functional information. Next: individuality (ITI), then
+  per-measure parameter controls in the UI.
 - **M4:** more systems: elementary CA, other CA rules, particle systems.
 - **M5:** polishing and sharing: UI, batch experiments and a results site, CI,
   contributor guide, hosted demo.
@@ -158,6 +159,22 @@ timing-based, so compare runs measured in the same session. The Lyapunov exponen
 the chaotic Tetralapillium metamorpha (~0.07) and Lenia soup (~0.02) from the regular
 creatures (~0); each value costs 128 extra steps of the system.
 
+**Information decompositions and statistical complexity** look at how a cell's next state
+depends on its own state and its neighbours (window 16, discretized to at most 4 levels;
+SC to 2):
+
+| Key | PDF | Measure | Unit |
+|---|---|---|---|
+| `statistical_complexity` | SC | entropy of local causal states (Shalizi et al. 2006): 3×3 pasts grouped when a G-test cannot tell their next-5-cell-cross distributions apart | bits/cell |
+| `pid` | PID | Williams–Beer partial information decomposition (I_min) of the next state from own state and a neighbour; synergy by default (`component`: redundancy, unique_self, unique_neighbour) | bits/cell |
+| `fid` | FID | Bohm et al.'s functional information decomposition of the same map with every input pattern weighted equally; synergy by default (`component`: self, neighbour) | bits/cell |
+
+All three are 0 for empty frames and iid noise. SC is 5 bits for frozen noise, which is
+correct: a static random field is predictable, but only by remembering each cell's
+5-cell cross. PID synergy equals transfer entropy on Life (with I_min the neighbour's
+unique information is 0). FID weights input patterns equally, so a lone glider (0.086)
+scores above a soup (0.038): it describes the local rule as used, not how much happens.
+
 **Rule-level measures** describe the rule (the system with a pattern's parameters), not
 the frames. Each is computed once from runs of its own, cached, and shown as a constant:
 
@@ -226,7 +243,7 @@ src/complexity/
   systems/               base.py, life.py, lenia.py, baseline.py (JAX)
   measures/              base.py, compression.py, information.py (TE in JAX, block entropy),
                          algorithmic.py (LZC, EC, LD), geometry.py (FD), dynamics.py (LE),
-                         rule.py (TL, LL, FI)
+                         rule.py (TL, LL, FI), causal.py (SC), decomposition.py (PID, FID)
   vendor/lenium/         code and data copied from Lenium, with source notes
   vendor/lenia/          patterns and RLE decoder from the original Lenia, with source notes
   app/server.py          FastAPI + WebSocket streaming

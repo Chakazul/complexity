@@ -382,6 +382,39 @@ rule table, shown in the UI as a constant per run, and used mainly in experiment
 Order within M3: conventions and baselines first, then TE, then the cheap ones (LZC, SE,
 FD, EC, LD, LE), then rule-level (TL, LL, FI), then the medium ones (SC, PID, FID, ITI).
 
+### 5.6 SC, PID and FID: decisions and first values (M3, done)
+
+- **SC.** Local statistical complexity (Shalizi et al. 2006): past = 3×3 at t, future =
+  the 5-cell cross at t+1, 2 levels by default (pasts have L⁹ values). Pasts are merged
+  most-frequent-first into the first causal state a G-test (α = 1e-3, vectorized over
+  states) cannot tell apart; a fixed total-variation threshold split iid noise into many
+  states, because 100-odd samples per past over 32 futures already differ by ~0.2. Values
+  (128², step 200): empty and iid binary noise 0, iid continuous 0.05 (chance splits),
+  frozen binary noise 5.0 (correct: predicting it needs each cell's whole cross), Life gun
+  0.22, Life soup 2.4, Integer Lenia soup 3.4, Lenia soup 3.5, Paraptera a. l. 0.38,
+  Tetralapillium 0.20. Not validated against `emic` on 1-D series yet.
+- **PID.** Implemented directly (I_min is a few lines), not with `dit`. Target y_{t+1},
+  sources y_t and a neighbour, ≤ 4 levels. On Life the synergy equals TE: I_min gives the
+  neighbour no unique information, so TE = unique + synergy is all synergy. On Lenia it is
+  about half of TE (Paraptera a. l. 0.012 of 0.018).
+- **FID.** `fid-tools` 0.1.2 (Bohm, Jan 2026, beta, depends on matplotlib) was read, not
+  run: its `neutral_completion_fid` weights every combination of observed input values
+  equally, completes unseen ones with a uniform output over the observed targets, and
+  reports I(T; X_i) and synergy = I(T; X) − Σ I(T; X_i). Reimplemented in ~15 lines with
+  the same conventions; tests check XOR, copy and a completed OR. Synergy is independent
+  of how much of the grid is active: glider 0.086, gun 0.053, Life soup 0.038, Paraptera
+  a. l. 0.12, Lenia soup 0.005; noise and empty 0.
+- **Taxonomy.** PID and FID are tagged system / local / dynamic as in the PDF. SC is tagged
+  pattern-level, not rule-level as in the PDF, because it is computed from the run's
+  frames (as are TE and LE, also rule-level in the PDF).
+- **ITI, open.** Krakauer's A* = I(S'; S), A = I(S'; S | E), nC = I(S'; E | S) need S and
+  E as random variables. Two readings are possible here: (a) coarse-grained features of a
+  segmented creature (mass, centroid velocity, shape moments) and its surroundings, as a
+  time series from a long twin run, which gives few samples and mostly autocorrelation;
+  (b) a local form, per cell of the segmented creature, with s = the cell and its
+  neighbours inside the creature, e = its neighbours outside, which estimates well but is
+  a new reading of the measure. Needs a decision.
+
 ### 5.5 Rule-level measures: decisions and first values (M3, done)
 
 - **Interface.** `RuleMeasure` is a `Measure` subclass with `compute_rule(system, pattern,
@@ -526,7 +559,8 @@ then polishing and sharing.
       (§5.4)
 - [x] Rule-level: transient length (TL), Langton's λ (LL), functional information (FI)
       (§5.5)
-- [ ] Statistical complexity (SC), PID, FID, individuality (ITI)
+- [x] Statistical complexity (SC), PID, FID (§5.6)
+- [ ] Individuality (ITI): needs a design decision (§5.6)
 - [ ] Measure-expectation tests from §6 for every measure; `warming_up` flag for window
       measures (done so far: orientation and structure tests over all registered measures,
       TE baselines, per-measure tests for the §5.4 measures; `warming_up` sent per tick and

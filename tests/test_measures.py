@@ -6,6 +6,8 @@ import pytest
 from complexity import registry
 from complexity.measures.algorithmic import lz76, regular_part
 from complexity.measures.base import Context, discretize
+from complexity.measures.causal import causal_states
+from complexity.measures.decomposition import fid, pid
 from complexity.measures.geometry import box_counts
 from complexity.measures.information import block_entropy, transfer_entropy
 from complexity.measures.rule import transient
@@ -252,3 +254,51 @@ def test_rule_measures_are_constant_and_cached_per_rule():
     run.step(5)
     again, ms = run.measure()
     assert first == again and ms["transient_length"] < 1  # cached: no recompute
+
+
+def table(t, y, x, L=2) -> np.ndarray:
+    """Counts of (t, y, x) for every (y, x) pattern once, t given by a function."""
+    counts = np.zeros((L, L, L))
+    for yv in range(L):
+        for xv in range(L):
+            counts[t(yv, xv), yv, xv] += 1
+    return counts
+
+
+def test_pid_on_textbook_gates():
+    xor, copy = pid(table(lambda y, x: y ^ x, 0, 0)), pid(table(lambda y, x: y, 0, 0))
+    assert xor["synergy"] == pytest.approx(1) and xor["redundancy"] == pytest.approx(0)
+    assert copy["unique_self"] == pytest.approx(1) and copy["synergy"] == pytest.approx(0)
+    same = np.zeros((2, 2, 2))
+    same[0, 0, 0] = same[1, 1, 1] = 1  # both sources equal the target
+    assert pid(same)["redundancy"] == pytest.approx(1)
+    assert pid(same)["synergy"] == pytest.approx(0)
+
+
+def test_fid_on_textbook_gates_and_unseen_inputs():
+    xor, copy = fid(table(lambda y, x: y ^ x, 0, 0)), fid(table(lambda y, x: y, 0, 0))
+    assert xor == pytest.approx({"self": 0, "neighbour": 0, "synergy": 1})
+    assert copy == pytest.approx({"self": 1, "neighbour": 0, "synergy": 0})
+    # OR seen on 3 of 4 inputs: the unseen (1, 1) gets a uniform output over the observed
+    # targets, as in fid-tools
+    seen = table(lambda y, x: y | x, 0, 0)
+    seen[1, 1, 1] = 0
+    full = fid(seen)
+    p = np.array([[[1, 0], [0, 0.5]], [[0, 1], [1, 0.5]]]) / 4  # p(t, y, x) after completion
+    h = lambda q: -np.sum(q[q > 0] * np.log2(q[q > 0]))
+    i_y = h(p.sum((1, 2))) + h(p.sum((0, 2))) - h(p.sum(2))
+    assert full["self"] == pytest.approx(i_y)
+
+
+def test_statistical_complexity():
+    rng = np.random.default_rng(0)
+    assert len(set(causal_states(np.zeros((4, 32, 32), int), 2, 1e-3)[0])) == 1
+    sc = registry.make_measure("statistical_complexity")
+    # iid noise: one causal state, up to a chance split of 512 pasts tested at alpha
+    assert sc.compute(list(rng.integers(0, 2, (16, 64, 64))), Context(n_levels=2)) < 0.05
+    frozen = rng.integers(0, 2, (64, 64))
+    # frozen noise is predictable but needs its whole 5-cell cross remembered: 5 bits
+    assert sc.compute([frozen] * 8, Context(n_levels=2)) == pytest.approx(5, abs=0.05)
+    soup = measured("life", "random", steps=50, size=(64, 64))["statistical_complexity"]
+    gun = measured("life", "gosper_glider_gun", steps=50, size=(64, 64))["statistical_complexity"]
+    assert soup > gun > 0
