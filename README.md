@@ -53,8 +53,9 @@ uv sync --extra cuda13     # or --extra cuda12; TPU: uv pip install -U "jax[tpu]
 uv run complexity info     # JAX version, backend and devices
 ```
 
-In the UI, add up to six runs (system + pattern) to compare side by side, tick the
-measures, and press **Start**. Each measure shows its current value per run in the table
+In the UI, click up to six systems (system · pattern) in the Systems list to compare side
+by side, each outlined in its series colour; click measures in the Measures list; and press
+**Start**. Click an item again to deselect it, or **Clear** to deselect a whole list. Each measure shows its current value per run in the table
 and its history as a live chart (hover for values). Measures that do not apply to a
 selected system are struck through.
 

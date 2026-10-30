@@ -29,34 +29,73 @@ for (let i = 0; i < 256; i++) {
 }
 
 // ---------- sidebar ----------
+// Two pick lists, built once: every system · pattern, and every measure. Clicking an item
+// toggles it; only classes and border colours change afterwards, so the scroll position
+// stays where it is.
 
 function systemByKey(key) { return catalog.systems.find((s) => s.key === key); }
 
-function renderRuns() {
-  const box = $("runs");
-  box.innerHTML = "";
-  for (const row of runRows) {
-    const el = document.createElement("div");
-    el.className = "run-row";
-    const sys = document.createElement("select");
-    for (const s of catalog.systems) sys.add(new Option(s.name, s.key, false, s.key === row.system));
-    const pat = document.createElement("select");
-    for (const [k, name] of Object.entries(systemByKey(row.system).patterns)) pat.add(new Option(name, k, false, k === row.pattern));
-    sys.onchange = () => { row.system = sys.value; row.pattern = Object.keys(systemByKey(row.system).patterns)[0]; renderRuns(); };
-    pat.onchange = () => { row.pattern = pat.value; };
-    const rm = document.createElement("button");
-    rm.className = "remove"; rm.textContent = "×"; rm.title = "Remove run";
-    rm.disabled = runRows.length === 1;
-    rm.onclick = () => { runRows = runRows.filter((r) => r !== row); renderRuns(); };
-    const sw = document.createElement("span");
-    sw.className = "swatch"; sw.style.background = seriesColor(row.slot);
-    el.append(sw, sys, pat, rm);
-    box.append(el);
-  }
-  $("add-run").disabled = runRows.length >= MAX_RUNS;
-  renderMeasures();
+// "Helicium solidus (rotating)" -> ["Helicium solidus", "rotating"]
+function splitNote(name) {
+  const m = name.match(/^(.*?)\s*\(([^)]*)\)$/);
+  return m ? [m[1], m[2]] : [name, ""];
 }
 
+const runKey = (system, pattern) => `${system}:${pattern}`;
+const runItems = new Map();      // runKey -> item element
+const measureItems = new Map();  // measure key -> item element
+let selectedMeasures = new Set();
+
+function pickItem(title, meta, onClick) {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "pick";
+  el.setAttribute("aria-pressed", "false");
+  const name = document.createElement("span");
+  name.className = "name"; name.textContent = title;
+  const sub = document.createElement("span");
+  sub.className = "meta"; sub.innerHTML = meta;
+  el.append(name, sub);
+  el.onclick = onClick;
+  return el;
+}
+
+function buildRunList() {
+  const box = $("runs");
+  for (const sys of catalog.systems) {
+    for (const [pattern, full] of Object.entries(sys.patterns)) {
+      const [name, note] = splitNote(full);
+      const el = pickItem(`${sys.name} · ${name}`, note ? `<span class="tag">${note}</span>` : "",
+        () => toggleRun(sys.key, pattern));
+      if (!note) el.classList.add("plain");
+      runItems.set(runKey(sys.key, pattern), el);
+      box.append(el);
+    }
+  }
+}
+
+function buildMeasureList() {
+  const box = $("measures");
+  for (const m of catalog.measures) {
+    const meta = [m.granularity, m.scope, m.temporal].map((t) => `<span class="tag">${t}</span>`).join("") +
+      ` ${m.unit}${m.window > 1 ? ` · window ${m.window}` : ""}`;
+    const el = pickItem(m.name, meta, () => {
+      selectedMeasures.has(m.key) ? selectedMeasures.delete(m.key) : selectedMeasures.add(m.key);
+      updateSidebar();
+    });
+    el.title = m.description;
+    measureItems.set(m.key, el);
+    box.append(el);
+  }
+}
+
+function toggleRun(system, pattern) {
+  const row = runRows.find((r) => r.system === system && r.pattern === pattern);
+  if (row) runRows = runRows.filter((r) => r !== row);
+  else if (runRows.length < MAX_RUNS) addRun(system, pattern);
+  else setStatus(`up to ${MAX_RUNS} systems: deselect one first`);
+  updateSidebar();
+}
 
 function addRun(system, pattern) {
   const used = new Set(runRows.map((r) => r.slot));
@@ -64,33 +103,28 @@ function addRun(system, pattern) {
   runRows.push({ slot, system, pattern });
 }
 
-// Off by default: LZMA compresses tighter than PNG and H.264 on every run measured so far.
-const UNTICKED = new Set(["png", "video_h264"]);
-
-function renderMeasures() {
-  const box = $("measures");
-  const checked = new Set([...box.querySelectorAll("input:checked")].map((i) => i.value));
-  const first = box.childElementCount === 0;
-  box.innerHTML = "";
+function updateSidebar() {
+  const slots = new Map(runRows.map((r) => [runKey(r.system, r.pattern), r.slot]));
+  const full = runRows.length >= MAX_RUNS;
+  for (const [key, el] of runItems) {
+    const on = slots.has(key);
+    el.classList.toggle("selected", on);
+    el.classList.toggle("full", full && !on);
+    el.setAttribute("aria-pressed", on);
+    el.style.borderColor = on ? seriesColor(slots.get(key)) : "";
+  }
   for (const m of catalog.measures) {
-    const applies = runRows.some((r) => m.accepts.includes(r.system));
-    const el = document.createElement("label");
-    el.className = "measure" + (applies ? "" : " na");
+    const el = measureItems.get(m.key), on = selectedMeasures.has(m.key);
+    const applies = runRows.length === 0 || runRows.some((r) => m.accepts.includes(r.system));
+    el.classList.toggle("selected", on);
+    el.classList.toggle("na", !applies);
+    el.setAttribute("aria-pressed", on);
     el.title = m.description + (applies ? "" : "\nNot applicable to the selected systems.");
-    const cb = document.createElement("input");
-    cb.type = "checkbox"; cb.value = m.key;
-    cb.checked = first ? !UNTICKED.has(m.key) : checked.has(m.key);
-    cb.disabled = !applies;
-    const name = document.createElement("span");
-    name.className = "name"; name.textContent = m.name;
-    const meta = document.createElement("span");
-    meta.className = "meta";
-    meta.innerHTML = [m.granularity, m.scope, m.temporal].map((t) => `<span class="tag">${t}</span>`).join("") +
-      ` ${m.unit}${m.window > 1 ? ` · window ${m.window}` : ""}`;
-    el.append(cb, name, meta);
-    box.append(el);
   }
 }
+
+// Off by default: LZMA compresses tighter than PNG and H.264 on every run measured so far.
+const UNTICKED = new Set(["png", "video_h264"]);
 
 // ---------- session ----------
 
@@ -102,7 +136,8 @@ let pending = null;  // {measures, slots} of the session being started
 
 function start() {
   const size = parseInt($("size").value, 10) || 128;
-  const measures = [...$("measures").querySelectorAll("input:checked")].map((i) => i.value);
+  if (!runRows.length) return setStatus("select at least one system");
+  const measures = catalog.measures.map((m) => m.key).filter((k) => selectedMeasures.has(k));
   if (!measures.length) return setStatus("select at least one measure");
   sessionId++;
   pending = { measures, slots: runRows.map((r) => r.slot) };
@@ -370,15 +405,19 @@ async function main() {
     ["lenia", "paraptera_arcus_labens"], ["lenia", "paraptera_cavus_furiosus"],
     ["lenia", "tetralapillium_metamorpha"], ["baseline", "iid_noise_continuous"],
   ]) addRun(system, pattern);
-  renderRuns();
-  $("add-run").onclick = () => { addRun("lenia", "orbium"); renderRuns(); };
+  selectedMeasures = new Set(catalog.measures.map((m) => m.key).filter((k) => !UNTICKED.has(k)));
+  buildRunList();
+  buildMeasureList();
+  updateSidebar();
+  $("clear-runs").onclick = () => { runRows = []; updateSidebar(); };
+  $("clear-measures").onclick = () => { selectedMeasures.clear(); updateSidebar(); };
   $("start").onclick = () => { start(); $("start").textContent = "Restart"; };
   $("play").onclick = () => { ws.send(JSON.stringify({ type: playing ? "pause" : "play" })); setPlaying(!playing); };
   $("step").onclick = () => ws.send(JSON.stringify({ type: "step" }));
   $("spt").oninput = sendSpeed;
   $("fps").oninput = sendSpeed;
   connect();
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderRuns(); active && (buildViews(), buildCharts()); dirty = true; });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { updateSidebar(); active && (buildViews(), buildCharts()); dirty = true; });
   requestAnimationFrame(frameLoop);
   setInterval(updateFps, 250);
 }

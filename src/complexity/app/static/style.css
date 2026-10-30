@@ -95,19 +95,32 @@ button {
 }
 button:disabled { opacity: .5; cursor: default; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.ghost { background: none; border-style: dashed; width: 100%; margin-top: 6px; color: var(--text-secondary); }
 .buttons { display: flex; gap: 8px; }
+h2 { display: flex; align-items: baseline; gap: 6px; }
+button.clear { margin-left: auto; padding: 1px 8px; font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--text-secondary); }
 
-.run-row { display: grid; grid-template-columns: 10px 0.8fr 1.2fr 24px; gap: 6px; align-items: center; margin-bottom: 6px; }
-.run-row select { min-width: 0; width: 100%; }
+/* Pick lists: square, scrollable; a selected item gets a coloured border (its series
+   colour for systems). Items keep a transparent 2px border so selecting does not shift. */
+.picklist {
+  aspect-ratio: 1; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); padding: 4px;
+}
+.pick {
+  display: grid; gap: 2px; width: 100%; text-align: left; margin: 0 0 2px; padding: 5px 8px;
+  background: none; border: 2px solid transparent; border-radius: 6px;
+}
+.pick:hover { background: var(--surface-1); }
+.pick:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pick .name { color: var(--text-primary); }
+.pick .meta { color: var(--text-muted); font-size: 12px; }
+.pick.plain .meta { display: none; }
+.pick.selected { background: var(--surface-1); }
+#measures .pick.selected { border-color: var(--text-secondary); }
+.pick.full { cursor: not-allowed; }
+.pick.full .name { color: var(--text-muted); }
+.pick.na .name { color: var(--text-muted); text-decoration: line-through; }
 .swatch { width: 10px; height: 10px; border-radius: 3px; }
-.remove { padding: 0; width: 24px; height: 24px; line-height: 1; border: 0; background: none; color: var(--text-muted); }
-
-.measure { display: grid; grid-template-columns: 18px 1fr; gap: 4px 6px; margin-bottom: 10px; cursor: pointer; }
-.measure .name { color: var(--text-primary); }
-.measure .meta { grid-column: 2; color: var(--text-muted); font-size: 12px; }
 .tag { display: inline-block; padding: 0 5px; margin-right: 3px; border-radius: 4px; border: 1px solid var(--border); font-size: 11px; color: var(--text-secondary); }
-.measure.na .name { color: var(--text-muted); text-decoration: line-through; }
 
 main { padding: 16px 20px 40px; min-width: 0; }
 .views { display: flex; flex-wrap: wrap; gap: 16px; }
