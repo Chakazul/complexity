@@ -89,25 +89,21 @@ class Measure(ABC):
         """Frames oldest first; see the class docstring for their type."""
 
 
-class RuleMeasure(ABC):
-    """A property of a rule (system and its parameters), not of a frame: transient length,
-    Langton's lambda, functional information (PLAN.md §5.3). Computed once per (system,
-    pattern) from the rule table or from batched runs, and shown as a constant per run."""
+class RuleMeasure(Measure):
+    """A property of a rule (the system with a pattern's parameters), not of a frame:
+    transient length, Langton's lambda, functional information (PLAN.md §5.3). Computed
+    once per (system, pattern, parameters) from the rule or from batched runs of their own,
+    cached, and reported as a constant on every tick of a run."""
 
-    key: str
-    name: str
-    unit: str
-    description: str = ""
-    granularity: str = "rule"
-    scope: str = "global"
-    temporal: str = "static"
+    granularity = "rule"
+    group = "Rule-level"
 
-    def accepts(self, system) -> bool:
-        return True
+    def compute(self, frames, ctx: Context = NO_CONTEXT) -> float:
+        raise TypeError(f"{self.key} is a rule measure: use compute_rule")
 
     @abstractmethod
-    def compute(self, system, pattern: str) -> float:
-        """The measure's value for `system` running `pattern`'s parameters."""
+    def compute_rule(self, system, pattern: str, ctx: Context = NO_CONTEXT) -> float:
+        """The measure's value for `system` running `pattern`'s rule."""
 
 
 def to_uint8(frame: np.ndarray) -> np.ndarray:

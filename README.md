@@ -24,8 +24,8 @@ The design and the milestone checklist are in **[PLAN.md](PLAN.md)**. In brief:
   16 Game of Life patterns from the same catalogue.
 - **M3 (in progress):** most measures from the PDF. Done: noise baselines, transfer
   entropy, LZC, block entropy, fractal dimension, effective complexity, logical depth,
-  Lyapunov exponent. Next: rule-level measures (transient length, Langton's λ,
-  functional information), then statistical complexity, PID, FID, individuality.
+  Lyapunov exponent, and the rule-level transient length, Langton's λ and functional
+  information. Next: statistical complexity, PID, FID, individuality.
 - **M4:** more systems: elementary CA, other CA rules, particle systems.
 - **M5:** polishing and sharing: UI, batch experiments and a results site, CI,
   contributor guide, hosted demo.
@@ -158,6 +158,18 @@ timing-based, so compare runs measured in the same session. The Lyapunov exponen
 the chaotic Tetralapillium metamorpha (~0.07) and Lenia soup (~0.02) from the regular
 creatures (~0); each value costs 128 extra steps of the system.
 
+**Rule-level measures** describe the rule (the system with a pattern's parameters), not
+the frames. Each is computed once from runs of its own, cached, and shown as a constant:
+
+| Key | PDF | Measure | Unit |
+|---|---|---|---|
+| `transient_length` | TL | mean log2(1 + steps until the state repeats) over 8 random soups of the rule on 64², up to 4096 steps (continuous states compared to 1e-3) | log2 steps |
+| `langton_lambda` | LL | fraction of uniformly random neighbourhoods the rule maps to a nonzero state (Life: 140/512 ≈ 0.273); discrete rules only | fraction |
+| `functional_information` | FI | −log2 of the fraction of 128 nearby rules (m, s within ±50 % of the pattern's) under which the pattern lives on for 500 steps; Lenia only | bits |
+
+They make the first tick of a run slower (about 12 s for the default four runs), once per
+pattern.
+
 ## Adding a system or a measure
 
 Write one class, decorate it, and add its module to `_BUILTIN_MODULES` in
@@ -213,7 +225,8 @@ src/complexity/
   cli.py                 complexity serve | list | info | run
   systems/               base.py, life.py, lenia.py, baseline.py (JAX)
   measures/              base.py, compression.py, information.py (TE in JAX, block entropy),
-                         algorithmic.py (LZC, EC, LD), geometry.py (FD), dynamics.py (LE)
+                         algorithmic.py (LZC, EC, LD), geometry.py (FD), dynamics.py (LE),
+                         rule.py (TL, LL, FI)
   vendor/lenium/         code and data copied from Lenium, with source notes
   vendor/lenia/          patterns and RLE decoder from the original Lenia, with source notes
   app/server.py          FastAPI + WebSocket streaming

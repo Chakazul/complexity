@@ -19,7 +19,18 @@ import jax.numpy as jnp
 import numpy as np
 
 from complexity import engine, registry
-from complexity.measures.base import Context, discretize, to_uint8
+from complexity.measures.base import Context, RuleMeasure, discretize, to_uint8
+
+# Rule-measure values by (measure key, its parameters, system, pattern): they depend on the
+# rule only, and some take seconds, so restarts and other runs of the same rule reuse them.
+_RULE_VALUES: dict = {}
+
+
+def rule_value(m: RuleMeasure, system, pattern: str, ctx: Context) -> float:
+    key = (m.key, tuple(sorted(m.config().items())), system, pattern)
+    if key not in _RULE_VALUES:
+        _RULE_VALUES[key] = float(m.compute_rule(system, pattern, ctx))
+    return _RULE_VALUES[key]
 
 
 @dataclass
@@ -95,7 +106,9 @@ class Run:
         for m in self.measures:
             t0 = time.perf_counter()
             ctx = self.contexts[m.key]
-            if m.needs_state:
+            if isinstance(m, RuleMeasure):
+                values[m.key] = rule_value(m, self.system, self.spec.pattern, ctx)
+            elif m.needs_state:
                 rng = jax.random.fold_in(self.rng, self.t + 1)  # differs from init's key
                 values[m.key] = float(m.compute_state(self.system, self.state, rng, ctx))
             else:

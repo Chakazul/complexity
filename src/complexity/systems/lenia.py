@@ -55,17 +55,19 @@ CREATURES = {**LENIUM, **{k: from_catalogue(ANIMALS[i]) for k, i in CATALOGUE.it
 
 
 
-@partial(jax.tree_util.register_dataclass, data_fields=["A", "K", "g"],
-         meta_fields=["P", "T", "m", "s"])
+# m and s are data, not static metadata, so runs with different growth parameters share one
+# compiled step and can be batched (functional information samples them).
+@partial(jax.tree_util.register_dataclass, data_fields=["A", "K", "g", "m", "s"],
+         meta_fields=["P", "T"])
 @dataclass(frozen=True)
 class LeniaState:
     A: jax.Array  # int32 0..P (integer) or float32 [0, 1] (continuous)
     K: jax.Array  # rfft2 of the kernel: integer weights (integer) or normalized (continuous)
-    g: jax.Array | None  # growth lookup table (integer only)
+    g: jax.Array | None  # growth lookup table (integer only; built from m, s)
     P: int  # 0 = continuous
     T: float
-    m: float = field(default=0.0)
-    s: float = field(default=0.0)
+    m: jax.Array = field(default_factory=lambda: jnp.float32(0))  # growth (continuous only)
+    s: jax.Array = field(default_factory=lambda: jnp.float32(0))
 
 
 @register_system
@@ -90,24 +92,50 @@ class Lenia(System):
         return P + 1 if P else None
 
     def init(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> LeniaState:
+        return self.init_with(pattern, size, rng)
+
+    def init_with(self, pattern: str, size: tuple[int, int], rng: jax.Array, *,
+                  cells: str = "pattern", m: float | None = None,
+                  s: float | None = None) -> LeniaState:
+        """`init`, optionally with other growth parameters and other cells: "pattern" (the
+        pattern's own), "soup" (random cells in the central 3/4 with the pattern's rule) or
+        "uniform" (every cell iid uniform over the states)."""
         name, soup = self.sources[pattern]
         c = CREATURES[name]
         R, T, P = c["R"], c["T"], c.get("P", 0)
         (kern,) = c["kernels"]
+        m = kern["m"] if m is None else m
+        s = kern["s"] if s is None else s
 
-        if soup:
-            h, w = size
-            cells = jax.random.uniform(rng, (h * 3 // 4, w * 3 // 4))
-            cells = model.discretize(cells, P) if P else cells
+        if cells == "uniform":
+            A = (jax.random.randint(rng, size, 0, P + 1) if P
+                 else jax.random.uniform(rng, size))
         else:
-            (cells,) = c["cells"]  # one channel
-        A = place_center(jnp.zeros(size, jnp.int32 if P else jnp.float32), cells)
+            if soup or cells == "soup":
+                h, w = size
+                init = jax.random.uniform(rng, (h * 3 // 4, w * 3 // 4))
+                init = model.discretize(init, P) if P else init
+            else:
+                (init,) = c["cells"]  # one channel
+            A = place_center(jnp.zeros(size, jnp.int32 if P else jnp.float32), init)
 
         if P:
             K = model.integer_kernel(R, P, kern["b"])
-            g = model.growth_lookup(K, P, kern["m"], kern["s"])
+            g = model.growth_lookup(K, P, m, s)
             return LeniaState(A, model.integer_kernel_fft(K, size), g, P, T)
-        return LeniaState(A, model.kernel_fft(size, R, kern["b"]), None, 0, T, kern["m"], kern["s"])
+        return LeniaState(A, model.kernel_fft(size, R, kern["b"]), None, 0, T,
+                          jnp.float32(m), jnp.float32(s))
+
+    def growth_params(self, pattern: str) -> tuple[float, float]:
+        """The pattern's growth center m and width s."""
+        (kern,) = CREATURES[self.sources[pattern][0]]["kernels"]
+        return kern["m"], kern["s"]
+
+    def soup(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> LeniaState:
+        return self.init_with(pattern, size, rng, cells="soup")
+
+    def uniform(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> LeniaState:
+        return self.init_with(pattern, size, rng, cells="uniform")
 
     def step(self, st: LeniaState) -> LeniaState:
         if st.P:

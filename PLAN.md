@@ -382,6 +382,28 @@ rule table, shown in the UI as a constant per run, and used mainly in experiment
 Order within M3: conventions and baselines first, then TE, then the cheap ones (LZC, SE,
 FD, EC, LD, LE), then rule-level (TL, LL, FI), then the medium ones (SC, PID, FID, ITI).
 
+### 5.5 Rule-level measures: decisions and first values (M3, done)
+
+- **Interface.** `RuleMeasure` is a `Measure` subclass with `compute_rule(system, pattern,
+  ctx)`; `Run` computes it on the first tick and caches it per (measure, parameters,
+  system, pattern), so it appears in the table and charts as a constant like any measure.
+  Systems gain `soup` (random initial state under the pattern's rule) and, for LL,
+  `uniform` (every cell iid uniform). Lenia's `m` and `s` became traced data, so runs with
+  different growth parameters batch (and creatures share one compiled step).
+- **TL.** Two uint32 hashes per step, computed in a `lax.scan` and `vmap`ped over 8 soups
+  on 64², up to 4096 steps; the transient is the index where the first repeated state
+  first occurred. Values: still baselines 0; Life soups 9.3 (~650 steps); Orbium-rule soups,
+  which die, 7.5; min Orbium 8.6; Paraptera and Tetralapillium rules and iid noise hit the
+  4096-step cap (12, a lower bound).
+- **LL.** One step of a uniformly random 256² grid: Life 0.269 (exact 140/512 = 0.273),
+  min Orbium 0.84. Continuous rules have no rule table and are skipped.
+- **FI.** An absolute box (m ∈ [0.05, 0.5], s ∈ [0.005, 0.1]) gave ~6 bits for every
+  creature (1 of 64 rules works): too coarse to compare. Sampling within ±50 % of the
+  pattern's own m and s asks how fragile a creature is to its rule: Lenia soup 1.1 bits;
+  min Orbium 3.1, Orbium 3.5, Hydrogeminium and Tetralapillium 3.7, Hexadentium 3.8,
+  Paraptera c. f. 4.0, Kronium 4.2, Gyrorbium 4.7, Paraptera a. l. 5.4, Scutium and
+  Helicium 7 (1 of 128). 1.5 s per creature at 128² (Integer Lenia 6 s).
+
 ### 5.4 The cheap measures: decisions and first values (M3, done)
 
 - **LZC.** A direct Kaspar–Schuster parse rescans the history for every phrase, so noise
@@ -502,7 +524,8 @@ then polishing and sharing.
 - [x] LZC, block entropy (SE), fractal dimension (FD), effective complexity proxy (EC),
       logical depth proxy (LD), Lyapunov exponent (LE); systems gain `perturb` for LE
       (§5.4)
-- [ ] Rule-level: transient length (TL), Langton's λ (LL), functional information (FI)
+- [x] Rule-level: transient length (TL), Langton's λ (LL), functional information (FI)
+      (§5.5)
 - [ ] Statistical complexity (SC), PID, FID, individuality (ITI)
 - [ ] Measure-expectation tests from §6 for every measure; `warming_up` flag for window
       measures (done so far: orientation and structure tests over all registered measures,

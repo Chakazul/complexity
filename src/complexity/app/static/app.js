@@ -87,7 +87,8 @@ function buildMeasureList() {
       box.append(h);
     }
     const kind = PEAKS[m.peaks_at];
-    const meta = [kind.tag, m.granularity, m.scope, m.temporal].map((t) => `<span class="tag">${t}</span>`).join("") +
+    const meta = [kind.tag, m.granularity, m.scope, m.temporal]
+      .map((t) => `<span class="tag" title="${TAG_HELP[t] || ""}">${t}</span>`).join("") +
       ` ${m.unit}${m.window > 1 ? ` · window ${m.window}` : ""}`;
     const el = pickItem(`${kind.icon}${m.name}`, meta, () => {
       selectedMeasures.has(m.key) ? selectedMeasures.delete(m.key) : selectedMeasures.add(m.key);
@@ -139,6 +140,20 @@ const PEAKS = {
   randomness: { icon: "🎲 ", tag: "randomness" },
   structure: { icon: "🌿 ", tag: "structural" },
   mixed: { icon: "", tag: "mixed" },
+};
+
+// Popups for the tags in the measure list (taxonomy from Complexity_Measure.pdf §1.1-1.2).
+const TAG_HELP = {
+  randomness: "Peaks at randomness: highest for noise, lowest for uniform or still frames. Order → disorder rises steadily (entropy, compression, chaos).",
+  structural: "Peaks at structure: low for both uniform frames and noise, highest in between (moving or large-scale structure).",
+  mixed: "Peaks neither at randomness nor reliably at structure; read with care.",
+  pattern: "Pattern-level: measures a particular configuration (frames of this run).",
+  rule: "Rule-level: measures the rule itself, from runs of its own; constant for a run.",
+  system: "System-level: measures a whole system or family of rules.",
+  local: "Local: built from small neighbourhoods of cells, then averaged.",
+  global: "Global: computed from the whole frame at once.",
+  static: "Static: one frame (or the rule) at a time.",
+  dynamic: "Dynamic: uses changes over time (a window of frames, or runs of the system).",
 };
 
 // Off by default: LZMA compresses tighter than PNG and H.264 on every run measured so far.

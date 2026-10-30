@@ -121,7 +121,7 @@ button.clear { margin-left: auto; padding: 1px 8px; font-size: 11px; text-transf
   letter-spacing: .05em; color: var(--text-muted);
 }
 .pick-group:not(:first-child) { margin-top: 6px; }
-.chart h3 { cursor: help; }
+.chart h3, .pick .tag[title] { cursor: help; }
 .pick.selected { background: var(--surface-1); }
 #measures .pick.selected { border-color: var(--text-secondary); }
 .pick.full { cursor: not-allowed; }

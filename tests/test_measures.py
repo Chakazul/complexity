@@ -8,6 +8,7 @@ from complexity.measures.algorithmic import lz76, regular_part
 from complexity.measures.base import Context, discretize
 from complexity.measures.geometry import box_counts
 from complexity.measures.information import block_entropy, transfer_entropy
+from complexity.measures.rule import transient
 from complexity.session import Run, RunSpec
 
 
@@ -23,7 +24,7 @@ def test_orientation_noise_scores_at_least_empty(levels):
     """PLAN.md §6: higher = more complex, so iid noise never scores below an empty grid."""
     empty, noise = measured("baseline", "empty"), measured("baseline", f"iid_noise_{levels}")
     for key, cls in registry.measures().items():
-        if cls.peaks_at != "mixed":
+        if cls.peaks_at != "mixed" and key in noise:  # skips measures for other systems
             assert noise[key] >= empty[key], key
 
 
@@ -31,7 +32,8 @@ def test_structure_peaked_measures_rate_a_glider_stream_above_noise_and_empty():
     stream = measured("life", "gosper_glider_gun", steps=100, size=(128, 128))
     noise = measured("baseline", "iid_noise_binary", size=(128, 128))
     empty = measured("baseline", "empty", size=(128, 128))
-    peaked = [k for k, cls in registry.measures().items() if cls.peaks_at == "structure"]
+    peaked = [k for k, cls in registry.measures().items()
+              if cls.peaks_at == "structure" and k in stream and k in noise]
     assert peaked
     for key in peaked:
         assert stream[key] > max(noise[key], empty[key]), key
@@ -114,7 +116,8 @@ def test_run_measures_every_registered_pair():
         run = Run(RunSpec(system, next(iter(cls.patterns)), (64, 64)), list(registry.measures()))
         run.step(3)
         values, _ = run.measure()
-        assert set(values) == set(registry.measures()) and all(np.isfinite(list(values.values())))
+        assert set(values) | set(run.skipped) == set(registry.measures())
+        assert all(np.isfinite(list(values.values())))
 
 
 def test_novelty_separates_static_from_fresh_frames():
@@ -208,3 +211,44 @@ def test_discrete_perturbations_change_one_cell_by_one_level(system):
     diff = np.round(b - a).astype(int)
     assert np.count_nonzero(diff) == 1
     assert set(np.abs(diff[diff != 0])) <= {1, n}  # baseline wraps the top level to 0
+
+
+def rule(key: str, system: str, pattern: str, **params) -> float:
+    sys_ = registry.make_system(system)
+    m = registry.make_measure(key, **params)
+    return m.compute_rule(sys_, pattern, Context(sys_.n_states(pattern)))
+
+
+def test_transient_is_the_start_of_the_first_cycle():
+    seq = np.array([[5, 0], [6, 0], [7, 0], [8, 0], [6, 0], [7, 0]])  # 5, then cycle 6 7 8
+    assert transient(seq) == 1
+    assert transient(np.array([[1, 0], [1, 0]])) == 0
+    assert transient(np.array([[1, 0], [2, 0], [3, 0]])) is None
+
+
+def test_transient_length_on_baselines_and_life():
+    kw = {"size": 32, "batch": 2, "max_steps": 256}
+    assert rule("transient_length", "baseline", "frozen_noise_13", **kw) == 0
+    assert rule("transient_length", "baseline", "iid_noise_binary", **kw) == np.log2(257)
+    assert 0 < rule("transient_length", "life", "glider", **kw) < np.log2(257)
+
+
+def test_langton_lambda_of_life():
+    # born with 3 of 8 neighbours (56 of 256 tables), survive with 2 or 3 (84): 140 / 512
+    assert rule("langton_lambda", "life", "glider", size=512) == pytest.approx(140 / 512, abs=0.005)
+    assert not registry.make_measure("langton_lambda").accepts(registry.make_system("lenia"))
+
+
+def test_functional_information_rates_soups_below_creatures():
+    kw = {"samples": 16, "steps": 200, "size": 64}
+    soup = rule("functional_information", "lenia", "random", **kw)
+    assert soup < rule("functional_information", "lenia", "orbium", **kw) <= np.log2(32)
+
+
+def test_rule_measures_are_constant_and_cached_per_rule():
+    run = Run(RunSpec("baseline", "frozen_noise_binary", (32, 32)), ["transient_length"],
+              {"transient_length": {"size": 32, "batch": 2, "max_steps": 64}})
+    first, _ = run.measure()
+    run.step(5)
+    again, ms = run.measure()
+    assert first == again and ms["transient_length"] < 1  # cached: no recompute

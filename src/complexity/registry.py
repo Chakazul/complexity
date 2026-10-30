@@ -20,6 +20,7 @@ _BUILTIN_MODULES = (
     "complexity.measures.information",
     "complexity.measures.geometry",
     "complexity.measures.dynamics",
+    "complexity.measures.rule",
 )
 _loaded = False
 

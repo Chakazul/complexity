@@ -56,6 +56,16 @@ class System(ABC):
     def observe(self, state: State) -> jax.Array:
         """The current frame: float32 (height, width) with values in [0, 1]. Pure and jit-able."""
 
+    def soup(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> State:
+        """A random initial state under the pattern's rule, for rule-level measures (transient
+        length). Default: the "random" pattern if there is one, else the pattern itself."""
+        return self.init("random" if "random" in self.patterns else pattern, size, rng)
+
+    def uniform(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> State:
+        """Every cell iid uniform over the states, under the pattern's rule (Langton's
+        lambda). Optional, like `perturb`."""
+        raise NotImplementedError
+
     def perturb(self, state: State, rng: jax.Array) -> State:
         """A slightly different state, for measures of the dynamics (Lyapunov exponent):
         one active cell changed by one level if discrete, small noise if continuous.
