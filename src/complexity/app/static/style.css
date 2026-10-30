@@ -19,6 +19,8 @@
   /* heatmap: one orange ramp (dataviz sequential), from the surface at 0 */
   --heat-mid: #eb6834;
   --heat-hi: #5c1d06;
+  --tag-bg: #e7edf6;  /* light blue-gray, set apart from the list and item backgrounds */
+  --tag-border: #d2dbe8;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -39,6 +41,8 @@
     --series-6: #6c469f;
     --heat-mid: #d95926;
     --heat-hi: #ffd2b8;
+    --tag-bg: #252e3a;
+    --tag-border: #34404f;
   }
 }
 :root[data-theme="dark"] {
@@ -59,6 +63,8 @@
   --series-6: #6c469f;
   --heat-mid: #d95926;
   --heat-hi: #ffd2b8;
+  --tag-bg: #252e3a;
+  --tag-border: #34404f;
 }
 
 * { box-sizing: border-box; }
@@ -153,7 +159,7 @@ button.clear { margin-left: auto; padding: 4px 14px; font-size: 13px; text-trans
 .pick.full .name { color: var(--text-muted); }
 .pick.na .name { color: var(--text-muted); text-decoration: line-through; }
 .swatch { width: 10px; height: 10px; border-radius: 3px; }
-.tag { display: inline-block; padding: 0 5px; margin-right: 3px; border-radius: 4px; border: 1px solid var(--border); font-size: 11px; color: var(--text-secondary); }
+.tag { display: inline-block; padding: 0 5px; margin-right: 3px; border-radius: 4px; border: 1px solid var(--tag-border); background: var(--tag-bg); font-size: 11px; color: var(--text-secondary); }
 
 main { padding: 16px 20px 40px; min-width: 0; }
 .views { display: flex; flex-wrap: wrap; gap: 16px; }
