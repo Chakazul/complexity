@@ -216,12 +216,12 @@ experiments here, unless an experiment says otherwise: kernel rings
   vendored code with `import lenium` (add the dependency, delete `vendor/lenium/`, and keep
   the golden tests as the check that behaviour is unchanged).
 
-**Creature patterns (M2; revised 2026-11-01).** Fourteen continuous creatures from the
+**Creature patterns (M2; revised 2026-11-01).** Thirteen continuous creatures from the
 original Lenia catalogue, `~/github/lenia-ref/code/Lenia/Python/animals.json` (614 entries;
 the Python `LeniaND.py` is the reference implementation), chosen by Bert. Where several
 entries share a name, the index picks one (the 3rd Helicium serratus turbulentus, the 2nd
 Asterium vagus and Amoebium foliatus); names are shown without a number. With the Lenium
-Orbium (Gaussian) they make 15 creature patterns.
+Orbium (Gaussian) they make 14 creature patterns.
 
 | Pattern | Index | Code | R | b | m | s | Cells | Notes |
 |---|---|---|---|---|---|---|---|---|
@@ -237,7 +237,6 @@ Orbium (Gaussian) they make 15 creature patterns.
 | Asterium vagus | 404 | 3R5v | 27 | 1, 1/2, 1 | 0.27 | 0.033 | 42×42 | chaotic; 2nd of that name |
 | Asterium metamorpha currens | 408 | 4R5mc | 36 | 1, 1/3, 2/3, 1 | 0.2 | 0.022 | 55×54 | chaotic |
 | Amoebium foliatus | 587 | 5Af | 36 | 1, 1/12, 1/12, 1/12, 1/4 | 0.19 | 0.015 | 55×61 | 2nd of that name |
-| Tetradecactenium | 257 | 3Ct14 | 20 | 1, 1, 1 | 0.27 | 0.0377 | 88×100 | big; grows (below) |
 | Urium longus | 267 | 3U4l | 13 | 3/4, 1, 1 | 0.333 | 0.0439 | 65×61 | big |
 
 All have `T = 10`, `kn = 1`, `gn = 1`. Replaced on 2026-11-01: Scutium solidus, Helicium
@@ -254,22 +253,22 @@ Hexadentium rotans, Amoebium dentalis.
   bump growth matched to its width, 2·bump(0.5 + 0.15 (u − m)/s) − 1, turned 8 of the 14
   creatures into goo within 1000 steps; ring weights `b` (fractions) and the radius convention (`D = dist / R`, ring
   `⌊D · len(b)⌋`) match `LeniaND.py`.
-- **Vendored** in `src/complexity/vendor/lenia/`: the 30 catalogue entries in use verbatim
+- **Vendored** in `src/complexity/vendor/lenia/`: the 29 catalogue entries in use verbatim
   (`animals.json`, with their original indices) and `Board.rle2arr` / `ch2val` from
   `LeniaND.py`, reduced to 2-D. The decoder vendored in `1588585` came from the agent
   rewrite and is not reused.
 - **Grid size.** No minimum: every grid size is allowed, and a pattern larger than the grid
   is cropped to its central part (`place_center`). Whether a cropped or cramped creature
   survives is part of what one can explore. A per-pattern minimum size was tried and
-  dropped (2026-10-30). Tetradecactenium (88×100) and Urium longus need 256² to be roomy.
-- **Tests.** Each creature but Tetradecactenium survives 500 steps at 128²: mass within
+  dropped (2026-10-30). Urium longus (65×61) needs 256² to be roomy.
+- **Tests.** Each creature survives 500 steps at 128²: mass within
   ±20 % and under 20 % of the grid above 0.1. Over 2000 steps (128² and 256²) they stay
   within 0.95–1.11 of their start mass, except Tetralapillium metamorpha, which is
   metastable: at 128² it dies by step 1000 on the bump core, at 256² it lives (0.84–0.99).
-  **Tetradecactenium grows** under its catalogue rule, to 6.3× its mass by step 500 and
-  13× by step 1000 on 256², a third of the grid; a float64 NumPy port of `LeniaND.py`'s
-  `kernel_shell` and `calc_once` gives the same numbers, so it is the entry's behaviour,
-  not the port's — and a test of the bump core against the original.
+  The bump core is tested against a float64 NumPy port of `LeniaND.py`'s `kernel_shell`
+  and `calc_once`: Gyrorbium gyrans after 200 steps, mass equal to 1e-4, cells to 3e-4.
+  Tetradecactenium (index 257) was added and removed on 2026-11-01: under its catalogue
+  rule it grows to 13× its mass and a third of the grid by step 1000 (also in the port).
 
 ### 4.2b Multi-channel Lenia — `lenia_multi` (2026-10-31)
 

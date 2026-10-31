@@ -37,7 +37,7 @@ CATALOGUE = {
     "paraptera_arcus_pedes": 91, "paraptera_cavus_furiosus": 96,
     "tetralapillium_metamorpha": 498, "florakronium_arcus": 313,
     "heptadentium_scintillans": 355, "asterium_vagus": 404, "asterium_metamorpha_currens": 408,
-    "amoebium_foliatus": 587, "tetradecactenium": 257, "urium_longus": 267,
+    "amoebium_foliatus": 587, "urium_longus": 267,
 }
 
 # the original Lenia's kernel cores (`kn`) that the model implements
@@ -58,7 +58,7 @@ def from_catalogue(a: dict) -> dict:
 BEHAVIOUR = {
     "gyrorbium_gyrans": "gyrating", "paraptera_cavus_furiosus": "chaotic",
     "tetralapillium_metamorpha": "chaotic", "asterium_vagus": "chaotic",
-    "asterium_metamorpha_currens": "chaotic", "tetradecactenium": "big", "urium_longus": "big",
+    "asterium_metamorpha_currens": "chaotic", "urium_longus": "big",
 }
 
 

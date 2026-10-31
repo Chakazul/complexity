@@ -163,7 +163,7 @@ def test_gaussian_orbium_survives_and_moves(lenia):
     assert abs(float(frames[-1].sum()) - 72.9739) < 1e-3
 
 
-@pytest.mark.parametrize("pattern", [k for k in CATALOGUE if k != "tetradecactenium"])
+@pytest.mark.parametrize("pattern", list(CATALOGUE))
 def test_catalogue_creatures_survive(lenia, pattern):
     state = lenia.init(pattern, (128, 128), KEY)
     mass0 = float(state.A.sum())
@@ -173,11 +173,10 @@ def test_catalogue_creatures_survive(lenia, pattern):
 
 
 def test_bump_kernel_core_matches_the_original_lenia(lenia):
-    # Tetradecactenium grows under its catalogue rule: 6.26x its mass by step 500 on 256²
-    # in a NumPy port of LeniaND.py's kernel_shell and calc_once (float64)
-    state = lenia.init("tetradecactenium", (256, 256), KEY)
-    mass0 = float(state.A.sum())
-    assert float(run(lenia, state, 500).A.sum()) / mass0 == pytest.approx(6.26, abs=0.05)
+    # Gyrorbium gyrans after 200 steps on 128² in a float64 NumPy port of LeniaND.py's
+    # kernel_shell and calc_once: mass 98.23988 (here 98.23982, cells within 3e-4)
+    state = run(lenia, lenia.init("gyrorbium_gyrans", (128, 128), KEY), 200)
+    assert float(state.A.sum()) == pytest.approx(98.23988, abs=1e-3)
 
 
 def test_catalogue_creatures_use_the_bump_core_and_lenium_patterns_the_gaussian():
