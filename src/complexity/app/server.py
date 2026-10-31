@@ -6,7 +6,7 @@ Protocol (JSON messages):
      "measure_params"?: {key: {param: value}}}
     {"type": "play"} | {"type": "pause"} | {"type": "step"}
     {"type": "speed", "steps_per_tick": int, "fps": int}
-    {"type": "map", "measure": key | null}  (heatmap of one measure, docs/measures.md §4)
+    {"type": "map", "measure": key | null}  (heatmap of one measure, MEASURES.md §4)
   server -> client (init and tick echo the start's id, so the client can drop stale ticks)
     {"type": "init", "id": int, "runs": [{"label", "system", "n_states", "rgb", "height", "width", "measures",
                                "skipped", "config": {key: {param: value}}}]}

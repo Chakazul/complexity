@@ -33,7 +33,7 @@ class Measure(ABC):
     a sliding window of consecutive frames, oldest first. Before the window fills, the
     measure receives the frames available so far, and the run flags its value as warming up.
 
-    Orientation: higher value = more complex by this measure's definition (docs/measures.md §2). A
+    Orientation: higher value = more complex by this measure's definition (MEASURES.md §2). A
     quantity that runs the other way is negated or inverted in `compute`, and the
     `description` says so. `peaks_at` says where the measure is highest: "randomness"
     (compression, entropy), "structure" (transfer entropy) or "mixed" (neither reliably:
@@ -48,7 +48,7 @@ class Measure(ABC):
 
     Attributes named in `params` are tunable: `make_measure(key, window=32)`.
 
-    `map` says how the measure gives a spatial map (docs/measures.md §4): "local" measures
+    `map` says how the measure gives a spatial map (MEASURES.md §4): "local" measures
     implement `compute_map` (or `compute_state_map`), one value per cell; "tile" measures
     are applied by the run to tiles of the frame; None: no map.
     """
@@ -70,11 +70,11 @@ class Measure(ABC):
     choices: dict[str, tuple[str, ...]] = {}  # allowed values of text parameters
     applies_to: str = ""  # which systems, if not all: shown when a measure is greyed out
     # Classification from Complexity_Measure.pdf §1.1-1.2, as corrected by the reanalysis
-    # in docs/measures.md §2.3: what the measure is, in the literature. Shown as UI tags.
+    # in MEASURES.md §2.3: what the measure is, in the literature. Shown as UI tags.
     granularity: str = "pattern"  # "pattern", "rule" or "system"
     scope: str = "global"  # "local" or "global"
     temporal: str = "static"  # "static" or "dynamic"
-    # What this implementation computes (docs/measures.md §2.3): the property of an
+    # What this implementation computes (MEASURES.md §2.3): the property of an
     # "instance" (one frame), a "trajectory" (a stretch of a run), a "rule" or an
     # "ensemble"; estimated from one "object", one "run" or an "ensemble" of runs.
     subject: str = "instance"
@@ -132,7 +132,7 @@ class Measure(ABC):
 
 class RuleMeasure(Measure):
     """A property of a rule (the system with a pattern's parameters), not of a frame:
-    transient length, Langton's lambda, functional information (docs/measures.md §5.7). Computed
+    transient length, Langton's lambda, functional information (MEASURES.md §5.7). Computed
     once per (system, pattern, parameters) from the rule or from batched runs of their own,
     cached, and reported as a constant on every tick of a run."""
 

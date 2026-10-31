@@ -3,8 +3,8 @@
 The definitions, explanations and categorization of the complexity measures in Complexity
 Lab: the ones implemented, the ones deferred, and the ones proposed. Also the decisions
 behind each implementation, first values, and the questions and answers that shaped them.
-The project plan and milestones are in [PLAN.md](../PLAN.md); background on the measures
-is in [assets/Complexity_Measure.pdf](../assets/Complexity_Measure.pdf) (cited as "the PDF").
+The project plan and milestones are in [PLAN.md](PLAN.md); background on the measures
+is in [assets/Complexity_Measure.pdf](assets/Complexity_Measure.pdf) (cited as "the PDF").
 
 Contents: 1 Purpose · 2 Conventions (2.3 reanalysis of granularity) · 3 Catalogue · 4 Granularity and heatmaps ·
 5 Measures in detail · 6 Validation · 7 First values · 8 The goal measure and proposals ·

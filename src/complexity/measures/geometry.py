@@ -1,4 +1,4 @@
-"""Geometric measures of a frame (docs/measures.md §5.5): fractal dimension (FD) by box counting."""
+"""Geometric measures of a frame (MEASURES.md §5.5): fractal dimension (FD) by box counting."""
 
 from __future__ import annotations
 

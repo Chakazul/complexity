@@ -15,7 +15,7 @@ entropy, with **noise baselines** to calibrate each measure.
 ## Status and roadmap
 
 The design and the milestone checklist are in **[PLAN.md](PLAN.md)**; the measures are
-described in **[docs/measures.md](docs/measures.md)**. In brief:
+described in **[MEASURES.md](MEASURES.md)**. In brief:
 
 - **M0 (done):** NumPy demo — the systems and measures below, interactive UI, CLI.
 - **M1 (done):** JAX engine for GPU/TPU (CPU JAX supported), Integer Lenia with the
@@ -121,13 +121,13 @@ HX 370, 24 threads / NVIDIA RTX 5070 Ti Laptop, JAX 0.12):
 
 On the GPU every step costs about the same up to 512² (the step is launch-bound); the CPU
 wins on small grids. Either way the host-side compression measures, not the simulation,
-set the pace in the UI ([docs/measures.md](docs/measures.md) §5.1).
+set the pace in the UI ([MEASURES.md](MEASURES.md) §5.1).
 
 ## Measures
 
 Definitions, categorization (randomness vs structural, taxonomy tags), implementation
 decisions, first values and the design Q&A for every measure, including deferred and
-proposed ones, are in **[docs/measures.md](docs/measures.md)**. A summary:
+proposed ones, are in **[MEASURES.md](MEASURES.md)**. A summary:
 
 Compression measures report **bits per cell** (per frame for video), so values are
 comparable across grid sizes: ~0 for a uniform grid, ~1 for incompressible binary noise,

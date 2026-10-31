@@ -206,7 +206,7 @@ function updateSidebar() {
   if (!active) renderMapControls();  // before a start, the menu follows the selection
 }
 
-// Where a measure is highest (docs/measures.md §2.1): randomness measures peak at noise, structural ones
+// Where a measure is highest (MEASURES.md §2.1): randomness measures peak at noise, structural ones
 // are low for both order and noise. Logical depth's proxy does neither reliably.
 const PEAKS = {
   randomness: { icon: "🎲 ", tag: "randomness" },
@@ -229,7 +229,7 @@ const TAG_HELP = {
   heatmap: "Has a spatial map: choose it under Heatmap (Run section) to see where the value comes from.",
 };
 
-// What this implementation computes, below the description (docs/measures.md §2.3).
+// What this implementation computes, below the description (MEASURES.md §2.3).
 const SUBJECT_NOTE = (m) => `\n\nComputed here: a property of ${
   { instance: "one frame", trajectory: "a stretch of the run", rule: "the rule", ensemble: "an ensemble" }[m.subject]
 }, estimated from ${{ object: "that frame", run: "this run", ensemble: "an ensemble of runs" }[m.estimated_from]}.`;
@@ -263,7 +263,7 @@ function start() {
   }));
 }
 
-// ---------- heatmaps (docs/measures.md §4) ----------
+// ---------- heatmaps (MEASURES.md §4) ----------
 // One measure's spatial map per run, beside its frame: an orange ramp from the surface
 // colour at 0. The scale is shared across runs: 0 to the largest value this tick;
 // negatives show as 0. (An overlay on the frame was tried and dropped, 2026-10-30.)

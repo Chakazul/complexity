@@ -283,7 +283,7 @@ within 200 steps. So the replication switch sits within ~0.5 % of one kernel's r
 the goo search (M3b) should look around these two parameter sets.
 
 ### 4.3 Baselines — `baseline`
-Reference "systems" that calibrate every measure. Expected values are tested (docs/measures.md §6).
+Reference "systems" that calibrate every measure. Expected values are tested (MEASURES.md §6).
 - `empty` — all zeros.
 - `frozen_noise` — one random frame repeated (static randomness).
 - `iid_noise` — a new random frame every step (dynamic randomness).
@@ -301,7 +301,7 @@ particle-native measures.
 
 The definitions, explanations, categorization and implementation decisions of all
 measures — implemented, deferred and proposed — with first values and the design Q&A, are
-in **[docs/measures.md](docs/measures.md)**. In brief:
+in **[MEASURES.md](MEASURES.md)**. In brief:
 
 - 20 measures cover all of the PDF's 18 except TD, IIT and AT (deferred) and WZ (with
   elementary CA in M4); ITI comes in two forms, compression in five.
@@ -311,7 +311,7 @@ in **[docs/measures.md](docs/measures.md)**. In brief:
   tile; TL, LL and FI are per rule.
 - The goal measure — a dynamic map, low for empty and noise, highest for networks of
   self-contained units above goo — is not among them; multi-scale structural complexity is
-  the candidate (M3b, docs/measures.md §8).
+  the candidate (M3b, MEASURES.md §8).
 
 ## 6. Validation
 
@@ -328,7 +328,7 @@ in **[docs/measures.md](docs/measures.md)**. In brief:
   1000 steps at 64² and 128²; continuous Lenia has an identical kernel FFT and differs by
   ~1e-7 after one step (float rounding order), growing chaotically to O(1) by step ~1000.
 - **Measure expectations** on the noise baselines (orientation and structure tests, and
-  per-measure tests): docs/measures.md §6.
+  per-measure tests): MEASURES.md §6.
 - **Device independence.** CI runs on CPU JAX. GPU runs are checked locally to match CPU
   within tolerance.
 
@@ -342,7 +342,7 @@ in **[docs/measures.md](docs/measures.md)**. In brief:
 - [x] `complexity serve | list | run` CLI with CSV output
 - [x] Tests: GoL goldens, Orbium survival, compression sanity
 - [x] Composite compression measure `novelty` (best-of `image_min`/`video_min` dropped); per-frame cache;
-      grid-size comparison (`scripts/compression_by_grid_size.py`, findings in docs/measures.md §5.1)
+      grid-size comparison (`scripts/compression_by_grid_size.py`, findings in MEASURES.md §5.1)
 
 ### M1 — JAX engine
 - [x] Add `jax` dependency and `cuda13` extra; `complexity info` command
@@ -372,7 +372,7 @@ then polishing and sharing.
 - [x] Survival tests for each creature; Life goldens for the new
       spaceships (displacement per period) and oscillators (period)
 
-### M3 — Measures (docs/measures.md) ✅
+### M3 — Measures (MEASURES.md) ✅
 - [x] `Measure` gains `backend`, `needs_discrete`, `ctx`, `peaks_at` and tunable `params`;
       orientation documented in the base class; `RuleMeasure` interface for rule-level
       measures
@@ -381,25 +381,25 @@ then polishing and sharing.
       bias correction)
 - [x] LZC, block entropy (SE), fractal dimension (FD), effective complexity proxy (EC),
       logical depth proxy (LD), Lyapunov exponent (LE); systems gain `perturb` for LE
-      (docs/measures.md §5.2, §5.6)
+      (MEASURES.md §5.2, §5.6)
 - [x] Rule-level: transient length (TL), Langton's λ (LL), functional information (FI)
-      (docs/measures.md §5.7)
-- [x] Statistical complexity (SC), PID, FID (docs/measures.md §5.3)
-- [x] Individuality (ITI) in both forms, `iti_features` and `iti_local` (docs/measures.md §5.4)
+      (MEASURES.md §5.7)
+- [x] Statistical complexity (SC), PID, FID (MEASURES.md §5.3)
+- [x] Individuality (ITI) in both forms, `iti_features` and `iti_local` (MEASURES.md §5.4)
 - [ ] ITI features: target creature and environment of several creatures, once the
       Aquarium exists (M3b)
-- [x] Heatmaps (docs/measures.md §4): a spatial map for every measure with spatial granularity, local
+- [x] Heatmaps (MEASURES.md §4): a spatial map for every measure with spatial granularity, local
       fields (TE, SC, block entropy, Lyapunov separation) or per tile (compression, LZC,
       PID, FID); shown overlaid on the frame or side by side
 - [x] Overlay or side by side: side by side (Bert, 2026-10-30)
-- [x] Measure-expectation tests (docs/measures.md §6) for every measure (orientation and structure tests
+- [x] Measure-expectation tests (MEASURES.md §6) for every measure (orientation and structure tests
       over all registered measures, plus per-measure tests); `warming_up` flag for window
       measures, sent per tick and drawn faint in the UI
 - [x] UI: measures grouped (by kind, with taxonomy tags and popups); per-measure settings
       behind a ⚙ (typed and checked by the server, kept per browser, applied at the next
       Start); compatibility hints name the skipped systems and what the measure needs
 
-### M3b — Multi-scale structural complexity (docs/measures.md §8), after multi-channel Lenia (M4)
+### M3b — Multi-scale structural complexity (MEASURES.md §8), after multi-channel Lenia (M4)
 - [ ] Reference cases: empty and noise (low); goo-like structures (self-organizing, one
       level); single creatures (Aquarium unit); **Aquarium** networks: self-replicating
       (`aquarium`) and dividing on collision (`aquarium_scene`) (highest) — the Aquarium
@@ -408,7 +408,7 @@ then polishing and sharing.
 - [ ] Collision experiments as the acceptance test: pairs of units and units against noise
       (Orbium, Aquarium unit and colonies in static and moving modes, Scutium, Life glider
       and still lifes, goo); record survival and identity
-- [ ] Prototype the complexity field C = S × M × I (docs/measures.md §8.1b): S spatial
+- [ ] Prototype the complexity field C = S × M × I (MEASURES.md §8.1b): S spatial
       structure across scales; M self-maintenance by perturbation (internal flow, repair,
       containment, tolerance), reusing the Lyapunov twin runs; I individuality
       (segmentation, tracking, ITI); each scaled between empty and matched noise
@@ -441,7 +441,7 @@ then polishing and sharing.
       seeds via `vmap`; results in `results/<name>/` with metadata sidecar
 - [ ] First study: all measures × (GoL, Lenia creatures, baselines, new systems) × 10 seeds
 - [ ] Measure × system compatibility matrix (applicable / informative / misleading) with
-      short notes, kept in `docs/compatibility.md`
+      short notes, kept in `COMPATIBILITY.md`
 - [ ] Static results site generated from `results/` (GitHub Pages)
 - [ ] `CONTRIBUTING.md`: adding a system / measure, the conventions in §2, the test checklist
 - [ ] GitHub Actions: ruff + pytest on CPU JAX
@@ -471,7 +471,7 @@ then polishing and sharing.
 ## Log
 - 2026-10-21 — M0 done: NumPy demo with GoL, Lenia, 4 compression measures, UI and CLI.
 - 2026-10-21 — Added best-of and novelty compression measures; grid-size findings in
-  docs/measures.md §5.1.
+  MEASURES.md §5.1.
 - 2026-10-29 — Lenia base switched to the hand-coded Lenium (`lenium.old`); Gaussian
   Orbium replaces the polynomial one; compression findings rerun.
 - 2026-10-29 — M1 done: JAX engine (`rollout` / `rollout_batch` / `advance`), functional
@@ -490,4 +490,4 @@ then polishing and sharing.
   cached per rule, per-measure settings in the UI. Open: ITI features on the Aquarium
   (M3b), multi-scale structural complexity (M3b, after multi-channel Lenia in M4).
 - 2026-10-31 — Measure definitions, decisions, values and design Q&A moved from §5 to
-  docs/measures.md.
+  MEASURES.md.

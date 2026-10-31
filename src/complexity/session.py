@@ -121,7 +121,7 @@ class Run:
         return max(8, min(self.size) // 16)
 
     def map(self, key: str) -> np.ndarray | None:
-        """The spatial map of measure `key` at the current step (docs/measures.md §4), float32
+        """The spatial map of measure `key` at the current step (MEASURES.md §4), float32
         (height, width) for local measures or (height / tile, width / tile) per tile; None
         if the measure has no map or does not run here."""
         m = next((m for m in self.measures if m.key == key), None)

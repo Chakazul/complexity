@@ -1,4 +1,4 @@
-"""Measures of the dynamics rather than the frames (docs/measures.md §5.6): the Lyapunov exponent
+"""Measures of the dynamics rather than the frames (MEASURES.md §5.6): the Lyapunov exponent
 (LE), from a twin run started from a perturbed copy of the current state.
 
 These need the system and its state, so they set `needs_state` and implement
@@ -84,7 +84,7 @@ class Lyapunov(Measure):
     steps = 64
     burn_in = 8
     params = ("steps", "burn_in")
-    granularity = "rule"  # the exponent belongs to the dynamics (docs/measures.md §2.3)
+    granularity = "rule"  # the exponent belongs to the dynamics (MEASURES.md §2.3)
     subject = "trajectory"  # a finite-time estimate from the current state
     estimated_from = "run"
     applies_to = "systems that can perturb their state (all built-in ones)"

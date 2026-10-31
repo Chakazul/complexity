@@ -1,4 +1,4 @@
-"""Rule-level measures (docs/measures.md §5.7): properties of a rule, from runs of their own.
+"""Rule-level measures (MEASURES.md §5.7): properties of a rule, from runs of their own.
 
 Transient length (TL) and Langton's lambda (LL) apply to any rule; functional information
 (FI) varies Lenia's growth parameters. Each is computed once per (system, pattern) and

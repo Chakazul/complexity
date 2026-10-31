@@ -1,4 +1,4 @@
-"""Information decompositions of a cell's next state (docs/measures.md §5.3): partial information
+"""Information decompositions of a cell's next state (MEASURES.md §5.3): partial information
 decomposition (PID, Williams & Beer 2010) and functional information decomposition (FID,
 Bohm et al. 2025).
 
@@ -134,7 +134,7 @@ class FunctionalDecomposition(_Decomposition):
     component = "synergy"
     params = ("component", "window", "offset", "n_levels")
     choices = {"component": ("synergy", "self", "neighbour")}
-    granularity = "rule"  # a property of the input-output function (docs/measures.md §2.3)
+    granularity = "rule"  # a property of the input-output function (MEASURES.md §2.3)
     subject = "rule"
 
     def decompose(self, counts):

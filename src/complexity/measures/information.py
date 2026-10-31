@@ -3,7 +3,7 @@ the device) and block entropy (SE, on the host).
 
 All estimates are plug-in: probabilities are histogram frequencies over the cells (and time
 steps) of the window, with the Miller-Madow bias correction. The bias grows with bins /
-samples (docs/measures.md §5.3), so values are compared with the `baseline` system's iid noise of the
+samples (MEASURES.md §5.3), so values are compared with the `baseline` system's iid noise of the
 same kind.
 """
 
@@ -161,7 +161,7 @@ class BlockEntropy(Measure):
     needs_discrete = True
     block = 2
     params = ("block", "n_levels")
-    granularity = "system"  # Shannon entropy belongs to a distribution (docs/measures.md §2.3)
+    granularity = "system"  # Shannon entropy belongs to a distribution (MEASURES.md §2.3)
     scope = "local"  # its pointwise form, the surprisal, is the map
 
     map = "local"
