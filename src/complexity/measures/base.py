@@ -38,7 +38,7 @@ class Measure(ABC):
     `description` says so. `peaks_at` says where the measure is highest: "randomness"
     (compression, entropy), "structure" (transfer entropy), "mixed" (neither reliably:
     logical depth) or "none" (a statistic for reference, not a complexity measure: mass,
-    speed); the tests check the first two.
+    speed, change rate); the tests check the first two.
 
     `needs_state` measures (Lyapunov exponent) need the dynamics, not frames: they implement
     `compute_state(system, state, rng, ctx)`, which the run calls instead of `compute`.
@@ -54,7 +54,8 @@ class Measure(ABC):
     are applied by the run to tiles of the frame; None: no map.
 
     `ratio` names a per-object version (MEASURES.md §5.10): the grid total (value × cells)
-    divided by the mean "mass", or "speed_mass" (speed × mass), over the measure's window.
+    divided by the mean "mass", or the "change" rate Σ|ΔA| per step, over the measure's
+    window.
     The run reports it instead of the value when asked (`Run(per_object=True)`), in
     `ratio_unit`. The map stays per cell, in `map_unit`.
     """
@@ -72,7 +73,7 @@ class Measure(ABC):
     map_unit: str = ""  # unit of the map if it differs from `unit`
     n_levels: int | None = None  # None: n_states if discrete, else DEFAULT_LEVELS
     peaks_at: str = "randomness"  # "randomness", "structure", "mixed" or "none"
-    ratio: str | None = None  # None, "mass" or "speed_mass": see the docstring
+    ratio: str | None = None  # None, "mass" or "change": see the docstring
     ratio_unit: str = ""
     params: tuple[str, ...] = ()
     choices: dict[str, tuple[str, ...]] = {}  # allowed values of text parameters

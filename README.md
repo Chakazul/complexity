@@ -224,11 +224,12 @@ pattern.
 |---|---|---|
 | `mass` | total mass: the sum of the frame's cell values | cells |
 | `speed` | moving speed of the center of mass over a 33-frame window, centering each frame on the previous center first so that a creature crossing the torus's edge is not split (as the hand-coded Lenium does) | cells/step |
+| `change_rate` | Σ\|ΔA\| per step over the cells: motion and change in place; the divisor of per-object transfer entropy | mass/step |
 
 **Per object** (checkbox beside the Measures title, on by default; CLI `--per-object`):
 statistical complexity is reported per unit of mass (bits/mass) and transfer entropy per
-unit of mass per cell moved (bits/(mass·cell)), instead of their grid averages, which mostly
-follow a creature's size and speed (MEASURES.md §5.10, Q17).
+unit of mass changed (bits/Δmass), instead of their grid averages, which mostly follow a
+creature's size and speed (MEASURES.md §5.10, Q17).
 
 ## Adding a system or a measure
 

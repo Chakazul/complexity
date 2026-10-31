@@ -421,6 +421,9 @@ def test_mass_and_speed():
         assert glider["speed"] == pytest.approx(np.sqrt(2) / 4) and glider["mass"] == 5
     assert stats("life", "galaxy", 64)["speed"] == 0  # an oscillator stays put
     assert stats("baseline", "empty", 32) == {"mass": 0, "speed": 0}
+    run = Run(RunSpec("life", "glider", (32, 32)), ["change_rate"])
+    run.step(50)
+    assert run.measure()[0]["change_rate"] == pytest.approx(4)  # 2 births and 2 deaths per step
     assert stats("lenia", "orbium", 64)["speed"] > 0.3
 
 
@@ -440,8 +443,25 @@ def test_per_object_ratios():
     # grid averages shrink ~4x on a 4x larger grid; the ratios change little (MEASURES §5.10)
     for key in ("statistical_complexity", "transfer_entropy"):
         assert 1 < large[key] / small[key] < 1.3, key
-    still = Run(RunSpec("life", "galaxy", (64, 64)), ["transfer_entropy"], per_object=True)
-    still.step(50)
-    assert still.measure()[0]["transfer_entropy"] == 0  # does not move: no ratio
+    frozen = Run(RunSpec("baseline", "frozen_noise_binary", (32, 32)), ["transfer_entropy"],
+                 per_object=True)
+    frozen.step(20)
+    assert frozen.measure()[0]["transfer_entropy"] == 0  # nothing changes: no ratio
     m = registry.make_measure("transfer_entropy")
-    assert (m.ratio, m.ratio_unit, m.map_unit) == ("speed_mass", "bits/(mass·cell)", "bits/cell/step")
+    assert (m.ratio, m.ratio_unit, m.map_unit) == ("change", "bits/Δmass", "bits/cell/step")
+
+
+def test_per_object_te_has_no_spikes_when_a_creature_slows_down():
+    # Tetralapillium almost stops at times but keeps changing shape; TE / (speed × mass)
+    # reached 39x its median there, TE / change rate stays within 2x (MEASURES §5.10)
+    run = Run(RunSpec("lenia", "tetralapillium_metamorpha", (256, 256)),
+              ["transfer_entropy", "speed", "change_rate"], per_object=True)
+    run.step(200)
+    te, speed = [], []
+    for _ in range(40):
+        run.step(10)
+        values = run.measure()[0]
+        te.append(values["transfer_entropy"])
+        speed.append(values["speed"])
+    assert min(speed) < 0.1 * max(speed)  # it does slow down
+    assert max(te) < 2 * np.median(te)

@@ -45,7 +45,7 @@ Every measure declares `peaks_at`, shown in the UI as a tag and an emoji:
 | randomness | 🎲 | rises from order to disorder; highest for noise | compression (all), LZC, block entropy, fractal dimension, Lyapunov exponent, transient length, Langton's λ |
 | structural | 🌿 | low for both uniform frames and noise, highest in between | effective complexity, statistical complexity, transfer entropy, PID, FID, ITI (both), functional information |
 | mixed | — | neither reliably | logical depth (its proxy, §5.2.3) |
-| statistic | 📏 | not a complexity measure; for reference | total mass, moving speed (§5.9) |
+| statistic | 📏 | not a complexity measure; for reference | total mass, moving speed, change rate (§5.9) |
 
 This is the classic split between measures of randomness (Kolmogorov complexity is often
 called algorithmic randomness) and measures of structured complexity, which are low at both
@@ -197,6 +197,7 @@ for discrete states only (§2.2).
 | AT | Assembly index | — | — | pattern, local (regional), static | — | — | deferred (§5.8) |
 | — | Total mass (statistic) | `mass` | 📏 | pattern, global, static | instance / object | — | implemented (§5.9) |
 | — | Moving speed (statistic) | `speed` | 📏 | pattern, global, dynamic | trajectory / run | — | implemented (§5.9) |
+| — | Change rate (statistic) | `change_rate` | 📏 | pattern, global, dynamic | trajectory / run | — | implemented (§5.9) |
 
 Statistical complexity and transfer entropy also have per-object versions (§5.10).
 | WZ | Wuensche's Z | — | — | rule, global, static, discrete | — | — | with elementary CA, M4 (§5.8) |
@@ -211,7 +212,7 @@ Statistical complexity and transfer entropy also have per-object versions (§5.1
 Code: `src/complexity/measures/` — `compression.py`, `algorithmic.py` (LZC, EC, LD),
 `causal.py` (SC), `information.py` (TE, block entropy), `decomposition.py` (PID, FID),
 `individuality.py` (ITI), `geometry.py` (FD), `dynamics.py` (LE), `rule.py` (TL, LL, FI),
-`statistics.py` (mass, speed).
+`statistics.py` (mass, speed, change rate).
 
 ## 4. Granularity and heatmaps
 
@@ -587,7 +588,7 @@ Most Lenia creatures sit at the 9-bit ceiling; telling them apart needs many mor
   i with index a_i and copy number n_i among N_T objects.
 - **Wuensche's Z (WZ).** Rule-level, static, for elementary CA; added with that system (M4).
 
-### 5.9 Statistics for reference (`mass`, `speed`)
+### 5.9 Statistics for reference (`mass`, `speed`, `change_rate`)
 
 Not complexity measures: plain statistics to read the others against (is the creature
 alive, is it moving), tagged 📏 *statistic* and skipped by the orientation tests.
@@ -607,6 +608,10 @@ alive, is it moving), tagged 📏 *statistic* and skipped by the orientation tes
   Lenia's units, × T / R: 0.46); Galaxy and empty 0. With several objects it is the
   speed of their common center, and on iid noise the center jumps (0.6–0.8): read it for
   single creatures.
+- **Change rate** (`change_rate`): Σ|A(t+1) − A(t)| over the cells, averaged over the window
+  (16 frames), in mass per step: motion and change in place alike. Glider 4 (2 births, 2
+  deaths a step); Orbium 14.8, Paraptera pedes 55, Tetralapillium 7.5; still and frozen
+  patterns 0. The divisor of TE's per-object version (§5.10).
 
 ### 5.10 Per-object ratios (option "per object", on by default in the UI)
 
@@ -617,22 +622,32 @@ per-object versions divide that out:
 | Measure | Per object | Unit |
 |---|---|---|
 | statistical complexity | SC × cells / mass | bits/mass: bits per unit of mass |
-| transfer entropy | TE × cells / (speed × mass) | bits/(mass·cell): bits per unit of mass per cell moved |
+| transfer entropy | TE × cells / change rate | bits/Δmass: bits per unit of mass changed |
 
 `cells` is the grid's H × W, so SC × cells is the total local complexity over the grid
-(bits) and TE × cells the total transfer per step (bits/step); mass and speed (§5.9) are
-means over the measure's own window of raw frames (SC sees only 2-level symbols). The
-ratio is 0 for an empty grid and, for TE, for a pattern slower than 0.001 cells/step (an
-oscillator such as Galaxy has TE > 0 but no speed). Maps stay per cell (`map_unit`).
+(bits) and TE × cells the total transfer per step (bits/step); mass and change rate (§5.9)
+are means over the measure's own window of raw frames (SC sees only 2-level symbols). The
+ratio is 0 for an empty grid and, for TE, when nothing changes (then TE is 0 as well).
+Maps stay per cell (`map_unit`).
+
+**Why change rate, not speed × mass** (2026-11-01). TE was first divided by speed × mass,
+which matched it across the five creatures (Q17), but a creature that nearly stops while
+changing shape in place keeps its TE while its speed falls toward 0: on Tetralapillium
+(256², speed 0.002–0.34 cells/step) TE / (speed × mass) peaked at 39× its median (CV 2.0),
+spikes in the chart. The change rate counts motion and change in place alike and is 0 only
+when TE is: TE / change rate stays within 1.6× its median (CV 0.24), steadier than raw TE
+(2.6×, 0.53), and across the creatures TE follows change rate as closely (log correlation
+0.98). TE / mass was in between (2.2×, 0.48).
 
 Implemented in the run (`Measure.ratio`, `ratio_unit`; `Run(per_object=True)`, CLI
 `--per-object`, the UI's checkbox beside the Measures title, sent at Start); the library
 and CLI default to the grid averages. Other measures could declare a ratio the same way.
 
 Values (128², step 300): SC Orbium 20.1, Tetralapillium 22.0, Paraptera furiosus 16.4,
-Florakronium 16.1, Paraptera pedes 14.0; TE Tetralapillium 2.94, Orbium 1.99, Paraptera
-furiosus 1.56, Florakronium 1.50, Paraptera pedes 1.37. On 256² the grid averages drop
-~3.5×, the ratios rise 15–20 %: local SC and TE take probabilities over the whole grid, so a
+Florakronium 16.1, Paraptera pedes 14.0; TE Orbium 5.94, Paraptera pedes 5.68, Paraptera
+furiosus 5.48, Florakronium 5.14, Tetralapillium 3.28 — Tetralapillium changes the most in
+ways its neighbours do not predict. On 256² the grid averages drop ~3.5×, the ratios rise
+10–27 %: local SC and TE take probabilities over the whole grid, so a
 creature's states are rarer on a larger grid (about log2 4 = 2 more bits per creature cell
 at 4× the area). Compare creatures at equal grid size.
 
@@ -1004,7 +1019,9 @@ Tetralapillium metamorpha and Florakronium arcus (128², 50 measurements over 50
   gliders score ~0 (Orbium 0.01, Paraptera pedes 0.09), creatures whose mass varies
   smoothly ~1–1.3. Interesting, but not individuality in Krakauer's sense; that needs
   other creatures (§5.4).
-Hence the per-object ratios (§5.10), which keep what is specific to each creature.
+Hence the per-object ratios (§5.10), which keep what is specific to each creature. TE's
+divisor became the change rate rather than speed × mass, which spiked when a creature slowed
+down while still changing shape.
 
 ## 10. Open questions
 

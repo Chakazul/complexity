@@ -1,5 +1,5 @@
 """Statistics of a frame for reference, not complexity measures (MEASURES.md §5.9): total
-mass and moving speed.
+mass, moving speed and change rate.
 
 Speed follows the hand-coded Lenium's `stat.calc_basic_stats`, which recenters the world on
 the integer part of the center of mass every step so that a creature never straddles the
@@ -48,6 +48,12 @@ def centers(frames) -> np.ndarray | None:
     return np.array(out)
 
 
+def change_rate(frames) -> float:
+    """Mean total change per step, Σ|A(t+1) − A(t)| over the cells, in units of mass."""
+    f = np.asarray(frames, np.float64)
+    return float(np.abs(np.diff(f, axis=0)).sum(axis=(1, 2)).mean()) if len(f) > 1 else 0.0
+
+
 class _Statistic(Measure):
     group = "Statistics"
     peaks_at = "none"  # not a complexity measure
@@ -91,3 +97,24 @@ class Speed(_Statistic):
             return 0.0
         c = centers(frames)
         return 0.0 if c is None else float(np.linalg.norm(c[-1] - c[0]) / (len(frames) - 1))
+
+
+@register_measure
+class ChangeRate(_Statistic):
+    key = "change_rate"
+    name = "Change rate"
+    unit = "mass/step"
+    description = (
+        "How much the frame changes per step: Σ|A(t+1) − A(t)| over the cells, averaged over "
+        "the window. Covers motion and change in place alike (a still or frozen pattern: 0; "
+        "an oscillator or a creature changing shape in place: > 0). The divisor of transfer "
+        "entropy's per-object version. A statistic for reference, not a complexity measure."
+    )
+    window = 16
+    params = ("window",)
+    temporal = "dynamic"
+    subject = "trajectory"
+    estimated_from = "run"
+
+    def compute(self, frames, ctx=NO_CONTEXT) -> float:
+        return change_rate(frames)
