@@ -5,7 +5,7 @@ Lab: the ones implemented, the ones deferred, and the ones proposed. Also the de
 behind each implementation, first values, and the questions and answers that shaped them.
 The project plan and milestones are in [PLAN.md](PLAN.md); background on the measures
 is in [assets/Complexity_Measure.pdf](assets/Complexity_Measure.pdf) (cited as "the PDF"), and
-the papers behind each measure are in [assets/](assets/) (§2.4).
+the papers behind each measure are catalogued in [assets/README.md](assets/README.md) (§2.4).
 
 Contents: 1 Purpose · 2 Conventions (2.3 reanalysis of granularity, 2.4 checked against the papers) · 3 Catalogue · 4 Granularity and heatmaps ·
 5 Measures in detail · 6 Validation · 7 First values · 8 The goal measure and proposals ·
@@ -141,8 +141,9 @@ Re-derived from knowledge of the literature, then checked against the papers (§
 
 ### 2.4 Checked against the papers (2026-10-31)
 
-The 22 papers in `assets/` (one per measure, three for IIT, two each for SC and WZ) were
-read against these notes. What they confirm, correct or add:
+The 22 papers catalogued in [assets/README.md](assets/README.md) (one per measure, three
+for IIT, two each for SC and WZ) were read against these notes. What they confirm, correct
+or add:
 
 | Measure | Paper | Result |
 |---|---|---|

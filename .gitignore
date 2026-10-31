@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 results/
+
+# papers behind the measures: catalogued in assets/README.md, not redistributed
+assets/*.pdf
+!assets/Complexity_Measure.pdf
