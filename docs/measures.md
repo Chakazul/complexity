@@ -601,13 +601,39 @@ on matched noise so values compare across systems:
 - **C = S × M × I**. Motion is optional: a gliding Orbium and a stationary Aquarium ring can
   both score high. Observed dynamics (local TE) remains available as a separate component.
 
+**Finding the individuals: a loop of observation and intervention** (Q13). Observational
+segmentation (threshold and torus components now; later watershed splitting, tracking over
+time with merge and split events, motion coherence, channel signatures) proposes candidates
+in real time, but cannot tell touching colony members from one blob, or goo from a unit.
+Interventions refine them: perturb a cell and record which cells' futures change (its
+causal reach); an individual is a set of cells that influence each other strongly and the
+outside weakly — a disturbance spreads, is repaired, and stops at the boundary. Touching
+colony members separate; goo has no such closed sets. For differentiable systems (Lenia),
+`jax.jvp` gives how one disturbance spreads everywhere and `jax.vjp` which past cells
+influenced a region, each at about the cost of a few steps, batched over many probes;
+large (collision-like) disturbances and discrete systems need finite twin runs. Confirmed,
+tracked individuals are what M and the collision tests act on.
+
+**Observation and intervention together** (Q14). Observation runs always and in real time:
+detection, tracking, natural encounter statistics, S and observed dynamics. Interventions
+run in the background or offline on the top candidates (hot regions): individuation, M,
+tolerance curves. In busy scenes, natural collisions serve as free validation of what the
+interventions predict. Perturbation protocols (kind, size, place) are fixed and documented,
+since results depend on them.
+
 **Outputs**: the C heatmap; **hot regions** (C above a threshold, connected in space and
 time: position, extent, peak, integral; boxes in the UI, exportable); **run summaries**
 (mean, maximum, 95th percentile over space and time) to compare conditions, batched over
 seeds and parameters (M5 experiments).
 
-**Validation**, with **collision experiments** (pairs of units, units against noise; record
-survival and identity) as the acceptance test. Expected ranking, lowest to highest: empty,
+**Validation**, with **collision experiments** as the acceptance test: head-on and glancing
+collisions of two units, a unit into a patch of noise, a unit into an existing colony.
+Survival = the same number of units afterwards, each within ±20 % of its mass, separable
+again within a few hundred steps; identity tracked through the encounter. Continuous
+Orbium, as agreed. A separate **Collider Lab** web app (Bert) may collect collision data
+with human labels (individual, colony, goo): pattern pair and parameters, angle, offset,
+speed, outcome (survived, merged, split, died, became goo), units and masses before and
+after — the ground truth for whether high C matches what a person calls complex. Expected ranking, lowest to highest: empty,
 noise; frozen noise; Life still lifes, the glider, Scutium (disintegrate on collision); goo
 (no individuals); Orbium, the Aquarium unit, Aquarium colonies in static and moving modes
 (survive collisions, members stay individuals).
@@ -629,6 +655,11 @@ noise; frozen noise; Life still lifes, the glider, Scutium (disintegrate on coll
 - **Per-creature ITI plus the number of interacting individuals**: units (individuality)
   and their network directly; needs the target-creature design of `iti_features` (M3b).
 - **Logical depth without the timing artefact** (§5.2.3).
+- **Effective information and causal emergence** (Hoel 2013): interventional — set states
+  uniformly at random and measure the information carried to the next step, across scales;
+  relevant to the multi-scale part of the goal.
+- **Causal information flow** (Ay & Polani 2008): the formal, interventional counterpart
+  of transfer entropy; the basis for M's "internal flow".
 
 ## 9. Questions and answers
 
@@ -715,6 +746,45 @@ an individual (Aquarium, Orbium); objects that break on collision (Scutium, the 
 and goo without individuals are less complex. Observational measures cannot see this in a
 structure that does not change, so the goal measure needs an interventional component —
 perturb and follow the repair (§8.1b).
+
+**Q13. To run collision and intervention experiments the objects must first be found. How —
+or do interventions themselves reveal the individuals?**
+Both, in a loop (§8.1b). Observational segmentation is cheap and real time but fails for
+touching colony members and for goo. Interventions define the boundary causally: the set of
+cells within which a disturbance spreads and is repaired, and beyond which it does not go.
+Observation proposes candidates; interventions confirm, split or merge them in the
+background; tracking keeps their identity. Autodiff makes small-perturbation responses
+cheap in Lenia.
+
+**Q14. Is observing a long enough simulation enough to find individuals and their
+complexity, as a person would, or are interventions better?**
+Observation can suffice when the scene produces its own natural experiments often enough
+(busy colonies) and the observer brings priors, as people do. But a stable structure is
+quiet — its repair shows only when disturbed; deterministic, tightly coupled parts confuse
+inference from statistics alone; and observation never visits the limits of tolerance.
+Interventions isolate cause and effect, probe any size and place, run in parallel, and are
+far more efficient here because the simulator is ours, at the price of a fixed protocol and
+of states that may not occur naturally. Hence a hybrid: observation always on,
+interventions on the top candidates.
+
+**Q15. Does any documented measure use an interventional mechanism like the goal
+measure's, or is it new or specific to Lenia?**
+The ingredients have precedents. In §3: the Lyapunov exponent uses the same twin-run
+mechanism but rewards divergence (chaos), where M rewards repair and containment; IIT is
+interventional and defines a boundary by integration, but needs the full transition table
+and has no repair or tolerance; FID's uniform inputs and FI's perturbed rule parameters are
+interventions on the rule, not on a structure. Beyond §3: Beer's perturbation analysis of
+the Life glider as an autopoietic unit (closest to the individuation loop); Hoel's
+interventional effective information; Ay & Polani's causal information flow; Sensorimotor
+Lenia (Hamon et al. 2024), which searched for Lenia creatures robust to obstacles and
+perturbations as a sign of agency; ecological resilience and basins of attraction. What is
+specific here: a spatial, real-time field rather than one number; the combination of
+structure × self-maintenance (spread, repair, containment, tolerance) × individuality;
+calibration against empty and matched noise; individuation by intervention in a loop with
+tracking; and autodiff for exact small-perturbation responses. Not Lenia-specific in
+concept — any simulator that can be perturbed and rerun works (Life with finite flips, as
+Beer did); Lenia is special in being differentiable and in having self-repairing,
+colony-forming individuals. (Citations from memory, to be checked before publication.)
 
 ## 10. Open questions
 
