@@ -63,6 +63,7 @@ the reanalysis in §2.3); two more say what **this implementation computes**.
 | subject | instance / trajectory / rule / ensemble | what the implementation measures: one frame / a stretch of the run / the rule / an ensemble |
 | estimated from | object / run / ensemble | the data it uses: that frame / this run / an ensemble of runs |
 | heatmap | — | has a spatial map (§4) |
+| discrete | — | defined for discrete states only (a rule table, exact repeats); skips continuous systems |
 
 The UI shows the first three and heatmap as coloured tags (in each pair the value preferred
 for the goal in §8 is a step darker: pattern, local, dynamic, structural), and the last two
@@ -168,7 +169,8 @@ read against these notes. What they confirm, correct or add:
 
 All 18 measures of the PDF, plus the variants added here and the proposals. Tags are
 granularity, scope, temporal (§2.2); "computed" is subject / estimated from. "Map": local =
-one value per cell; tile = per tile of the frame (§4).
+one value per cell; tile = per tile of the frame (§4). "discrete" marks measures defined
+for discrete states only (§2.2).
 
 | PDF | Measure | Key | Kind | Tags | Computed | Map | Status |
 |---|---|---|---|---|---|---|---|
@@ -185,13 +187,13 @@ one value per cell; tile = per tile of the frame (§4).
 | ITI | Individuality, local adaptation | `iti_local` | 🌿 | pattern, local, dynamic | trajectory / run | local | implemented |
 | FD | Fractal dimension | `fractal_dimension` | 🎲 | pattern, global, static | instance / object | — | implemented |
 | LE | Lyapunov exponent | `lyapunov` | 🎲 | rule, global, dynamic | trajectory / run | local | implemented |
-| TL | Transient length (growth class) | `transient_length` | 🎲 | rule, global, dynamic | rule / ensemble | — | implemented (discrete) |
-| LL | Langton's λ | `langton_lambda` | 🎲 | rule, global, static | rule / ensemble | — | implemented |
+| TL | Transient length (growth class) | `transient_length` | 🎲 | rule, global, dynamic, discrete | rule / ensemble | — | implemented |
+| LL | Langton's λ | `langton_lambda` | 🎲 | rule, global, static, discrete | rule / ensemble | — | implemented |
 | FI | Functional information | `functional_information` | 🌿 | system, global, dynamic | ensemble / ensemble | — | implemented |
 | TD | Thermodynamic depth | — | — | pattern, global, dynamic | — | — | deferred (§5.8) |
 | IIT | Integrated information | — | — | system, global, dynamic | — | — | deferred (§5.8) |
 | AT | Assembly index | — | — | pattern, local (regional), static | — | — | deferred (§5.8) |
-| WZ | Wuensche's Z | — | — | rule, global, static | — | — | with elementary CA, M4 (§5.8) |
+| WZ | Wuensche's Z | — | — | rule, global, static, discrete | — | — | with elementary CA, M4 (§5.8) |
 | — | Multi-scale structural complexity | — | 🌿 | pattern, local, dynamic | trajectory / run (better: ensemble) | local | proposed: the goal measure (§8) |
 | — | Local information dynamics (storage, transfer, modification) | — | 🌿 | pattern, local, dynamic | trajectory / run | local | proposed (§8.2) |
 | — | Causal emergence / integrated information decomposition (ΦID) | — | 🌿 | pattern | trajectory / run | per unit | proposed (§8.2) |
