@@ -10,7 +10,7 @@ import pytest
 
 from complexity import engine, registry
 from complexity.systems.base import place_center
-from complexity.systems.lenia import CATALOGUE
+from complexity.systems.lenia import CATALOGUE, CREATURES
 from complexity.vendor.lenium import model
 
 KEY = jax.random.key(0)
@@ -163,14 +163,30 @@ def test_gaussian_orbium_survives_and_moves(lenia):
     assert abs(float(frames[-1].sum()) - 72.9739) < 1e-3
 
 
-@pytest.mark.parametrize("pattern", list(CATALOGUE))
+@pytest.mark.parametrize("pattern", [k for k in CATALOGUE if k != "tetradecactenium"])
 def test_catalogue_creatures_survive(lenia, pattern):
-    n = 256 if pattern == "amoebium_dentalis" else 128
-    state = lenia.init(pattern, (n, n), KEY)
+    state = lenia.init(pattern, (128, 128), KEY)
     mass0 = float(state.A.sum())
     A = run(lenia, state, 500).A
     assert 0.8 * mass0 < float(A.sum()) < 1.2 * mass0
     assert float((A > 0.1).mean()) < 0.2  # still a creature, not a filled grid
+
+
+def test_bump_kernel_core_matches_the_original_lenia(lenia):
+    # Tetradecactenium grows under its catalogue rule: 6.26x its mass by step 500 on 256²
+    # in a NumPy port of LeniaND.py's kernel_shell and calc_once (float64)
+    state = lenia.init("tetradecactenium", (256, 256), KEY)
+    mass0 = float(state.A.sum())
+    assert float(run(lenia, state, 500).A.sum()) / mass0 == pytest.approx(6.26, abs=0.05)
+
+
+def test_catalogue_creatures_use_the_bump_core_and_lenium_patterns_the_gaussian():
+    assert all(CREATURES[k]["kernel_core"] == "bump" for k in CATALOGUE)
+    assert "kernel_core" not in CREATURES["orbium"]  # Gaussian by default
+    r = jnp.array([0.0, 0.5])
+    assert model.kernel_core(r, "bump").tolist() == [0.0, 1.0]
+    assert model.kernel_core(r)[1] == 1.0
+    assert "bump" in registry.make_system("lenia").patterns["gyrorbium_gyrans"]
 
 
 # ---- every system ----

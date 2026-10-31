@@ -606,7 +606,7 @@ async function main() {
   $("toggle-panel").onclick = () => setPanel(document.querySelector(".layout").classList.contains("collapsed"));
   addEventListener("resize", () => { dirty = true; });
   for (const [system, pattern] of [
-    ["lenia", "paraptera_arcus_labens"], ["lenia", "paraptera_cavus_furiosus"],
+    ["lenia", "paraptera_arcus_pedes"], ["lenia", "paraptera_cavus_furiosus"],
     ["lenia", "tetralapillium_metamorpha"], ["baseline", "iid_noise_continuous"],
   ]) addRun(system, pattern);
   selectedMeasures = new Set(catalog.measures

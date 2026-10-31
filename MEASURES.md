@@ -552,7 +552,8 @@ log2(N / #{E ≥ E_pattern}) over the N = 513 configurations, the pattern includ
 log2 513 = 9 bits: "no random pattern of that size did as well" reads 9, a lower bound.
 Life, Lenia, Integer Lenia and multi-channel Lenia; batches of 64 bound device memory.
 
-**Notes.** The settling period lets stored cells grow into the creature (the Aquarium unit
+**Notes** (creature names are of the set before 2026-11-01, on the Gaussian shell). The
+settling period lets stored cells grow into the creature (the Aquarium unit
 settles at 2.3× its stored mass; Life spaceships are stored one cell short). The area limit
 is the same for every configuration: measured against each one's own settled state, random
 Hydrogeminium boxes that grow into a third of the grid and then hold still passed. The
@@ -604,6 +605,9 @@ Most Lenia creatures sit at the 9-bit ceiling; telling them apart needs many mor
 ## 7. First values
 
 At 128², step 200 unless noted (TE: step 100). Empty and iid noise rows are the baselines.
+Lenia creature values are from before 2026-11-01: the creatures ran on the Gaussian shell,
+and several (Scutium, Helicium solidus, Hydrogeminium, Paraptera a. l., Kronium,
+Hexadentium, Amoebium dentalis) have since been replaced (PLAN.md §4.2).
 
 | Run | LZC | SE | FD | EC | LD ns/cell | LE | TE | SC |
 |---|---|---|---|---|---|---|---|---|
@@ -847,10 +851,11 @@ decomposition is ~15 lines. It was read (not run) and reimplemented with its con
 (uniform inputs over observed values, neutral completion over observed outputs).
 
 **Q10. Do the Aquarium and the Lenia creatures use bump or Gaussian kernels?**
-Gaussian. The hand-coded Lenium, Chan's Lenia tutorial and Leniabreeder all build
-multi-channel kernels as Gaussian rings `bell(D mod 1, 0.5, 0.15) · b`, so the Aquarium was
-found on Gaussian kernels. The ten catalogue creatures were found on the bump core
-(`kn = 1`) but run here on the Gaussian shell, which they survive (PLAN.md §4.2).
+Each uses the core it was found with (since 2026-11-01). The hand-coded Lenium, Chan's
+Lenia tutorial and Leniabreeder all build multi-channel kernels as Gaussian rings
+`bell(D mod 1, 0.5, 0.15) · b`, so the Aquarium and Lenium's Orbiums are Gaussian. The
+catalogue creatures were found on the bump core (`kn = 1`) and run on it, marked "bump"
+(PLAN.md §4.2); until 2026-11-01 they ran on the Gaussian shell.
 
 **Q11. Is the granularity right — spatial, temporal, and subject (pattern / rule /
 system)?**

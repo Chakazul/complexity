@@ -3,11 +3,13 @@
 # model.py `Lenia` and `IntegerLenia`, func.py `bell` / `calc_kernels` / `calc_growth_lookup`
 # / `discretize` / `get_params`, util.py `direct_convolve`. Single channel and kernel, and
 # multi-channel, multi-kernel `Lenia` (2-D). Replace with `import lenium` once it is
-# published (PLAN.md §4.2).
+# published (PLAN.md §4.2). Local addition: the `core` argument (the original Lenia's
+# bump kernel core, LeniaND.py `Automaton.kernel_core[0]`, for its catalogue creatures).
 """Lenia and Integer Lenia, with Gaussian (`bell`) kernel shells and growth.
 
 Kernel: rings of height b over the scaled distance D = |x| · len(b) / R, each ring shaped
-bell(D mod 1, 0.5, 0.15); zero for D ≥ len(b). Growth: 2 · bell(U, m, s) − 1.
+bell(D mod 1, 0.5, 0.15) — or, with `core="bump"`, the original Lenia's exponential bump
+exp(4 − 1/(r(1 − r))) of r = D mod 1; zero for D ≥ len(b). Growth: 2 · bell(U, m, s) − 1.
 
 Differences from the original, none of which changes a result:
 - Functions over arrays instead of classes over a data dict.
@@ -36,21 +38,32 @@ def discretize(A, P=1):
     return jnp.round(A * P).astype(jnp.int32)
 
 
-def ring_kernel(dist: jax.Array, R: float, b, r: float = 1.0) -> jax.Array:
+CORES = ("gaussian", "bump")
+
+
+def kernel_core(r: jax.Array, core: str = "gaussian") -> jax.Array:
+    """The shape of one ring over r in [0, 1): "gaussian" bell(r, 0.5, 0.15), or "bump"
+    exp(4 − 1/(r(1 − r))), 0 at r = 0 (the original Lenia's `kn = 1`)."""
+    if core == "bump":
+        return jnp.exp(4 - 1 / (r * (1 - r)))  # 1/0 = inf, exp(-inf) = 0
+    return bell(r, 0.5, 0.15)
+
+
+def ring_kernel(dist: jax.Array, R: float, b, r: float = 1.0, core: str = "gaussian") -> jax.Array:
     """Unnormalized kernel from distances to the origin, rings of heights `b` out to R · r
     (divided in the original's order, so the floats match)."""
     D = dist * len(b) / jnp.float32(R) / jnp.float32(r)
-    return bell(D % 1, 0.5, 0.15) * jnp.asarray(b, jnp.float32)[D.astype(int)] * (D < len(b))
+    return kernel_core(D % 1, core) * jnp.asarray(b, jnp.float32)[D.astype(int)] * (D < len(b))
 
 
 # ---- continuous Lenia ----
 
 
-def kernel_fft(size: tuple[int, int], R: float, b) -> jax.Array:
+def kernel_fft(size: tuple[int, int], R: float, b, core: str = "gaussian") -> jax.Array:
     """rfft2 of the normalized kernel on a (height, width) torus."""
     h, w = size
     y, x = jnp.ogrid[-(h // 2) : h - h // 2, -(w // 2) : w - w // 2]
-    K = ring_kernel(jnp.sqrt((x**2 + y**2).astype(jnp.float32)), R, b)
+    K = ring_kernel(jnp.sqrt((x**2 + y**2).astype(jnp.float32)), R, b, core=core)
     return jnp.fft.rfft2(jnp.fft.ifftshift(K / K.sum()))
 
 
@@ -98,10 +111,10 @@ def multi_step(A, fK, m, s, h, Mk, Mc, T) -> jax.Array:
 # ---- Integer Lenia ----
 
 
-def integer_kernel(R: int, P: int, b=(1.0,)) -> jax.Array:
+def integer_kernel(R: int, P: int, b=(1.0,), core: str = "gaussian") -> jax.Array:
     """Integer kernel weights 0..P, cropped to (2R+1)²."""
     I = jnp.mgrid[-R : R + 1, -R : R + 1]  # coordinates (d y x)
-    return discretize(ring_kernel(jnp.linalg.norm(I, axis=0), R, b), P)
+    return discretize(ring_kernel(jnp.linalg.norm(I, axis=0), R, b, core=core), P)
 
 
 def growth_lookup(K: jax.Array, P: int, m: float, s: float, h: float = 1.0) -> jax.Array:

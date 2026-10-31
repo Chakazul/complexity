@@ -216,45 +216,56 @@ experiments here, unless an experiment says otherwise: kernel rings
   vendored code with `import lenium` (add the dependency, delete `vendor/lenium/`, and keep
   the golden tests as the check that behaviour is unchanged).
 
-**Creature patterns (M2, done).** Ten continuous creatures from the original Lenia catalogue,
-`~/github/lenia-ref/code/Lenia/Python/animals.json` (614 entries; the Python `LeniaND.py`
-is the reference implementation). Where the request named only a genus, the species below
-is a proposal (the genus's first catalogue entry, or its best-known one):
+**Creature patterns (M2; revised 2026-11-01).** Thirteen continuous creatures from the
+original Lenia catalogue, `~/github/lenia-ref/code/Lenia/Python/animals.json` (614 entries;
+the Python `LeniaND.py` is the reference implementation), chosen by Bert; "#n" is the n-th
+catalogue entry of that name. With the Lenium Orbium (Gaussian) they make 14 creature
+patterns.
 
-| Pattern | Code | R | b | m | s | Cells | Notes |
-|---|---|---|---|---|---|---|---|
-| Gyrorbium gyrans | OG2g | 13 | 1 | 0.156 | 0.0224 | 23×21 | genus pick (also *revolvens*) |
-| Scutium solidus | S1s | 13 | 1 | 0.29 | 0.045 | 20×18 | genus pick (37 entries) |
-| Helicium solidus | H3s | 13 | 1 | 0.35 | 0.06 | 29×41 | genus pick (35 entries) |
-| Hydrogeminium natans | 3GH2n | 18 | 1/2, 1, 2/3 | 0.26 | 0.036 | 51×55 | no plain "Geminium"; family Geminidae, best-known member |
-| Paraptera arcus labens | P4al | 13 | 1 | 0.347 | 0.057 | 40×43 | |
-| Paraptera cavus furiosus | P4cf | 13 | 1 | 0.297 | 0.0405 | 36×39 | |
-| Tetralapillium metamorpha | 2L4m | 18 | 1, 1/2 | 0.2 | 0.022 | 22×23 | second of two entries; the first dies by step 750 on either kernel core |
-| Kronium solidus | K4s | 18 | 1, 1/3 | 0.24 | 0.029 | 23×23 | genus pick (46 entries) |
-| Hexadentium rotans | 2D6r | 18 | 1, 3/4 | 0.27 | 0.039 | 35×35 | genus pick |
-| Amoebium dentalis | 3Ad | 27 | 1, 5/6, 1/3 | 0.28 | 0.031 | 70×67 | genus pick; 256² to be whole and roomy |
+| Pattern | Index | Code | R | b | m | s | Cells | Notes |
+|---|---|---|---|---|---|---|---|---|
+| Gyrorbium gyrans | 11 | OG2g | 13 | 1 | 0.156 | 0.0224 | 23×21 | gyrating |
+| Triscutium valvatus laterale | 44 | S3vl | 15 | 1 | 0.36 | 0.064 | 35×43 | |
+| Helicium serratus turbulentus #3 | 173 | 4H3t | 18 | 1/4, 1/2, 3/4, 1 | 0.2 | 0.02 | 44×65 | |
+| Paraptera arcus pedes | 91 | P4ap | 13 | 1 | 0.362 | 0.0665 | 43×44 | |
+| Paraptera cavus furiosus | 96 | P4cf | 13 | 1 | 0.297 | 0.0405 | 36×39 | chaotic |
+| Tetralapillium metamorpha | 498 | 2L4m | 18 | 1, 1/2 | 0.2 | 0.022 | 22×23 | chaotic; second of two entries (the first dies by step 750) |
+| Florakronium arcus | 313 | K9a | 18 | 1, 1/2 | 0.28 | 0.035 | 31×40 | |
+| Heptadentium scintillans | 355 | 2D7s | 18 | 1, 5/6 | 0.22 | 0.025 | 38×38 | |
+| Asterium vagus #2 | 404 | 3R5v | 27 | 1, 1/2, 1 | 0.27 | 0.033 | 42×42 | chaotic |
+| Asterium metamorpha currens | 408 | 4R5mc | 36 | 1, 1/3, 2/3, 1 | 0.2 | 0.022 | 55×54 | chaotic |
+| Amoebium foliatus #2 | 587 | 5Af | 36 | 1, 1/12, 1/12, 1/12, 1/4 | 0.19 | 0.015 | 55×61 | |
+| Tetradecactenium | 257 | 3Ct14 | 20 | 1, 1, 1 | 0.27 | 0.0377 | 88×100 | big; grows (below) |
+| Urium longus | 267 | 3U4l | 13 | 3/4, 1, 1 | 0.333 | 0.0439 | 65×61 | big |
 
-All have `T = 10`, `kn = 1`, `gn = 1`. What adding them takes:
-- **Kernel core.** `kn = 1` is the original *exponential bump* core,
-  `exp(4 − 1/(r(1 − r)))`. They run on the standard Gaussian shell `bell(r, 0.5, 0.15)`
-  instead, with no parameter changes: in a 1000-step test (2026-10-30, 128², Amoebium at
-  256²) all ten keep their shape and motion, with mass within 0.80–1.05 of the start, as
-  on the bump core. So no kernel-core parameter is needed. `gn = 1` is the Gaussian growth
-  already in use; ring weights `b` (fractions) and the radius convention (`D = dist / R`,
-  ring `⌊D · len(b)⌋`) already match.
-- **Vendored** in `src/complexity/vendor/lenia/`: the 26 catalogue entries verbatim
+All have `T = 10`, `kn = 1`, `gn = 1`. Replaced on 2026-11-01: Scutium solidus, Helicium
+solidus, Hydrogeminium natans (dropped), Paraptera arcus labens, Kronium solidus,
+Hexadentium rotans, Amoebium dentalis.
+- **Kernel core.** `kn = 1` is the original *exponential bump* core
+  `exp(4 − 1/(r(1 − r)))`, and since 2026-11-01 the creatures run on it, as found: each
+  catalogue entry carries `kernel_core = "bump"` (shown as "bump" in the pattern list),
+  and patterns without it (Lenium's Orbium and minimum Orbium, the Aquarium) use the
+  Gaussian shell `bell(r, 0.5, 0.15)`, the default. The model takes the core as an argument
+  (`model.kernel_core`, a local addition to the vendored Lenium). Earlier they ran on the
+  Gaussian shell, which the old ten survived. `gn = 1` is the Gaussian growth already in
+  use; ring weights `b` (fractions) and the radius convention (`D = dist / R`, ring
+  `⌊D · len(b)⌋`) match `LeniaND.py`.
+- **Vendored** in `src/complexity/vendor/lenia/`: the 29 catalogue entries in use verbatim
   (`animals.json`, with their original indices) and `Board.rle2arr` / `ch2val` from
   `LeniaND.py`, reduced to 2-D. The decoder vendored in `1588585` came from the agent
   rewrite and is not reused.
 - **Grid size.** No minimum: every grid size is allowed, and a pattern larger than the grid
   is cropped to its central part (`place_center`). Whether a cropped or cramped creature
   survives is part of what one can explore. A per-pattern minimum size was tried and
-  dropped (2026-10-30).
-- **Tests.** Each creature survives 500 steps at 128² (Amoebium 256²): mass within ±20 %
-  and under 20 % of the grid above 0.1. Over 2000 steps all ten stay within 0.76–1.08 of
-  their start mass. Tetralapillium metamorpha is metastable: at 128² it has
-  died between steps 1000 and 2000 in some runs, and at ×2 / ×3 scale it settles into an
-  oscillating ring.
+  dropped (2026-10-30). Tetradecactenium (88×100) and Urium longus need 256² to be roomy.
+- **Tests.** Each creature but Tetradecactenium survives 500 steps at 128²: mass within
+  ±20 % and under 20 % of the grid above 0.1. Over 2000 steps (128² and 256²) they stay
+  within 0.95–1.11 of their start mass, except Tetralapillium metamorpha, which is
+  metastable: at 128² it dies by step 1000 on the bump core, at 256² it lives (0.84–0.99).
+  **Tetradecactenium grows** under its catalogue rule, to 6.3× its mass by step 500 and
+  13× by step 1000 on 256², a third of the grid; a float64 NumPy port of `LeniaND.py`'s
+  `kernel_shell` and `calc_once` gives the same numbers, so it is the entry's behaviour,
+  not the port's — and a test of the bump core against the original.
 
 ### 4.2b Multi-channel Lenia — `lenia_multi` (2026-10-31)
 
@@ -433,7 +444,7 @@ then polishing and sharing.
 - [x] Without a usable GPU, a CUDA build of JAX falls back to the CPU quietly: the CUDA
       driver is asked first (`complexity/device.py`) and `JAX_PLATFORMS=cpu` set if it has
       no device, instead of the plugin's traceback
-- [x] UI starts with Paraptera arcus labens, Paraptera cavus furiosus, Tetralapillium
+- [x] UI starts with Paraptera arcus pedes, Paraptera cavus furiosus, Tetralapillium
       metamorpha and continuous iid noise
 - [ ] UI: "compiling…" state on start; export the session as CSV; record to MP4
       (baselines are selectable as systems and warm-up points are dimmed since M3)
@@ -494,3 +505,5 @@ then polishing and sharing.
 - 2026-11-01 — Measures checked against the papers in `assets/` (MEASURES.md §2.4);
   transient length and functional information replaced by the papers' measures (growth
   class over grid sizes; random patterns of the creature's size with a graded function).
+- 2026-11-01 — Lenia creatures revised (13 from the catalogue, PLAN §4.2); catalogue
+  creatures run on the bump kernel core they were found with, others on the Gaussian.

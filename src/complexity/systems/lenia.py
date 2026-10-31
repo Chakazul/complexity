@@ -3,11 +3,12 @@
 
 The pattern's quantization level P selects the variant. Without P, classic continuous Lenia: FFT
 convolution, float states in [0, 1]. With P, Integer Lenia: states 0..P, integer kernel and
-potential (FFT, rounded back to exact integers), growth by lookup table. Kernel shells and
-growth are Gaussian, the standard for Lenia experiments here. The model and the Orbium
-patterns, with their parameters (R, T, P, b, m, s), come from the hand-coded Lenium
-(`vendor/lenium/`); the other creatures come from the original Lenia catalogue
-(`vendor/lenia/`), found there with a bump kernel core but run here on the Gaussian shell.
+potential (FFT, rounded back to exact integers), growth by lookup table. Growth is Gaussian.
+Kernel shells are Gaussian, the standard for Lenia experiments here, unless the pattern was
+found with the original Lenia's bump core (`kernel_core = "bump"`): the catalogue creatures.
+The model and the Orbium patterns, with their parameters (R, T, P, b, m, s), come from the
+hand-coded Lenium (`vendor/lenium/`); the other creatures come from the original Lenia
+catalogue (`vendor/lenia/`).
 """
 
 from __future__ import annotations
@@ -27,36 +28,55 @@ from complexity.vendor.lenia.rle import rle2arr
 from complexity.vendor.lenium import model
 from complexity.vendor.lenium.patterns import patterns as LENIUM
 
-# pattern -> index in the original Lenia catalogue (PLAN.md §4.2)
+# pattern -> index in the original Lenia catalogue (PLAN.md §4.2); "#n" in a name is the
+# n-th catalogue entry of that name
 CATALOGUE = {
-    "gyrorbium_gyrans": 11, "scutium_solidus": 28, "helicium_solidus": 164,
-    "hydrogeminium_natans": 233, "paraptera_arcus_labens": 89,
-    "paraptera_cavus_furiosus": 96, "tetralapillium_metamorpha": 498, "kronium_solidus": 283,
-    "hexadentium_rotans": 348, "amoebium_dentalis": 588,
+    "gyrorbium_gyrans": 11, "triscutium_valvatus_laterale": 44,
+    "helicium_serratus_turbulentus_3": 173, "paraptera_arcus_pedes": 91,
+    "paraptera_cavus_furiosus": 96, "tetralapillium_metamorpha": 498,
+    "florakronium_arcus": 313, "heptadentium_scintillans": 355, "asterium_vagus_2": 404,
+    "asterium_metamorpha_currens": 408, "amoebium_foliatus_2": 587, "tetradecactenium": 257,
+    "urium_longus": 267,
 }
+NUMBERED = {"helicium_serratus_turbulentus_3": 3, "asterium_vagus_2": 2, "amoebium_foliatus_2": 2}
+
+# the original Lenia's kernel cores (`kn`) that the model implements
+KERNEL_CORES = {1: "bump"}
 
 
 def from_catalogue(a: dict) -> dict:
-    """A catalogue entry in Lenium's pattern format (one kernel, one channel)."""
+    """A catalogue entry in Lenium's pattern format (one kernel, one channel), with its
+    kernel core."""
     p = a["params"]
     b = [float(Fraction(f)) for f in p["b"].split(",")]
-    return {"name": a["name"], "R": p["R"], "T": p["T"],
+    assert p["gn"] == 1, "only Gaussian growth is implemented"
+    return {"name": a["name"], "R": p["R"], "T": p["T"], "kernel_core": KERNEL_CORES[p["kn"]],
             "kernels": [{"b": b, "m": p["m"], "s": p["s"]}], "cells": [rle2arr(a["cells"])]}
 
 
 # shown after the name in the pattern list
 BEHAVIOUR = {
-    "gyrorbium_gyrans": "gyrating", "helicium_solidus": "rotating",
-    "paraptera_cavus_furiosus": "chaotic", "tetralapillium_metamorpha": "chaotic",
-    "hexadentium_rotans": "rotating", "amoebium_dentalis": "chaotic",
+    "gyrorbium_gyrans": "gyrating", "paraptera_cavus_furiosus": "chaotic",
+    "tetralapillium_metamorpha": "chaotic", "asterium_vagus_2": "chaotic",
+    "asterium_metamorpha_currens": "chaotic", "tetradecactenium": "big", "urium_longus": "big",
 }
+
+
+def display_name(key: str) -> str:
+    """The pattern's catalogue name, its number if several share it, its behaviour, and
+    its kernel core if not Gaussian."""
+    c = CREATURES[key]
+    name = c["name"] + (f" #{NUMBERED[key]}" if key in NUMBERED else "")
+    notes = [BEHAVIOUR.get(key), "bump" if c.get("kernel_core") == "bump" else None]
+    notes = [n for n in notes if n]
+    return name + (f" ({', '.join(notes)})" if notes else "")
 
 CREATURES = {**LENIUM, **{k: from_catalogue(ANIMALS[i]) for k, i in CATALOGUE.items()}}
 
 
 
 # m and s are data, not static metadata, so runs with different growth parameters share one
-# compiled step and can be batched (functional information samples them).
+# compiled step and can be batched.
 @partial(jax.tree_util.register_dataclass, data_fields=["A", "K", "g", "m", "s"],
          meta_fields=["P", "T"])
 @dataclass(frozen=True)
@@ -77,8 +97,7 @@ class Lenia(System):
     patterns = {
         "orbium": "Orbium",
         "random": "Random soup (Orbium params)",
-        **{k: CREATURES[k]["name"] + (f" ({BEHAVIOUR[k]})" if k in BEHAVIOUR else "")
-           for k in CATALOGUE},
+        **{k: display_name(k) for k in CATALOGUE},
     }
     # pattern -> (creature, random soup?)
     sources = {
@@ -104,6 +123,7 @@ class Lenia(System):
         name, soup = self.sources[pattern]
         c = CREATURES[name]
         R, T, P = c["R"], c["T"], c.get("P", 0)
+        core = c.get("kernel_core", "gaussian")
         (kern,) = c["kernels"]
         m = kern["m"] if m is None else m
         s = kern["s"] if s is None else s
@@ -125,10 +145,10 @@ class Lenia(System):
             A = place_center(jnp.zeros(size, jnp.int32 if P else jnp.float32), init)
 
         if P:
-            K = model.integer_kernel(R, P, kern["b"])
+            K = model.integer_kernel(R, P, kern["b"], core=core)
             g = model.growth_lookup(K, P, m, s)
             return LeniaState(A, model.integer_kernel_fft(K, size), g, P, T)
-        return LeniaState(A, model.kernel_fft(size, R, kern["b"]), None, 0, T,
+        return LeniaState(A, model.kernel_fft(size, R, kern["b"], core=core), None, 0, T,
                           jnp.float32(m), jnp.float32(s))
 
     def reach(self, pattern: str) -> int:

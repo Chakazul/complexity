@@ -20,9 +20,9 @@ described in **[MEASURES.md](MEASURES.md)**. In brief:
 - **M0 (done):** NumPy demo — the systems and measures below, interactive UI, CLI.
 - **M1 (done):** JAX engine for GPU/TPU (CPU JAX supported), Integer Lenia with the
   *minimum Orbium*.
-- **M2 (done):** ten creatures from the original Lenia catalogue (Gyrorbium, Scutium,
-  Helicium, Geminium, Paraptera, Tetralapillium, Kronium, Hexadentium, Amoebium), and
-  16 Game of Life patterns from the same catalogue.
+- **M2 (done):** thirteen creatures from the original Lenia catalogue (Gyrorbium,
+  Triscutium, Helicium, Paraptera, Tetralapillium, Florakronium, Heptadentium, Asterium,
+  Amoebium, Tetradecactenium, Urium), and 16 Game of Life patterns from the same catalogue.
 - **M3 (done):** most measures from the PDF. Done: noise baselines, transfer
   entropy, LZC, block entropy, fractal dimension, effective complexity, logical depth,
   Lyapunov exponent, statistical complexity, PID, FID, and the rule-level transient
@@ -87,7 +87,7 @@ uv run complexity run life:random --measures png,video_h264 --size 256x256 --eve
 
 | System | Patterns |
 |---|---|
-| `lenia` — Lenia (continuous) | Orbium (default), random soup, Gyrorbium gyrans, Scutium solidus, Helicium solidus, Hydrogeminium natans, Paraptera arcus labens, Paraptera cavus furiosus, Tetralapillium metamorpha, Kronium solidus, Hexadentium rotans, Amoebium dentalis |
+| `lenia` — Lenia (continuous) | Orbium (default), random soup, Gyrorbium gyrans, Triscutium valvatus laterale, Helicium serratus turbulentus #3, Paraptera arcus pedes, Paraptera cavus furiosus, Tetralapillium metamorpha, Florakronium arcus, Heptadentium scintillans, Asterium vagus #2, Asterium metamorpha currens, Amoebium foliatus #2, Tetradecactenium, Urium longus |
 | `integer_lenia` — Integer Lenia (`P = 12`, 13 states) | minimum Orbium (default), random soup |
 | `life` — Game of Life (discrete) | glider (default), Gosper glider gun, lightweight / middleweight / heavyweight spaceships, Copperhead, Galaxy, Weekender, Lobster, Sir Robin, Pufferfish, Switch engine, Max, Sidecar gun, Star gate, R-pentomino, acorn, random soup |
 | `lenia_multi` — Multi-channel Lenia (3 channels, 15 kernels) | Aquarium (self-replicating), Aquarium unit (VT049W, does not divide alone), Aquarium with 8 units (VT049W, divide on collision) |
@@ -99,11 +99,12 @@ the channels. Its Aquarium patterns grow into networks of ~100 separate units on
 The baselines calibrate the measures: compare a system with noise of its own kind (binary
 for Life, 13 levels for Integer Lenia, continuous for Lenia).
 
-Lenia uses Gaussian kernel shells and growth, the standard for experiments here. The
-named creatures and Life patterns come from the original Lenia catalogue
-(`src/complexity/vendor/lenia/`); the creatures were found with a bump kernel core but
-survive on the Gaussian one. A pattern larger than the grid is cropped to its central part;
-Amoebium, Sidecar gun and Star gate need 256² to be whole.
+Lenia uses Gaussian growth, and Gaussian kernel shells unless a pattern was found with the
+original Lenia's bump core: the named creatures and Life patterns come from the original
+Lenia catalogue (`src/complexity/vendor/lenia/`), and its creatures run on the bump core,
+marked "bump" in the pattern list. A pattern larger than the grid is cropped to its central
+part; Tetradecactenium, Sidecar gun and Star gate need 256² to be whole. Tetradecactenium
+grows to fill a third of the grid, as in the original Lenia.
 
 The minimum Orbium is an Integer Lenia glider: 13 cell states (0..12), integer kernel,
 potential and growth, so it suits both discrete measures (13 symbols) and continuous ones.
