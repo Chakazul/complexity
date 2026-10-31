@@ -216,41 +216,45 @@ experiments here, unless an experiment says otherwise: kernel rings
   vendored code with `import lenium` (add the dependency, delete `vendor/lenium/`, and keep
   the golden tests as the check that behaviour is unchanged).
 
-**Creature patterns (M2; revised 2026-11-01).** Thirteen continuous creatures from the
+**Creature patterns (M2; revised 2026-11-01).** Fourteen continuous creatures from the
 original Lenia catalogue, `~/github/lenia-ref/code/Lenia/Python/animals.json` (614 entries;
-the Python `LeniaND.py` is the reference implementation), chosen by Bert; "#n" is the n-th
-catalogue entry of that name. With the Lenium Orbium (Gaussian) they make 14 creature
-patterns.
+the Python `LeniaND.py` is the reference implementation), chosen by Bert. Where several
+entries share a name, the index picks one (the 3rd Helicium serratus turbulentus, the 2nd
+Asterium vagus and Amoebium foliatus); names are shown without a number. With the Lenium
+Orbium (Gaussian) they make 15 creature patterns.
 
 | Pattern | Index | Code | R | b | m | s | Cells | Notes |
 |---|---|---|---|---|---|---|---|---|
 | Gyrorbium gyrans | 11 | OG2g | 13 | 1 | 0.156 | 0.0224 | 23×21 | gyrating |
 | Triscutium valvatus laterale | 44 | S3vl | 15 | 1 | 0.36 | 0.064 | 35×43 | |
-| Helicium serratus turbulentus #3 | 173 | 4H3t | 18 | 1/4, 1/2, 3/4, 1 | 0.2 | 0.02 | 44×65 | |
+| Helicium serratus turbulentus | 173 | 4H3t | 18 | 1/4, 1/2, 3/4, 1 | 0.2 | 0.02 | 44×65 | 3rd of that name |
+| Hydrogeminium natans | 233 | 3GH2n | 18 | 1/2, 1, 2/3 | 0.26 | 0.036 | 51×55 | |
 | Paraptera arcus pedes | 91 | P4ap | 13 | 1 | 0.362 | 0.0665 | 43×44 | |
 | Paraptera cavus furiosus | 96 | P4cf | 13 | 1 | 0.297 | 0.0405 | 36×39 | chaotic |
 | Tetralapillium metamorpha | 498 | 2L4m | 18 | 1, 1/2 | 0.2 | 0.022 | 22×23 | chaotic; second of two entries (the first dies by step 750) |
 | Florakronium arcus | 313 | K9a | 18 | 1, 1/2 | 0.28 | 0.035 | 31×40 | |
 | Heptadentium scintillans | 355 | 2D7s | 18 | 1, 5/6 | 0.22 | 0.025 | 38×38 | |
-| Asterium vagus #2 | 404 | 3R5v | 27 | 1, 1/2, 1 | 0.27 | 0.033 | 42×42 | chaotic |
+| Asterium vagus | 404 | 3R5v | 27 | 1, 1/2, 1 | 0.27 | 0.033 | 42×42 | chaotic; 2nd of that name |
 | Asterium metamorpha currens | 408 | 4R5mc | 36 | 1, 1/3, 2/3, 1 | 0.2 | 0.022 | 55×54 | chaotic |
-| Amoebium foliatus #2 | 587 | 5Af | 36 | 1, 1/12, 1/12, 1/12, 1/4 | 0.19 | 0.015 | 55×61 | |
+| Amoebium foliatus | 587 | 5Af | 36 | 1, 1/12, 1/12, 1/12, 1/4 | 0.19 | 0.015 | 55×61 | 2nd of that name |
 | Tetradecactenium | 257 | 3Ct14 | 20 | 1, 1, 1 | 0.27 | 0.0377 | 88×100 | big; grows (below) |
 | Urium longus | 267 | 3U4l | 13 | 3/4, 1, 1 | 0.333 | 0.0439 | 65×61 | big |
 
 All have `T = 10`, `kn = 1`, `gn = 1`. Replaced on 2026-11-01: Scutium solidus, Helicium
-solidus, Hydrogeminium natans (dropped), Paraptera arcus labens, Kronium solidus,
+solidus, Paraptera arcus labens, Kronium solidus,
 Hexadentium rotans, Amoebium dentalis.
 - **Kernel core.** `kn = 1` is the original *exponential bump* core
   `exp(4 − 1/(r(1 − r)))`, and since 2026-11-01 the creatures run on it, as found: each
-  catalogue entry carries `kernel_core = "bump"` (shown as "bump" in the pattern list),
+  catalogue entry carries `kernel_core = "bump"`,
   and patterns without it (Lenium's Orbium and minimum Orbium, the Aquarium) use the
   Gaussian shell `bell(r, 0.5, 0.15)`, the default. The model takes the core as an argument
   (`model.kernel_core`, a local addition to the vendored Lenium). Earlier they ran on the
   Gaussian shell, which the old ten survived. `gn = 1` is the Gaussian growth already in
-  use; ring weights `b` (fractions) and the radius convention (`D = dist / R`, ring
+  use, and it stays Gaussian with the bump kernel, as in `LeniaND.py` (Bert, 2026-11-01): a
+  bump growth matched to its width, 2·bump(0.5 + 0.15 (u − m)/s) − 1, turned 8 of the 14
+  creatures into goo within 1000 steps; ring weights `b` (fractions) and the radius convention (`D = dist / R`, ring
   `⌊D · len(b)⌋`) match `LeniaND.py`.
-- **Vendored** in `src/complexity/vendor/lenia/`: the 29 catalogue entries in use verbatim
+- **Vendored** in `src/complexity/vendor/lenia/`: the 30 catalogue entries in use verbatim
   (`animals.json`, with their original indices) and `Board.rle2arr` / `ch2val` from
   `LeniaND.py`, reduced to 2-D. The decoder vendored in `1588585` came from the agent
   rewrite and is not reused.
@@ -444,8 +448,9 @@ then polishing and sharing.
 - [x] Without a usable GPU, a CUDA build of JAX falls back to the CPU quietly: the CUDA
       driver is asked first (`complexity/device.py`) and `JAX_PLATFORMS=cpu` set if it has
       no device, instead of the plugin's traceback
-- [x] UI starts with Paraptera arcus pedes, Paraptera cavus furiosus, Tetralapillium
-      metamorpha and continuous iid noise
+- [x] UI starts with Orbium, Paraptera arcus pedes, Paraptera cavus furiosus,
+      Tetralapillium metamorpha, Florakronium arcus and continuous iid noise; with no
+      measure selected it runs the simulations only
 - [ ] UI: "compiling…" state on start; export the session as CSV; record to MP4
       (baselines are selectable as systems and warm-up points are dimmed since M3)
 - [ ] `experiments/*.toml` config format and `complexity experiment <config>`; batched

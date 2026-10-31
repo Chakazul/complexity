@@ -186,7 +186,9 @@ def test_catalogue_creatures_use_the_bump_core_and_lenium_patterns_the_gaussian(
     r = jnp.array([0.0, 0.5])
     assert model.kernel_core(r, "bump").tolist() == [0.0, 1.0]
     assert model.kernel_core(r)[1] == 1.0
-    assert "bump" in registry.make_system("lenia").patterns["gyrorbium_gyrans"]
+    names = registry.make_system("lenia").patterns
+    assert names["gyrorbium_gyrans"] == "Gyrorbium gyrans (gyrating)"
+    assert names["helicium_serratus_turbulentus"] == "Helicium serratus turbulentus"
 
 
 # ---- every system ----

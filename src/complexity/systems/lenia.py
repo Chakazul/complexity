@@ -28,17 +28,17 @@ from complexity.vendor.lenia.rle import rle2arr
 from complexity.vendor.lenium import model
 from complexity.vendor.lenium.patterns import patterns as LENIUM
 
-# pattern -> index in the original Lenia catalogue (PLAN.md §4.2); "#n" in a name is the
-# n-th catalogue entry of that name
+# pattern -> index in the original Lenia catalogue (PLAN.md §4.2); where several entries
+# share a name, the index picks one (Helicium serratus turbulentus: the 3rd, Asterium vagus
+# and Amoebium foliatus: the 2nd)
 CATALOGUE = {
     "gyrorbium_gyrans": 11, "triscutium_valvatus_laterale": 44,
-    "helicium_serratus_turbulentus_3": 173, "paraptera_arcus_pedes": 91,
-    "paraptera_cavus_furiosus": 96, "tetralapillium_metamorpha": 498,
-    "florakronium_arcus": 313, "heptadentium_scintillans": 355, "asterium_vagus_2": 404,
-    "asterium_metamorpha_currens": 408, "amoebium_foliatus_2": 587, "tetradecactenium": 257,
-    "urium_longus": 267,
+    "helicium_serratus_turbulentus": 173, "hydrogeminium_natans": 233,
+    "paraptera_arcus_pedes": 91, "paraptera_cavus_furiosus": 96,
+    "tetralapillium_metamorpha": 498, "florakronium_arcus": 313,
+    "heptadentium_scintillans": 355, "asterium_vagus": 404, "asterium_metamorpha_currens": 408,
+    "amoebium_foliatus": 587, "tetradecactenium": 257, "urium_longus": 267,
 }
-NUMBERED = {"helicium_serratus_turbulentus_3": 3, "asterium_vagus_2": 2, "amoebium_foliatus_2": 2}
 
 # the original Lenia's kernel cores (`kn`) that the model implements
 KERNEL_CORES = {1: "bump"}
@@ -57,19 +57,14 @@ def from_catalogue(a: dict) -> dict:
 # shown after the name in the pattern list
 BEHAVIOUR = {
     "gyrorbium_gyrans": "gyrating", "paraptera_cavus_furiosus": "chaotic",
-    "tetralapillium_metamorpha": "chaotic", "asterium_vagus_2": "chaotic",
+    "tetralapillium_metamorpha": "chaotic", "asterium_vagus": "chaotic",
     "asterium_metamorpha_currens": "chaotic", "tetradecactenium": "big", "urium_longus": "big",
 }
 
 
 def display_name(key: str) -> str:
-    """The pattern's catalogue name, its number if several share it, its behaviour, and
-    its kernel core if not Gaussian."""
-    c = CREATURES[key]
-    name = c["name"] + (f" #{NUMBERED[key]}" if key in NUMBERED else "")
-    notes = [BEHAVIOUR.get(key), "bump" if c.get("kernel_core") == "bump" else None]
-    notes = [n for n in notes if n]
-    return name + (f" ({', '.join(notes)})" if notes else "")
+    """The pattern's catalogue name and its behaviour."""
+    return CREATURES[key]["name"] + (f" ({BEHAVIOUR[key]})" if key in BEHAVIOUR else "")
 
 CREATURES = {**LENIUM, **{k: from_catalogue(ANIMALS[i]) for k, i in CATALOGUE.items()}}
 

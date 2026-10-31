@@ -250,7 +250,7 @@ function start() {
   const size = parseInt($("size").value, 10) || 128;
   if (!runRows.length) return setStatus("select at least one system");
   const measures = catalog.measures.map((m) => m.key).filter((k) => selectedMeasures.has(k));
-  if (!measures.length) return setStatus("select at least one measure");
+  // no measures: run the simulations only
   sessionId++;
   pending = { measures, slots: runRows.map((r) => r.slot) };
   ws.send(JSON.stringify({
@@ -606,8 +606,9 @@ async function main() {
   $("toggle-panel").onclick = () => setPanel(document.querySelector(".layout").classList.contains("collapsed"));
   addEventListener("resize", () => { dirty = true; });
   for (const [system, pattern] of [
-    ["lenia", "paraptera_arcus_pedes"], ["lenia", "paraptera_cavus_furiosus"],
-    ["lenia", "tetralapillium_metamorpha"], ["baseline", "iid_noise_continuous"],
+    ["lenia", "orbium"], ["lenia", "paraptera_arcus_pedes"], ["lenia", "paraptera_cavus_furiosus"],
+    ["lenia", "tetralapillium_metamorpha"], ["lenia", "florakronium_arcus"],
+    ["baseline", "iid_noise_continuous"],
   ]) addRun(system, pattern);
   selectedMeasures = new Set(catalog.measures
     .filter((m) => !UNTICKED.has(m.key) && !m.per_rule).map((m) => m.key));

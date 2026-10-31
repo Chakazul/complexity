@@ -606,7 +606,7 @@ Most Lenia creatures sit at the 9-bit ceiling; telling them apart needs many mor
 
 At 128², step 200 unless noted (TE: step 100). Empty and iid noise rows are the baselines.
 Lenia creature values are from before 2026-11-01: the creatures ran on the Gaussian shell,
-and several (Scutium, Helicium solidus, Hydrogeminium, Paraptera a. l., Kronium,
+and several (Scutium, Helicium solidus, Paraptera a. l., Kronium,
 Hexadentium, Amoebium dentalis) have since been replaced (PLAN.md §4.2).
 
 | Run | LZC | SE | FD | EC | LD ns/cell | LE | TE | SC |
@@ -854,8 +854,7 @@ decomposition is ~15 lines. It was read (not run) and reimplemented with its con
 Each uses the core it was found with (since 2026-11-01). The hand-coded Lenium, Chan's
 Lenia tutorial and Leniabreeder all build multi-channel kernels as Gaussian rings
 `bell(D mod 1, 0.5, 0.15) · b`, so the Aquarium and Lenium's Orbiums are Gaussian. The
-catalogue creatures were found on the bump core (`kn = 1`) and run on it, marked "bump"
-(PLAN.md §4.2); until 2026-11-01 they ran on the Gaussian shell.
+catalogue creatures were found on the bump core (`kn = 1`) and run on it (PLAN.md §4.2); until 2026-11-01 they ran on the Gaussian shell.
 
 **Q11. Is the granularity right — spatial, temporal, and subject (pattern / rule /
 system)?**
