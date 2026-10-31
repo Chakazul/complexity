@@ -20,6 +20,9 @@ import numpy as np
 
 from complexity import engine, registry
 from complexity.measures.base import Context, RuleMeasure, discretize, to_uint8
+from complexity.measures.statistics import Speed
+
+MIN_SPEED = 1e-3  # cells/step: slower counts as not moving for per-object ratios
 
 # Rule-measure values by (measure key, its parameters, system, pattern): they depend on the
 # rule only, and some take seconds, so restarts and other runs of the same rule reuse them.
@@ -47,8 +50,10 @@ class RunSpec:
 
 
 class Run:
-    def __init__(self, spec: RunSpec, measure_keys: list[str], measure_params: dict | None = None):
+    def __init__(self, spec: RunSpec, measure_keys: list[str], measure_params: dict | None = None,
+                 per_object: bool = False):
         self.spec = spec
+        self.per_object = per_object  # report measures' per-object ratios (Measure.ratio)
         self.system = registry.make_system(spec.system)
         self.size = tuple(spec.size or self.system.default_size)
         self.n_states = self.system.n_states(spec.pattern)
@@ -113,8 +118,22 @@ class Run:
                 values[m.key] = float(m.compute_state(self.system, self.state, rng, ctx))
             else:
                 values[m.key] = float(m.compute(self._frames_for(m), ctx))
+            if self.per_object and m.ratio:
+                values[m.key] = self._per_object(m, values[m.key])
             ms[m.key] = (time.perf_counter() - t0) * 1000
         return values, ms
+
+    def _per_object(self, m, value: float) -> float:
+        """`value` (a grid average) as a total over the grid divided by the mean mass, or
+        speed × mass, of the measure's window: MEASURES.md §5.10. 0 if the divisor is (near)
+        0: an empty grid, or a pattern that does not move."""
+        frames = self.host_frames()[-m.window :]
+        mass = float(np.mean([f.sum(dtype=np.float64) for f in frames]))
+        divisor = mass
+        if m.ratio == "speed_mass":
+            speed = Speed().compute(frames)
+            divisor = mass * speed if speed >= MIN_SPEED else 0.0
+        return value * self.size[0] * self.size[1] / divisor if divisor > 1e-9 else 0.0
 
     def map_tile(self) -> int:
         """Tile size for per-tile maps: about 16 tiles across, at least 8 cells."""

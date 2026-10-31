@@ -422,3 +422,26 @@ def test_mass_and_speed():
     assert stats("life", "galaxy", 64)["speed"] == 0  # an oscillator stays put
     assert stats("baseline", "empty", 32) == {"mass": 0, "speed": 0}
     assert stats("lenia", "orbium", 64)["speed"] > 0.3
+
+
+def test_per_object_ratios():
+    keys = ["statistical_complexity", "transfer_entropy", "mass", "speed"]
+
+    def values(size, per_object):
+        run = Run(RunSpec("lenia", "orbium", (size, size)), keys, per_object=per_object)
+        run.step(300)
+        return run.measure()[0]
+
+    grid, small, large = values(128, False), values(128, True), values(256, True)
+    assert small["mass"] == grid["mass"] and small["speed"] == grid["speed"]  # not ratios
+    # SC x cells / mass, with the mass over SC's window (constant for Orbium to ~0.3 %)
+    expect = grid["statistical_complexity"] * 128**2 / grid["mass"]
+    assert small["statistical_complexity"] == pytest.approx(expect, rel=0.01)
+    # grid averages shrink ~4x on a 4x larger grid; the ratios change little (MEASURES §5.10)
+    for key in ("statistical_complexity", "transfer_entropy"):
+        assert 1 < large[key] / small[key] < 1.3, key
+    still = Run(RunSpec("life", "galaxy", (64, 64)), ["transfer_entropy"], per_object=True)
+    still.step(50)
+    assert still.measure()[0]["transfer_entropy"] == 0  # does not move: no ratio
+    m = registry.make_measure("transfer_entropy")
+    assert (m.ratio, m.ratio_unit, m.map_unit) == ("speed_mass", "bits/(mass·cell)", "bits/cell/step")

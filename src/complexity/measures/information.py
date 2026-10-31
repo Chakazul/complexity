@@ -84,6 +84,9 @@ class TransferEntropy(Measure):
     key = "transfer_entropy"
     name = "Transfer entropy"
     unit = "bits/cell/step"
+    map_unit = "bits/cell/step"
+    ratio = "speed_mass"
+    ratio_unit = "bits/(mass·cell)"
     group = "Information theory"
     description = (
         "Information a neighbour's state adds about a cell's next state beyond the cell's "
@@ -91,7 +94,10 @@ class TransferEntropy(Measure):
         "4 neighbours at distance `offset`, all cells and the window's steps. 0 for empty, "
         "still and frozen patterns, ~0 for iid noise (nothing is predictable), highest for "
         "moving structure. History length 1, so it mixes in some information storage. "
-        "Plug-in estimate with the Miller-Madow bias correction; clipped at 0."
+        "Plug-in estimate with the Miller-Madow bias correction; clipped at 0. Per object: "
+        "the grid's total per step divided by speed × mass, bits per unit of mass per cell "
+        "moved (0 for a pattern that does not move), since the grid average mostly follows "
+        "how much mass moves across cells."
     )
     window = 16
     backend = "jax"

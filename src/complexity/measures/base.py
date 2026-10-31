@@ -52,6 +52,11 @@ class Measure(ABC):
     `map` says how the measure gives a spatial map (MEASURES.md §4): "local" measures
     implement `compute_map` (or `compute_state_map`), one value per cell; "tile" measures
     are applied by the run to tiles of the frame; None: no map.
+
+    `ratio` names a per-object version (MEASURES.md §5.10): the grid total (value × cells)
+    divided by the mean "mass", or "speed_mass" (speed × mass), over the measure's window.
+    The run reports it instead of the value when asked (`Run(per_object=True)`), in
+    `ratio_unit`. The map stays per cell, in `map_unit`.
     """
 
     key: str  # registry key, e.g. "png"
@@ -67,6 +72,8 @@ class Measure(ABC):
     map_unit: str = ""  # unit of the map if it differs from `unit`
     n_levels: int | None = None  # None: n_states if discrete, else DEFAULT_LEVELS
     peaks_at: str = "randomness"  # "randomness", "structure", "mixed" or "none"
+    ratio: str | None = None  # None, "mass" or "speed_mass": see the docstring
+    ratio_unit: str = ""
     params: tuple[str, ...] = ()
     choices: dict[str, tuple[str, ...]] = {}  # allowed values of text parameters
     applies_to: str = ""  # which systems, if not all: shown when a measure is greyed out

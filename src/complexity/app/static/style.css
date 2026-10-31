@@ -139,6 +139,8 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 h2 { display: flex; align-items: baseline; gap: 6px; }
 button.clear { margin-left: auto; padding: 4px 14px; font-size: 13px; text-transform: none; letter-spacing: 0; color: var(--text-secondary); }
 button.clear + button.clear { margin-left: 6px; }
+label.option { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text-secondary); cursor: pointer; }
+label.option + button.clear { margin-left: 6px; }
 
 /* Pick lists: fixed height, scrollable; a selected item gets a coloured border (its
    series colour for systems). Items keep a transparent 2px border so selecting does not

@@ -70,6 +70,9 @@ class StatisticalComplexity(Measure):
     key = "statistical_complexity"
     name = "Statistical complexity"
     unit = "bits/cell"
+    map_unit = "bits/cell"
+    ratio = "mass"
+    ratio_unit = "bits/mass"
     group = "Information theory"
     description = (
         "Crutchfield's statistical complexity, local form (Shalizi et al. 2006): cells whose "
@@ -77,7 +80,9 @@ class StatisticalComplexity(Measure):
         "causal state (merged by a G-test at `alpha`); the measure is the entropy of the "
         "causal states over the window, the memory needed to predict the field. 0 for "
         "uniform frames and for noise (every past predicts the same), high for structure. "
-        "At most 2 levels by default (the 3x3 pasts have L⁹ values)."
+        "At most 2 levels by default (the 3x3 pasts have L⁹ values). Per object: the "
+        "grid's total divided by the mass, bits per unit of mass, since the grid average "
+        "mostly follows how much of the grid a creature covers."
     )
     window = 16
     needs_discrete = True

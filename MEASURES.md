@@ -197,6 +197,8 @@ for discrete states only (§2.2).
 | AT | Assembly index | — | — | pattern, local (regional), static | — | — | deferred (§5.8) |
 | — | Total mass (statistic) | `mass` | 📏 | pattern, global, static | instance / object | — | implemented (§5.9) |
 | — | Moving speed (statistic) | `speed` | 📏 | pattern, global, dynamic | trajectory / run | — | implemented (§5.9) |
+
+Statistical complexity and transfer entropy also have per-object versions (§5.10).
 | WZ | Wuensche's Z | — | — | rule, global, static, discrete | — | — | with elementary CA, M4 (§5.8) |
 | — | Multi-scale structural complexity | — | 🌿 | pattern, local, dynamic | trajectory / run (better: ensemble) | local | proposed: the goal measure (§8) |
 | — | Local information dynamics (storage, transfer, modification) | — | 🌿 | pattern, local, dynamic | trajectory / run | local | proposed (§8.2) |
@@ -569,6 +571,22 @@ Gosper gun, a self-replicating Aquarium) fails its own mass limit early and scor
 Most Lenia creatures sit at the 9-bit ceiling; telling them apart needs many more samples
 (2048 on the GPU in ~5 s: still 11 bits = ceiling for Orbium, Scutium, min Orbium).
 
+### 5.8 Deferred
+
+- **Thermodynamic depth (TD; Lloyd & Pagels).** For a deterministic system it is the
+  entropy over a state's possible histories; computable only for tiny lattices. Revisit
+  with elementary CA (M4).
+- **Integrated information (IIT; Tononi).** Φ is exponential in system size: only ~3×3
+  binary patches are tractable (`pyphi`), and a patch's Φ is not the system's. It is not a
+  local measure as the PDF tags it (§2.3); its complexes are regions with causal boundaries
+  (§2.4), the idea behind individuation by intervention (§8.1b), which is affordable
+  where IIT is not.
+- **Assembly index (AT; Cronin, Walker).** The libraries target molecules and strings, and
+  the index is exponential in object size. Revisit for small discrete patches, with copy
+  number (§8.2). Assembly A = Σ_i e^{a_i}(n_i − 1)/N_T is an ensemble quantity: unique objects
+  i with index a_i and copy number n_i among N_T objects.
+- **Wuensche's Z (WZ).** Rule-level, static, for elementary CA; added with that system (M4).
+
 ### 5.9 Statistics for reference (`mass`, `speed`)
 
 Not complexity measures: plain statistics to read the others against (is the creature
@@ -590,21 +608,33 @@ alive, is it moving), tagged 📏 *statistic* and skipped by the orientation tes
   speed of their common center, and on iid noise the center jumps (0.6–0.8): read it for
   single creatures.
 
-### 5.8 Deferred
+### 5.10 Per-object ratios (option "per object", on by default in the UI)
 
-- **Thermodynamic depth (TD; Lloyd & Pagels).** For a deterministic system it is the
-  entropy over a state's possible histories; computable only for tiny lattices. Revisit
-  with elementary CA (M4).
-- **Integrated information (IIT; Tononi).** Φ is exponential in system size: only ~3×3
-  binary patches are tractable (`pyphi`), and a patch's Φ is not the system's. It is not a
-  local measure as the PDF tags it (§2.3); its complexes are regions with causal boundaries
-  (§2.4), the idea behind individuation by intervention (§8.1b), which is affordable
-  where IIT is not.
-- **Assembly index (AT; Cronin, Walker).** The libraries target molecules and strings, and
-  the index is exponential in object size. Revisit for small discrete patches, with copy
-  number (§8.2). Assembly A = Σ_i e^{a_i}(n_i − 1)/N_T is an ensemble quantity: unique objects
-  i with index a_i and copy number n_i among N_T objects.
-- **Wuensche's Z (WZ).** Rule-level, static, for elementary CA; added with that system (M4).
+Statistical complexity and transfer entropy are grid averages, so on a lone creature they
+mostly measure how much of the grid it covers and how fast it moves (Q17). Their
+per-object versions divide that out:
+
+| Measure | Per object | Unit |
+|---|---|---|
+| statistical complexity | SC × cells / mass | bits/mass: bits per unit of mass |
+| transfer entropy | TE × cells / (speed × mass) | bits/(mass·cell): bits per unit of mass per cell moved |
+
+`cells` is the grid's H × W, so SC × cells is the total local complexity over the grid
+(bits) and TE × cells the total transfer per step (bits/step); mass and speed (§5.9) are
+means over the measure's own window of raw frames (SC sees only 2-level symbols). The
+ratio is 0 for an empty grid and, for TE, for a pattern slower than 0.001 cells/step (an
+oscillator such as Galaxy has TE > 0 but no speed). Maps stay per cell (`map_unit`).
+
+Implemented in the run (`Measure.ratio`, `ratio_unit`; `Run(per_object=True)`, CLI
+`--per-object`, the UI's checkbox beside the Measures title, sent at Start); the library
+and CLI default to the grid averages. Other measures could declare a ratio the same way.
+
+Values (128², step 300): SC Orbium 20.1, Tetralapillium 22.0, Paraptera furiosus 16.4,
+Florakronium 16.1, Paraptera pedes 14.0; TE Tetralapillium 2.94, Orbium 1.99, Paraptera
+furiosus 1.56, Florakronium 1.50, Paraptera pedes 1.37. On 256² the grid averages drop
+~3.5×, the ratios rise 15–20 %: local SC and TE take probabilities over the whole grid, so a
+creature's states are rarer on a larger grid (about log2 4 = 2 more bits per creature cell
+at 4× the area). Compare creatures at equal grid size.
 
 ## 6. Validation
 
@@ -953,6 +983,28 @@ patterns with a graded one — and were replaced by the papers' measures (2026-1
 leads for the goal measure: the Lyapunov spectrum (repair), IIT's complexes and ITI's
 boundary search (individuation), assembly with copy number (colonies), input-entropy
 variance and excess entropy.
+
+**Q17. Among the structural measures, statistical complexity seems to follow total mass,
+transfer entropy moving speed, and individuality (features) something else. Do the
+definitions explain it?** (Bert, 2026-11-01)
+Mostly yes. Measured on Orbium, Paraptera arcus pedes, Paraptera cavus furiosus,
+Tetralapillium metamorpha and Florakronium arcus (128², 50 measurements over 500 steps):
+- SC ranks the creatures exactly as mass does (log correlation 0.99). Local SC averages
+  −log2 P(causal state) over all cells; the empty background is one common state that adds
+  almost nothing, so the value is ≈ the creature's share of the grid × its cells' mean
+  surprisal. On 256² Orbium's SC falls from 0.090 to 0.026.
+- TE follows speed × mass, not speed alone: same rank and log correlation 1.00 with
+  speed × mass, but only 0.4 rank correlation with speed (Orbium is fastest, yet second
+  lowest). A cell's next state depends on its neighbour's when a pattern moves into it,
+  and the cells changing per step grow with speed × size. Over time, curves move together
+  clearly only for Tetralapillium (TE vs speed 0.90), whose speed varies by 76 %; the
+  others keep mass and speed within 0.1–3 %.
+- `iti_features` follows neither (vs speed: −0.7): with one creature its environment is
+  empty and it measures how predictable the creature's mass is from step to step. Steady
+  gliders score ~0 (Orbium 0.01, Paraptera pedes 0.09), creatures whose mass varies
+  smoothly ~1–1.3. Interesting, but not individuality in Krakauer's sense; that needs
+  other creatures (§5.4).
+Hence the per-object ratios (§5.10), which keep what is specific to each creature.
 
 ## 10. Open questions
 
