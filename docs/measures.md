@@ -565,28 +565,52 @@ ranges — have high spatial (structural) and temporal (dynamic) complexity**, i
 
 Spatial and temporal blurring and delay are acceptable.
 
-**Proposed design** (to prototype in M3b):
-- A **complexity field C(x, y, t)** on coarse tiles (e.g. 8×8 cells) over a sliding window
-  (e.g. 16–32 frames), updated every few steps. The allowed blur and delay are what make
-  per-tile estimates reliable.
-- Two components per tile and window, each scaled between its value on empty and on
-  matched noise so that values compare across systems:
-  - **S, spatial (structural)**: structure that noise with the same statistics cannot
-    explain, at several scales (1, 2, 4, 8 cells): the noise-band coarse-graining of EC, or
-    local statistical complexity, per scale (§8.1).
-  - **D, temporal (dynamic)**: change that is neither absent nor random: local TE or
-    predictable change. 0 for still structure and frozen noise, ~0 for iid noise, high for
-    coherent motion and transformation.
-- **C = S × D**: a region must be both; still structure (high S, no D) and churning noise
-  (high D, no S) score low.
-- **Estimation**: probabilities pooled over all tiles and the recent window, or over many
-  runs of the same conditions; local values then read per tile (§2.3).
-- **Outputs**: the C heatmap; **hot regions** (C above a threshold, connected in space and
-  time: position, extent, peak, integral; boxes in the UI, exportable); **run summaries**
-  (mean, maximum, 95th percentile over space and time) for comparing conditions, batched
-  over seeds and parameters (M5 experiments).
-- **Validation ranking**, lowest to highest: empty, iid noise, frozen noise; still structure;
-  goo / chaotic soup; a single glider or creature; Aquarium networks.
+**What counts as complex** (Bert, 2026-10-31): a still structure can be highly complex.
+Information flows inside its own boundary, so it does not disintegrate on its own
+(self-organizing), and it tolerates disruption from other structures or noise
+(self-repairing, self-defending). Examples: the Aquarium (static and moving modes) and
+Orbium stay stable when they collide with other objects, and can form a **colony** in which
+members stay individuals and can leave at any time. Less complex: Scutium and the Life
+glider, which disintegrate on collision; goo, which is not made of individuals.
+
+**Consequence: observation is not enough.** A self-maintaining stationary structure and a
+frozen pattern give the same frames, so every observational measure here (TE, SC,
+compression, ITI) rates them alike. The difference shows only **under intervention**:
+perturb a region and follow how the perturbation spreads within it, is corrected, and stays
+inside its boundary — causal rather than observational information flow (Ay & Polani 2008;
+IIT is interventional for the same reason). The twin-run machinery of the Lyapunov exponent
+(`System.perturb`) already supports this.
+
+**Proposed design** (to prototype in M3b): a **complexity field C(x, y, t)** on coarse tiles
+or segmented regions over a sliding window, updated every few steps (blur and delay make
+the estimates reliable), from three components, each scaled between its value on empty and
+on matched noise so values compare across systems:
+- **S, structure**: spatial structure that noise with the same statistics cannot explain,
+  at several scales (1, 2, 4, 8 cells) — the noise-band coarse-graining of EC, or local
+  statistical complexity (§8.1).
+- **M, self-maintenance** (interventional): perturb a region at several strengths, up to
+  collision-like ones, and measure over the following steps
+  - *internal flow*: the perturbation spreads within the structure (its parts are coupled),
+  - *repair*: it then decays back to the unperturbed twin,
+  - *containment*: it does not leak beyond the boundary,
+  - *tolerance*: the largest perturbation still repaired.
+  Frozen noise has none of these; chaotic goo spreads damage without repairing it; empty
+  space repairs trivially but has S = 0.
+- **I, individuality**: the region is a bounded unit with a persistent identity among others,
+  also inside a colony (segmentation and tracking; ITI, §5.4). Separates goo from colonies.
+- **C = S × M × I**. Motion is optional: a gliding Orbium and a stationary Aquarium ring can
+  both score high. Observed dynamics (local TE) remains available as a separate component.
+
+**Outputs**: the C heatmap; **hot regions** (C above a threshold, connected in space and
+time: position, extent, peak, integral; boxes in the UI, exportable); **run summaries**
+(mean, maximum, 95th percentile over space and time) to compare conditions, batched over
+seeds and parameters (M5 experiments).
+
+**Validation**, with **collision experiments** (pairs of units, units against noise; record
+survival and identity) as the acceptance test. Expected ranking, lowest to highest: empty,
+noise; frozen noise; Life still lifes, the glider, Scutium (disintegrate on collision); goo
+(no individuals); Orbium, the Aquarium unit, Aquarium colonies in static and moving modes
+(survive collisions, members stay individuals).
 
 ### 8.2 Other proposals
 
@@ -683,6 +707,14 @@ local; the Lyapunov exponent is rule-level; functional information is ensemble-l
 deeper finding is that information measures are properties of distributions: estimated from
 one run they describe the run, not the rule, which one granularity tag cannot say — so each
 measure now also states its subject and what it is estimated from.
+
+**Q12. Should a still structure have low complexity, since nothing changes?**
+No (Bert, 2026-10-31). A stable structure maintains itself: information flows inside its
+boundary, it repairs damage and resists disruption, and it can join a colony while staying
+an individual (Aquarium, Orbium); objects that break on collision (Scutium, the Life glider)
+and goo without individuals are less complex. Observational measures cannot see this in a
+structure that does not change, so the goal measure needs an interventional component —
+perturb and follow the repair (§8.1b).
 
 ## 10. Open questions
 

@@ -405,11 +405,15 @@ then polishing and sharing.
       (`aquarium`) and dividing on collision (`aquarium_scene`) (highest) — the Aquarium
       patterns are in (§4.2b), goo is not found yet
 - [ ] Find goo-like structures at parameters near the Aquarium's (experiments by Bert)
-- [ ] Prototype the complexity field C = S × D on coarse tiles and a sliding window
-      (docs/measures.md §8.1b): S spatial structure across scales, D temporal dynamics, each
-      scaled between empty and matched noise; probabilities pooled over tiles / runs
-- [ ] Check it ranks the reference cases: empty, noise, frozen noise < still structure <
-      goo < single creature < Aquarium networks
+- [ ] Collision experiments as the acceptance test: pairs of units and units against noise
+      (Orbium, Aquarium unit and colonies in static and moving modes, Scutium, Life glider
+      and still lifes, goo); record survival and identity
+- [ ] Prototype the complexity field C = S × M × I (docs/measures.md §8.1b): S spatial
+      structure across scales; M self-maintenance by perturbation (internal flow, repair,
+      containment, tolerance), reusing the Lyapunov twin runs; I individuality
+      (segmentation, tracking, ITI); each scaled between empty and matched noise
+- [ ] Check it ranks the reference cases: empty, noise < frozen noise < still lifes, glider,
+      Scutium < goo < Orbium, Aquarium unit and colonies
 - [ ] Hot regions: threshold + connected components in space and time (position, extent,
       peak, integral); boxes in the UI; export
 - [ ] Run summaries (mean, max, 95th percentile of C) to compare simulation conditions,
