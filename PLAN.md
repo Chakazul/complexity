@@ -319,6 +319,7 @@ in **[MEASURES.md](MEASURES.md)**. In brief:
 
 - 20 measures cover all of the PDF's 18 except TD, IIT and AT (deferred) and WZ (with
   elementary CA in M4); ITI comes in two forms, compression in five.
+- Two statistics for reference, total mass and moving speed (📏), are listed with them.
 - Each measure peaks at randomness (🎲: compression, LZC, block entropy, FD, LE, TL, LL),
   at structure (🌿: EC, SC, TE, PID, FID, ITI, FI) or neither (logical depth's proxy).
 - Frame measures give time series; 11 also give spatial maps (heatmaps), per cell or per

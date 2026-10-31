@@ -45,6 +45,7 @@ Every measure declares `peaks_at`, shown in the UI as a tag and an emoji:
 | randomness | 🎲 | rises from order to disorder; highest for noise | compression (all), LZC, block entropy, fractal dimension, Lyapunov exponent, transient length, Langton's λ |
 | structural | 🌿 | low for both uniform frames and noise, highest in between | effective complexity, statistical complexity, transfer entropy, PID, FID, ITI (both), functional information |
 | mixed | — | neither reliably | logical depth (its proxy, §5.2.3) |
+| statistic | 📏 | not a complexity measure; for reference | total mass, moving speed (§5.9) |
 
 This is the classic split between measures of randomness (Kolmogorov complexity is often
 called algorithmic randomness) and measures of structured complexity, which are low at both
@@ -194,6 +195,8 @@ for discrete states only (§2.2).
 | TD | Thermodynamic depth | — | — | pattern, global, dynamic | — | — | deferred (§5.8) |
 | IIT | Integrated information | — | — | system, global, dynamic | — | — | deferred (§5.8) |
 | AT | Assembly index | — | — | pattern, local (regional), static | — | — | deferred (§5.8) |
+| — | Total mass (statistic) | `mass` | 📏 | pattern, global, static | instance / object | — | implemented (§5.9) |
+| — | Moving speed (statistic) | `speed` | 📏 | pattern, global, dynamic | trajectory / run | — | implemented (§5.9) |
 | WZ | Wuensche's Z | — | — | rule, global, static, discrete | — | — | with elementary CA, M4 (§5.8) |
 | — | Multi-scale structural complexity | — | 🌿 | pattern, local, dynamic | trajectory / run (better: ensemble) | local | proposed: the goal measure (§8) |
 | — | Local information dynamics (storage, transfer, modification) | — | 🌿 | pattern, local, dynamic | trajectory / run | local | proposed (§8.2) |
@@ -205,7 +208,8 @@ for discrete states only (§2.2).
 
 Code: `src/complexity/measures/` — `compression.py`, `algorithmic.py` (LZC, EC, LD),
 `causal.py` (SC), `information.py` (TE, block entropy), `decomposition.py` (PID, FID),
-`individuality.py` (ITI), `geometry.py` (FD), `dynamics.py` (LE), `rule.py` (TL, LL, FI).
+`individuality.py` (ITI), `geometry.py` (FD), `dynamics.py` (LE), `rule.py` (TL, LL, FI),
+`statistics.py` (mass, speed).
 
 ## 4. Granularity and heatmaps
 
@@ -564,6 +568,27 @@ boxes settle into bounded blobs, so those creatures score low. A growing pattern
 Gosper gun, a self-replicating Aquarium) fails its own mass limit early and scores low too.
 Most Lenia creatures sit at the 9-bit ceiling; telling them apart needs many more samples
 (2048 on the GPU in ~5 s: still 11 bits = ceiling for Orbium, Scutium, min Orbium).
+
+### 5.9 Statistics for reference (`mass`, `speed`)
+
+Not complexity measures: plain statistics to read the others against (is the creature
+alive, is it moving), tagged 📏 *statistic* and skipped by the orientation tests.
+
+- **Total mass** (`mass`): the sum of the frame's cell values, in cells (live cells in
+  Life; the mean of the channels for multi-channel Lenia). Glider 5, Orbium 72.7.
+- **Moving speed** (`speed`): displacement of the center of mass over the window (33 frames)
+  divided by the steps, in cells per step. On a torus a creature straddling the edge has
+  its center of mass split between the two sides, so each frame is first centered: as in
+  the hand-coded Lenium (`stat.calc_basic_stats`, which rolls the world by the integer
+  part of the center every step), but without shifting or storing the frame — its
+  coordinates are wrapped to within half a grid of the previous center's integer part,
+  the center of mass taken, and the new center carried to the next frame, so the centers
+  are unwrapped and their difference is the true displacement. The first frame of a
+  window is centered on its mass-weighted circular mean. Life's glider: exactly √2/4 =
+  0.354, on 128² and on 16², where it crosses the edge every ~16 steps; Orbium 0.60 (in
+  Lenia's units, × T / R: 0.46); Galaxy and empty 0. With several objects it is the
+  speed of their common center, and on iid noise the center jumps (0.6–0.8): read it for
+  single creatures.
 
 ### 5.8 Deferred
 

@@ -36,8 +36,9 @@ class Measure(ABC):
     Orientation: higher value = more complex by this measure's definition (MEASURES.md §2). A
     quantity that runs the other way is negated or inverted in `compute`, and the
     `description` says so. `peaks_at` says where the measure is highest: "randomness"
-    (compression, entropy), "structure" (transfer entropy) or "mixed" (neither reliably:
-    logical depth); the tests check the first two.
+    (compression, entropy), "structure" (transfer entropy), "mixed" (neither reliably:
+    logical depth) or "none" (a statistic for reference, not a complexity measure: mass,
+    speed); the tests check the first two.
 
     `needs_state` measures (Lyapunov exponent) need the dynamics, not frames: they implement
     `compute_state(system, state, rng, ctx)`, which the run calls instead of `compute`.
@@ -65,7 +66,7 @@ class Measure(ABC):
     map: str | None = None  # "local", "tile" or None
     map_unit: str = ""  # unit of the map if it differs from `unit`
     n_levels: int | None = None  # None: n_states if discrete, else DEFAULT_LEVELS
-    peaks_at: str = "randomness"  # "randomness", "structure" or "mixed"
+    peaks_at: str = "randomness"  # "randomness", "structure", "mixed" or "none"
     params: tuple[str, ...] = ()
     choices: dict[str, tuple[str, ...]] = {}  # allowed values of text parameters
     applies_to: str = ""  # which systems, if not all: shown when a measure is greyed out

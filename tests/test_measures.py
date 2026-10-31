@@ -12,6 +12,7 @@ from complexity.measures.geometry import box_counts
 from complexity.measures.individuality import decompose, torus_label
 from complexity.measures.information import block_entropy, transfer_entropy
 from complexity.measures.rule import growth_class, transient
+from complexity.measures.statistics import centers
 from complexity.session import Run, RunSpec
 
 
@@ -27,7 +28,7 @@ def test_orientation_noise_scores_at_least_empty(levels):
     """MEASURES.md §6: higher = more complex, so iid noise never scores below an empty grid."""
     empty, noise = measured("baseline", "empty"), measured("baseline", f"iid_noise_{levels}")
     for key, cls in registry.measures().items():
-        if cls.peaks_at != "mixed" and key in noise:  # skips measures for other systems
+        if cls.peaks_at not in ("mixed", "none") and key in noise:  # skips measures for other systems
             assert noise[key] >= empty[key], key
 
 
@@ -397,3 +398,27 @@ def test_parameters_from_the_ui_are_typed_and_checked():
                      ("lzma", {"window": 4}), ("iti_local", {"window": None})]:
         with pytest.raises(ValueError):
             registry.make_measure(key, **bad)
+
+
+def test_center_of_a_blob_split_by_the_edge():
+    frame = np.zeros((20, 20))
+    frame[9:12, [18, 19, 0, 1, 2]] = 1  # 5 wide, centered on column 0 across the edge
+    y, x = centers([frame])[0]
+    assert y == pytest.approx(10) and abs((x + 10) % 20 - 10) < 1e-9  # column 0 (or 20)
+    moved = np.roll(frame, 3, axis=1)
+    c = centers([frame, moved])
+    assert c[1] - c[0] == pytest.approx([0, 3])
+
+
+def test_mass_and_speed():
+    def stats(system, pattern, size, steps=200):
+        run = Run(RunSpec(system, pattern, (size, size)), ["mass", "speed"])
+        run.step(steps)
+        return run.measure()[0]
+
+    for size in (16, 128):  # on 16² the glider crosses the edge every ~16 steps
+        glider = stats("life", "glider", size)
+        assert glider["speed"] == pytest.approx(np.sqrt(2) / 4) and glider["mass"] == 5
+    assert stats("life", "galaxy", 64)["speed"] == 0  # an oscillator stays put
+    assert stats("baseline", "empty", 32) == {"mass": 0, "speed": 0}
+    assert stats("lenia", "orbium", 64)["speed"] > 0.3

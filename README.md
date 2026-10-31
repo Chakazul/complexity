@@ -218,6 +218,13 @@ the frames. Each is computed once from runs of its own, cached, and shown as a c
 They make the first tick of a run slower (about 12 s for the default four runs), once per
 pattern.
 
+**Statistics** for reference, not complexity measures (📏):
+
+| Key | Measure | Unit |
+|---|---|---|
+| `mass` | total mass: the sum of the frame's cell values | cells |
+| `speed` | moving speed of the center of mass over a 33-frame window, centering each frame on the previous center first so that a creature crossing the torus's edge is not split (as the hand-coded Lenium does) | cells/step |
+
 ## Adding a system or a measure
 
 Write one class, decorate it, and add its module to `_BUILTIN_MODULES` in
