@@ -95,6 +95,10 @@ class MultiLenia(System):
         h, w = size
         if cells == "uniform":
             A = jax.random.uniform(rng, (h, w, channels))
+        elif cells == "scramble":  # the pattern's box, iid uniform
+            box = jax.random.uniform(rng, init.shape)
+            A = jnp.stack([place_center(jnp.zeros(size, jnp.float32), box[..., i])
+                           for i in range(channels)], -1)
         elif cells == "scene":
             A = jnp.asarray(scatter(init, size, 8))
         elif cells == "soup":
@@ -113,6 +117,12 @@ class MultiLenia(System):
 
     def uniform(self, pattern, size, rng) -> MultiLeniaState:
         return self._init(pattern, size, rng, "uniform")
+
+    def scramble(self, pattern, size, rng) -> MultiLeniaState:
+        return self._init(pattern, size, rng, "scramble")
+
+    def reach(self, pattern) -> int:
+        return CREATURES[self.sources[pattern][0]]["R"]
 
     def step(self, st: MultiLeniaState) -> MultiLeniaState:
         A = model.multi_step(st.A, st.fK, st.m, st.s, st.h, st.Mk, st.Mc, st.T)

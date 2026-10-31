@@ -211,9 +211,9 @@ the frames. Each is computed once from runs of its own, cached, and shown as a c
 
 | Key | PDF | Measure | Unit |
 |---|---|---|---|
-| `transient_length` | TL | mean log2(1 + steps until the state repeats) over 8 random soups of the rule on 64², up to 4096 steps (continuous states compared to 1e-3) | log2 steps |
+| `transient_length` | TL | Hudcová & Mikolov's growth class of the mean transient (steps until the state repeats) of random soups over grid sides 16–96: 0 bounded, 1 log, 2 linear, 3 polynomial, 4 exponential (or the log-log `exponent`); discrete rules only | class |
 | `langton_lambda` | LL | fraction of uniformly random neighbourhoods the rule maps to a nonzero state (Life: 140/512 ≈ 0.273); discrete rules only | fraction |
-| `functional_information` | FI | −log2 of the fraction of 128 nearby rules (m, s within ±50 % of the pattern's) under which the pattern lives on for 500 steps; Lenia only | bits |
+| `functional_information` | FI | Hazen et al.'s functional information: −log2 of the fraction of 512 random patterns of the pattern's size (same rule) that live on as a bounded object at least as long as the pattern, over 500 steps; at most 9 bits | bits |
 
 They make the first tick of a run slower (about 12 s for the default four runs), once per
 pattern.

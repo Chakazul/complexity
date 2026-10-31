@@ -61,6 +61,11 @@ class System(ABC):
         frame in a colour map. Measures never see it. Optional."""
         return None
 
+    def reach(self, pattern: str) -> int:
+        """How far a cell's next state looks, in cells (the neighbourhood's radius): 1 for
+        Life, R for Lenia. Rule-level measures scale grid sizes by it."""
+        return 1
+
     def soup(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> State:
         """A random initial state under the pattern's rule, for rule-level measures (transient
         length). Default: the "random" pattern if there is one, else the pattern itself."""
@@ -69,6 +74,12 @@ class System(ABC):
     def uniform(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> State:
         """Every cell iid uniform over the states, under the pattern's rule (Langton's
         lambda). Optional, like `perturb`."""
+        raise NotImplementedError
+
+    def scramble(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> State:
+        """A random configuration of the pattern's size: its bounding box (for a soup, the
+        soup's area) filled with iid uniform states, placed as `init` places the pattern,
+        under the pattern's rule (functional information). Optional, like `perturb`."""
         raise NotImplementedError
 
     def perturb(self, state: State, rng: jax.Array) -> State:

@@ -11,7 +11,7 @@ from complexity.measures.decomposition import fid, pid
 from complexity.measures.geometry import box_counts
 from complexity.measures.individuality import decompose, torus_label
 from complexity.measures.information import block_entropy, transfer_entropy
-from complexity.measures.rule import transient
+from complexity.measures.rule import growth_class, transient
 from complexity.session import Run, RunSpec
 
 
@@ -229,11 +229,23 @@ def test_transient_is_the_start_of_the_first_cycle():
     assert transient(np.array([[1, 0], [2, 0], [3, 0]])) is None
 
 
-def test_transient_length_on_baselines_and_life():
-    kw = {"size": 32, "batch": 2, "max_steps": 256}
-    assert rule("transient_length", "baseline", "frozen_noise_13", **kw) == 0
-    assert rule("transient_length", "baseline", "iid_noise_binary", **kw) == np.log2(257)
-    assert 0 < rule("transient_length", "life", "glider", **kw) < np.log2(257)
+def test_growth_class_of_synthetic_transients():
+    n = np.array([16, 24, 32, 48, 64, 96])
+    assert growth_class(n, 5 + 0.01 * n) == 0  # bounded
+    assert growth_class(n, 40 * np.log(n)) == 1
+    assert growth_class(n, 10 * n + 7) == 2
+    assert growth_class(n, 0.5 * n ** 2.5) == 3
+    assert growth_class(n, np.exp(n / 8)) == 4
+
+
+def test_transient_length_classes():
+    # linear, as in the paper; a narrower range of sizes can tip it to polynomial
+    assert rule("transient_length", "life", "glider") == 2
+    assert 1 < rule("transient_length", "life", "glider", report="exponent") < 2
+    measure = registry.make_measure("transient_length")
+    assert measure.accepts(registry.make_system("integer_lenia"))
+    assert not measure.accepts(registry.make_system("lenia"))  # continuous: never repeats
+    assert measure.sizes(reach=13)[0] == 28  # wider rules start above their neighbourhood
 
 
 def test_langton_lambda_of_life():
@@ -243,18 +255,19 @@ def test_langton_lambda_of_life():
 
 
 def test_functional_information_rates_soups_below_creatures():
-    kw = {"samples": 16, "steps": 200, "size": 64}
-    soup = rule("functional_information", "lenia", "random", **kw)
-    assert soup < rule("functional_information", "lenia", "orbium", **kw) <= np.log2(32)
+    kw = {"samples": 31, "steps": 200, "size": 64}  # at most log2(32) = 5 bits
+    assert rule("functional_information", "lenia", "random", **kw) < 1
+    assert rule("functional_information", "lenia", "orbium", **kw) == pytest.approx(5)
+    assert rule("functional_information", "life", "random", **kw) < 1
 
 
 def test_rule_measures_are_constant_and_cached_per_rule():
-    run = Run(RunSpec("baseline", "frozen_noise_binary", (32, 32)), ["transient_length"],
-              {"transient_length": {"size": 32, "batch": 2, "max_steps": 64}})
+    run = Run(RunSpec("life", "glider", (32, 32)), ["langton_lambda"],
+              {"langton_lambda": {"size": 64}})
     first, _ = run.measure()
     run.step(5)
     again, ms = run.measure()
-    assert first == again and ms["transient_length"] < 1  # cached: no recompute
+    assert first == again and ms["langton_lambda"] < 1  # cached: no recompute
 
 
 def table(t, y, x, L=2) -> np.ndarray:
@@ -296,7 +309,7 @@ def test_fid_matches_bohm_game_of_life_and_is_never_negative():
     # input leave the centre's independent information unchanged (their §2.3)
     counts = np.zeros((2, 2, 256))
     for code in range(256):
-        n = bin(code).count("1")
+        n = code.bit_count()
         for c in (0, 1):
             counts[int(n == 3 or (c == 1 and n == 2)), c, code] += 1
     result = fid(counts)

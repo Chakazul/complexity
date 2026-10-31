@@ -98,8 +98,9 @@ class Lenia(System):
                   cells: str = "pattern", m: float | None = None,
                   s: float | None = None) -> LeniaState:
         """`init`, optionally with other growth parameters and other cells: "pattern" (the
-        pattern's own), "soup" (random cells in the central 3/4 with the pattern's rule) or
-        "uniform" (every cell iid uniform over the states)."""
+        pattern's own), "soup" (random cells in the central 3/4 with the pattern's rule),
+        "scramble" (the pattern's bounding box filled with iid uniform states; a soup for
+        soups) or "uniform" (every cell iid uniform over the states)."""
         name, soup = self.sources[pattern]
         c = CREATURES[name]
         R, T, P = c["R"], c["T"], c.get("P", 0)
@@ -117,6 +118,10 @@ class Lenia(System):
                 init = model.discretize(init, P) if P else init
             else:
                 (init,) = c["cells"]  # one channel
+                if cells == "scramble":
+                    shape = np.shape(init)
+                    init = (jax.random.randint(rng, shape, 0, P + 1) if P
+                            else jax.random.uniform(rng, shape))
             A = place_center(jnp.zeros(size, jnp.int32 if P else jnp.float32), init)
 
         if P:
@@ -126,16 +131,17 @@ class Lenia(System):
         return LeniaState(A, model.kernel_fft(size, R, kern["b"]), None, 0, T,
                           jnp.float32(m), jnp.float32(s))
 
-    def growth_params(self, pattern: str) -> tuple[float, float]:
-        """The pattern's growth center m and width s."""
-        (kern,) = CREATURES[self.sources[pattern][0]]["kernels"]
-        return kern["m"], kern["s"]
+    def reach(self, pattern: str) -> int:
+        return CREATURES[self.sources[pattern][0]]["R"]
 
     def soup(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> LeniaState:
         return self.init_with(pattern, size, rng, cells="soup")
 
     def uniform(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> LeniaState:
         return self.init_with(pattern, size, rng, cells="uniform")
+
+    def scramble(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> LeniaState:
+        return self.init_with(pattern, size, rng, cells="scramble")
 
     def step(self, st: LeniaState) -> LeniaState:
         if st.P:

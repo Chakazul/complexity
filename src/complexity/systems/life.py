@@ -68,6 +68,12 @@ class GameOfLife(System):
     def uniform(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> jax.Array:
         return self.init("random", size, rng)  # 50 % soup over the whole grid
 
+    def scramble(self, pattern: str, size: tuple[int, int], rng: jax.Array) -> jax.Array:
+        if pattern == "random":
+            return self.init("random", size, rng)
+        box = jax.random.bernoulli(rng, 0.5, cells(pattern).shape).astype(jnp.uint8)
+        return place_center(jnp.zeros(size, jnp.uint8), box)
+
     def perturb(self, grid: jax.Array, rng: jax.Array) -> jax.Array:
         """Flip one live cell (any cell if none is alive)."""
         y, x = random_active_cell(grid == 1, rng)

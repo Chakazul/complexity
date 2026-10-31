@@ -491,3 +491,6 @@ then polishing and sharing.
   (M3b), multi-scale structural complexity (M3b, after multi-channel Lenia in M4).
 - 2026-10-31 — Measure definitions, decisions, values and design Q&A moved from §5 to
   MEASURES.md.
+- 2026-11-01 — Measures checked against the papers in `assets/` (MEASURES.md §2.4);
+  transient length and functional information replaced by the papers' measures (growth
+  class over grid sizes; random patterns of the creature's size with a graded function).

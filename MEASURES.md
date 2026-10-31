@@ -146,8 +146,8 @@ read against these notes. What they confirm, correct or add:
 | Measure | Paper | Result |
 |---|---|---|
 | FID | Bohm et al. 2026 (arXiv v3) | **Corrected**: synergy is never negative. With every input combination weighted equally the inputs are independent, so I_syn = Σ H(X_i \| Y) − H(X \| Y) = I(X_1; X_2 \| Y) ≥ 0 (their eq. 3); there is no redundancy term. The code's description said "negative when redundant". Their Game of Life example (all 9 cells as inputs: total 0.84635, synergy 0.63765, centre 0.01092, each neighbour 0.02472 bits) is reproduced exactly and now tested. Bohm's "system" is the function itself, so the PDF's tag "system" means what §2.3 calls rule. |
-| TL | Hudcová & Mikolov 2020 | **Implementation differs**: the measure is the growth class of the mean transient with grid side n (fitted over n = 20–200: bounded, log, linear, polynomial, exponential), not a transient at one size. ECA: exponential ≈ chaotic; Life is linear (R² 0.98); in 2-D the linear (steep) and polynomial classes hold most complex rules. §5.7.1. |
-| FI | Hazen et al. 2007 | **Implementation differs**: configurations are all configurations of the system (sequences, patterns), and the degree of function E_x is graded. Here they are rule parameters near the creature's own and the function is pass or fail, so the value measures how fragile a creature is to its rule. §5.7.3. |
+| TL | Hudcová & Mikolov 2020 | **Implementation replaced** (it reported a transient at one size): the measure is the growth class of the mean transient with grid side n (fitted over n = 20–200: bounded, log, linear, polynomial, exponential). ECA: exponential ≈ chaotic; Life is linear (R² 0.98), reproduced here; in 2-D the linear (steep) and polynomial classes hold most complex rules. Defined for discrete systems only. §5.7.1. |
+| FI | Hazen et al. 2007 | **Implementation replaced** (it sampled rule parameters with a pass-or-fail function): configurations are configurations of the system — here random patterns of the creature's size — and the degree of function is graded; the FI of one configuration counts those that function at least as well. §5.7.3. |
 | LE | Yevenko et al. 2025 (ISAL; the PDF says 2026) | **Adds**: on Asymptotic Lenia they compute the whole Lyapunov spectrum (Benettin's JVP + QR, ~10⁴ steps) and covariant Lyapunov vectors, and propose the Kaplan–Yorke dimension as *the* complexity measure for continuous CA (chaotic soliton: D_KY ≈ 8.5). Symmetry (two translations, rotation, time) gives up to 4 zero exponents: 3 for a translating or rotating soliton, so Orbium's near-zero values here are expected. Nearly all other exponents are negative (mean −1), which they give as the reason creatures withstand perturbation — the repair that M in §8.1b wants to measure. §5.6. |
 | IIT | Tononi 2004; Oizumi et al. 2014; Albantakis et al. 2023 (IIT 4.0) | **Refined**: interventional (do-operator), as assumed. Exclusion picks the maximal set of units ("complex"), and complexes can be found one after another over a larger substrate as non-overlapping regions — causal individuation with boundaries, close to Q13. φ is sensitive to "fault lines", weakly coupled parts. The PDF's Φ = D(intact ‖ partitioned) is the IIT 2–3 form; IIT 4.0 uses the intrinsic difference over directional partitions. §5.8. |
 | AT | Sharma et al. 2023 | **Refined**: the assembly index is per object; assembly A combines indices with copy numbers over an ensemble. Many copies of a many-step object signal selection — as do Aquarium colonies of dozens of identical units. §5.8, §8.2. |
@@ -185,7 +185,7 @@ one value per cell; tile = per tile of the frame (§4).
 | ITI | Individuality, local adaptation | `iti_local` | 🌿 | pattern, local, dynamic | trajectory / run | local | implemented |
 | FD | Fractal dimension | `fractal_dimension` | 🎲 | pattern, global, static | instance / object | — | implemented |
 | LE | Lyapunov exponent | `lyapunov` | 🎲 | rule, global, dynamic | trajectory / run | local | implemented |
-| TL | Transient length | `transient_length` | 🎲 | rule, global, dynamic | rule / ensemble | — | implemented |
+| TL | Transient length (growth class) | `transient_length` | 🎲 | rule, global, dynamic | rule / ensemble | — | implemented (discrete) |
 | LL | Langton's λ | `langton_lambda` | 🎲 | rule, global, static | rule / ensemble | — | implemented |
 | FI | Functional information | `functional_information` | 🌿 | system, global, dynamic | ensemble / ensemble | — | implemented |
 | TD | Thermodynamic depth | — | — | pattern, global, dynamic | — | — | deferred (§5.8) |
@@ -494,21 +494,36 @@ cached, and shown as a constant; off by default in the UI (seconds on the first 
 
 #### 5.7.1 Transient length (`transient_length`, TL)
 
-Hudcová & Mikolov: how long random initial states take to settle. 8 soups of the rule
-(`System.soup`) on 64² run up to 4096 steps; two uint32 hashes per step (in a `lax.scan`,
-`vmap`ped over the soups; continuous states quantized to 1e-3); the transient is the index
-where the first repeated state first occurred. Reported as the mean of log2(1 + transient);
-soups that never repeat count as 4096 (a lower bound).
+**Definition.** Hudcová & Mikolov 2020: the transient of a configuration u is the number of
+steps before its trajectory first enters a cycle (the smallest i with Fⁱ(u) = Fʲ(u) for some
+j > i). The measure is how the mean transient μ_n of random configurations grows with the
+grid side n: bounded, logarithmic, linear, polynomial or exponential, by the best R² of
+regression fits. Bounded rules compute trivially; exponential ones are chaotic; Life is
+linear; in 2-D, linear rules with steep slopes and polynomial ones hold the complex
+behaviour. Defined for deterministic systems with finitely many states.
 
-**Against the paper.** Hudcová & Mikolov's measure is how the mean transient grows with the
-grid side n — they fit bounded, log, linear, polynomial and exponential curves over
-n = 20–200 and keep the best R² — not the transient at one size. In elementary CA the
-exponential class is chaotic; Life is linear (R² 0.98); among 2-D 3-state rules most are
-exponential, and the linear (steep) and polynomial classes hold the complex ones. A faithful
-version runs the soups at several sizes (e.g. 16–96) and reports the class and slope; the
-value here is one point of that curve, and at 64² chaotic and complex rules both hit the
-cap. Continuous Lenia needs quantization to repeat at all, so its transients depend on the
-1e-3 grid.
+**Implementation.** Sides: 6 values spaced geometrically from 16 to 96 (`min_size`,
+`max_size`, `n_sizes`); for a rule that looks further than a 3×3 neighbourhood
+(`System.reach`, R for Lenia), from just above its width, 2R + 2, keeping the ratio
+(min Orbium: 26–156). At each side, soups of the rule (`System.soup`) in batches of 8 until
+the mean is known to 10 % at 95 % confidence, as in the paper, or 4 batches are run. Each
+batch runs in chunks of 256 steps, with two uint32 hashes per frame (a `lax.scan`, `vmap`ped
+over the soups), and stops once every soup has repeated, up to 4096 steps. Sizes where more
+than a quarter of the soups never repeat are left out of the fit; with fewer than 3 sizes
+left the class is exponential (the paper's time bound leaves such rules unclassified; most
+are exponential). Fits, with R² in transient steps: μ = a + b ln n, μ = a + b n,
+1 + μ = c nᵏ, 1 + μ = c e^{bn}; bounded if the means vary by less than a step or a quarter
+of their mean. `report`: `class` (0 bounded, 1 log, 2 linear, 3 polynomial, 4 exponential)
+or `exponent` (slope of ln(1 + μ) against ln n, a continuous companion: 0 bounded, 1
+linear, large exponential).
+
+**Notes.** Discrete systems only (Life, Integer Lenia): continuous Lenia never repeats —
+creatures drift by fractions of a cell — so the old 1e-3 quantization gave every soup with
+a glider the cap. Linear and polynomial are close for Life (exponent ≈ 1.4): 16–96 gives
+linear, as in the paper, but 16–64 with fewer soups gave polynomial. The classes order
+rules from order to chaos, hence 🎲, but the paper places complex rules in the middle
+(linear, polynomial), not at the top. The noise baselines are no longer accepted (some of
+their patterns are continuous). ~5 s on GPU, ~20 s on CPU for Integer Lenia.
 
 #### 5.7.2 Langton's λ (`langton_lambda`, LL)
 
@@ -519,19 +534,32 @@ neighbours, 56 tables; survive with 2 or 3, 84). Discrete rules only.
 
 #### 5.7.3 Functional information (`functional_information`, FI)
 
-Hazen, Szostak et al.: −log2 of the fraction of configurations that perform a function.
-Here: 128 random growth parameters (m, s), each within ±50 % of the pattern's own, run for
-500 steps on 128²; the function is that the pattern lives on (mass within ½ to 2× the start,
-area at most 2×). None found counts as half of one. Lenia only (`growth_params`).
+**Definition.** Hazen et al. 2007 (after Szostak): for a function x and a degree of function
+E_x, I(E_x) = −log2 F(E_x), where F(E_x) is the fraction of all configurations of the system
+that achieve at least E_x. The FI of one configuration uses its own degree of function: how
+rare it is to do at least as well. 0 when every configuration does as well, log2 N for the
+best of N; undefined if nothing functions.
 
-An absolute box (m ∈ [0.05, 0.5], s ∈ [0.005, 0.1]) gave ~6 bits for every creature (1 of
-64 rules), too coarse to compare; the relative box asks how fragile a creature is to its rule.
+**Implementation.** Configurations: the pattern's own cells, and 512 random fillings of its
+bounding box with iid uniform states (`System.scramble`; for a soup, other soups), placed as
+the pattern is, under the pattern's rule, on 128². Function: living on as a bounded object.
+Degree of function: steps lived, checked every 50 of 500 steps after settling for 50 —
+mass within ½ to 2× the mass after settling, and area (cells above 0.1) at most 2× the
+pattern's bounding box; a configuration that is empty after settling scores 0. FI =
+log2(N / #{E ≥ E_pattern}) over the N = 513 configurations, the pattern included, so at most
+log2 513 = 9 bits: "no random pattern of that size did as well" reads 9, a lower bound.
+Life, Lenia, Integer Lenia and multi-channel Lenia; batches of 64 bound device memory.
 
-**Against the paper.** Hazen et al. count configurations of the system itself (sequences,
-here patterns) out of all possible ones, for a graded degree of function E_x, giving a curve
-I(E_x); FI is undefined when nothing functions (here: half of one). Sampling rules is a
-variant. Closer to Hazen: random patterns in the creature's bounding box under its own rule,
-with E_x graded (steps survived, or mass stability), reported as the curve.
+**Notes.** The settling period lets stored cells grow into the creature (the Aquarium unit
+settles at 2.3× its stored mass; Life spaceships are stored one cell short). The area limit
+is the same for every configuration: measured against each one's own settled state, random
+Hydrogeminium boxes that grow into a third of the grid and then hold still passed. The
+function is persistence, not shape or motion: a random 3×3 Life box that becomes a block
+counts as doing what the glider does, and under Kronium's and Amoebium's rules many random
+boxes settle into bounded blobs, so those creatures score low. A growing pattern (the
+Gosper gun, a self-replicating Aquarium) fails its own mass limit early and scores low too.
+Most Lenia creatures sit at the 9-bit ceiling; telling them apart needs many more samples
+(2048 on the GPU in ~5 s: still 11 bits = ceiling for Orbium, Scutium, min Orbium).
 
 ### 5.8 Deferred
 
@@ -589,12 +617,14 @@ At 128², step 200 unless noted (TE: step 100). Empty and iid noise rows are the
   0.005; noise and empty 0.
 - ITI (organismal A*): `iti_local` 0.9–1.1 for Life and Lenia creatures, 0.4–0.6 for Lenia
   soups, 0 for noise; `iti_features` Orbium 0, gun 0.45, Tetralapillium 1.0, noise 0.03.
-- TL: still baselines 0; Life soups 9.3; Orbium-rule soups (die) 7.5; min Orbium 8.6;
-  Paraptera, Tetralapillium and noise at the 4096-step cap (12).
+- TL (growth class, 2026-11-01): Life linear (exponent 1.43); min Orbium's Integer Lenia
+  log (0.57). Earlier single-size values (64²) are superseded.
 - LL: Life 0.269 (exact 0.273); min Orbium 0.84.
-- FI: Lenia soup 1.1 bits; min Orbium 3.1, Orbium 3.5, Hydrogeminium and Tetralapillium 3.7,
-  Hexadentium 3.8, Paraptera c. f. 4.0, Kronium 4.2, Gyrorbium 4.7, Paraptera a. l. 5.4,
-  Scutium and Helicium 7.
+- FI (random patterns of the pattern's size, 512 samples, ceiling 9 bits; 2026-11-01): at
+  the ceiling Orbium, min Orbium, Scutium, Helicium, Hydrogeminium, Paraptera a. l.,
+  Hexadentium; Gyrorbium and Paraptera c. f. 7.4; Tetralapillium 2.7; Kronium 1.2;
+  Amoebium 0.2; Aquarium unit 2.2, self-replicating Aquarium 3.0 (256²); Life glider 1.1,
+  gun 1.3, Galaxy 0.5, R-pentomino 0; soups 0–0.3.
 
 Readings: LZC, SE, FD and compression rank soups and noise on top. EC, SC, TE and FID put
 noise at the empty-grid level. LE singles out Tetralapillium metamorpha among the creatures;
@@ -862,8 +892,9 @@ measure's, or is it new or specific to Lenia?**
 The ingredients have precedents. In §3: the Lyapunov exponent uses the same twin-run
 mechanism but rewards divergence (chaos), where M rewards repair and containment; IIT is
 interventional and defines a boundary by integration, but needs the full transition table
-and has no repair or tolerance; FID's uniform inputs and FI's perturbed rule parameters are
-interventions on the rule, not on a structure. Beyond §3: Beer's perturbation analysis of
+and has no repair or tolerance; FID's uniform inputs are an intervention on the rule, and
+FI's random patterns a comparison with other configurations, not perturbations of a
+structure. Beyond §3: Beer's perturbation analysis of
 the Life glider as an autopoietic unit (closest to the individuation loop); Hoel's
 interventional effective information; Ay & Polani's causal information flow; Sensorimotor
 Lenia (Hamon et al. 2024), which searched for Lenia creatures robust to obstacles and
@@ -883,10 +914,10 @@ yet checked (papers not in `assets/`): Beer, Hoel, Ay & Polani, Hamon et al.
 **Q16. Do the papers confirm the definitions and implementations here?**
 Mostly (§2.4, checked 2026-10-31 against the 22 papers in `assets/`). One error: FID's
 synergy was described as possibly negative; it cannot be, by construction, and Bohm et
-al.'s Game of Life numbers are now a test. Two implementations are variants of the paper's
-measure: transient length at one grid size instead of its growth class, and functional
-information over rule parameters with a pass-or-fail function instead of over patterns with
-a graded one. Refinements: IIT's complexes are regions; AT's assembly is ensemble-level. New
+al.'s Game of Life numbers are now a test. Two implementations were variants of the
+paper's measure — transient length at one grid size instead of its growth class, and
+functional information over rule parameters with a pass-or-fail function instead of over
+patterns with a graded one — and were replaced by the papers' measures (2026-11-01, §5.7). Refinements: IIT's complexes are regions; AT's assembly is ensemble-level. New
 leads for the goal measure: the Lyapunov spectrum (repair), IIT's complexes and ITI's
 boundary search (individuation), assembly with copy number (colonies), input-entropy
 variance and excess entropy.
@@ -902,8 +933,8 @@ variance and excess entropy.
 - Logical depth: does dividing time by compressed size make it reliably structural?
 - Estimate causal states and probabilities from an ensemble of runs of the rule, then read
   local values on one run (§2.3), instead of from one 16-frame window.
-- Transient length as a growth class over grid sizes (§5.7.1); functional information over
-  patterns with a graded function (§5.7.3) — replace the current forms or add beside them?
+- Functional information: a function with shape or motion (not only persistence), and
+  enough samples to lift creatures off the ceiling (§5.7.3).
 - Lyapunov spectrum by `jvp` + QR (§5.6): does the clipped Lenia give stable spectra, and do
   the stable exponents of a tracked creature separate Orbium and the Aquarium (repair)
   from Scutium (breaks)?
