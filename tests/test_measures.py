@@ -291,6 +291,25 @@ def test_fid_on_textbook_gates_and_unseen_inputs():
     assert full["self"] == pytest.approx(i_y)
 
 
+def test_fid_matches_bohm_game_of_life_and_is_never_negative():
+    # Bohm et al. §3.4: Life's next state from its 3x3 at t; the 8 neighbours grouped into one
+    # input leave the centre's independent information unchanged (their §2.3)
+    counts = np.zeros((2, 2, 256))
+    for code in range(256):
+        n = bin(code).count("1")
+        for c in (0, 1):
+            counts[int(n == 3 or (c == 1 and n == 2)), c, code] += 1
+    result = fid(counts)
+    assert result["self"] == pytest.approx(0.01092, abs=1e-5)
+    assert sum(result.values()) == pytest.approx(0.84635, abs=1e-5)  # total information
+    # uniform inputs are independent, so synergy = I(Y; X | T) >= 0
+    rng = np.random.default_rng(0)
+    for _ in range(200):
+        tables = rng.integers(0, 5, (3, 3, 3)) * (rng.random((3, 3, 3)) < 0.6)
+        if tables.sum():
+            assert fid(tables)["synergy"] >= -1e-12
+
+
 def test_statistical_complexity():
     rng = np.random.default_rng(0)
     assert len(set(causal_states(np.zeros((4, 32, 32), int), 2, 1e-3)[0])) == 1

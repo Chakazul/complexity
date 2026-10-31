@@ -4,9 +4,10 @@ The definitions, explanations and categorization of the complexity measures in C
 Lab: the ones implemented, the ones deferred, and the ones proposed. Also the decisions
 behind each implementation, first values, and the questions and answers that shaped them.
 The project plan and milestones are in [PLAN.md](PLAN.md); background on the measures
-is in [assets/Complexity_Measure.pdf](assets/Complexity_Measure.pdf) (cited as "the PDF").
+is in [assets/Complexity_Measure.pdf](assets/Complexity_Measure.pdf) (cited as "the PDF"), and
+the papers behind each measure are in [assets/](assets/) (§2.4).
 
-Contents: 1 Purpose · 2 Conventions (2.3 reanalysis of granularity) · 3 Catalogue · 4 Granularity and heatmaps ·
+Contents: 1 Purpose · 2 Conventions (2.3 reanalysis of granularity, 2.4 checked against the papers) · 3 Catalogue · 4 Granularity and heatmaps ·
 5 Measures in detail · 6 Validation · 7 First values · 8 The goal measure and proposals ·
 9 Questions and answers · 10 Open questions
 
@@ -98,14 +99,14 @@ granularity tag cannot express that, hence the subject and estimated-from tags.
 | SC, C_μ (Crutchfield & Young) | process | global; pointwise as local SC (Shalizi et al. 2006) | asymptotic (infinite past) | causal states from an ensemble or long run, local values on one realization |
 | LD (Bennett) | instance | global | snapshot (it measures computation time; grows over a run) | |
 | TD (Lloyd & Pagels) | a state with its history | global | the history | depends on the process that produced the state |
-| TL (Hudcová & Mikolov) | rule | global | whole trajectory | classifies rules by how transients grow with system size |
+| TL (Hudcová & Mikolov) | rule | global | whole trajectory | classifies rules by how the mean transient grows with grid size: bounded, log, linear, polynomial, exponential |
 | PID (Williams & Beer) | ensemble (a joint distribution) | as the variables; pointwise variants (Finn & Lizier) | dynamic only with time-lagged variables | rule-level from a rule table, trajectory-level from a run |
 | FID (Bohm et al.) | **rule** (the input–output function) | the function's inputs | one-step mapping | uniform inputs make it a property of the function |
 | TE (Schreiber; Lizier) | process (a pair of stationary processes) | pointwise (local TE) | window or asymptotic | averages characterize rules, local values locate gliders |
-| IIT, Φ (Tononi) | a system in a state | **whole system** (its most integrated subset) | one step | defined over partitions of the whole system |
+| IIT, Φ (Tononi) | a system in a state | **regional, not pointwise**: φ is defined over partitions of a candidate set; the exclusion postulate picks maximal sets ("complexes"), recursively, as non-overlapping regions of a larger substrate | one step | interventional: transition probabilities under all interventions (the do-operator) |
 | ITI (Krakauer et al.) | an individual vs its environment | regional | window or asymptotic | needs an identified individual |
-| AT (Cronin, Walker et al.) | instance (an object); with copy number, a population | regional | snapshot (encodes a construction history) | |
-| FI (Hazen, Szostak) | ensemble of configurations, for a function | global | snapshot (dynamic if the function is run) | |
+| AT (Cronin, Walker et al.) | assembly index: instance (an object); assembly A = Σ e^{a_i}(n_i − 1)/N_T: an ensemble of objects with copy numbers n_i | regional | snapshot (encodes a construction history) | the index alone cannot detect selection; index × copy number can |
+| FI (Hazen, Szostak) | ensemble of all configurations, for a function and a degree of function E_x | global | snapshot (dynamic if the function is run) | I(E_x) = −log2 F(E_x), a curve over E_x; undefined if no configuration functions |
 | LL (Langton) | rule (table) | global over a local rule | static | |
 | WZ (Wuensche) | rule (table) | global over a local rule | static | |
 
@@ -114,7 +115,8 @@ compression, LZC, FD, EC, TL, LL, WZ and ITI. Corrections:
 - **FID is rule-level** (both said system): it is defined on the function, with uniform inputs.
 - **Block entropy is local** (these notes said global, while giving it a per-cell map), and
   its granularity is the distribution's: system, as in the PDF's §1.1.
-- **IIT is not local** (the PDF said local): Φ is defined over partitions of the whole system.
+- **IIT is not local** (the PDF said local): φ is defined over partitions of a whole candidate
+  system, and the complexes it picks are regions, not per-cell values (§2.4).
 - **The Lyapunov exponent is rule-level** (these notes said pattern, after the finite-time
   implementation): the exponent belongs to the dynamics; the implementation's subject is a
   trajectory (now its own tag).
@@ -134,7 +136,33 @@ from a run (trajectory, window, pointwise): local TE, local SC, local informatio
 Their probabilities and causal states would better come from an ensemble of runs of the
 rule than from one 16-frame window — a limitation of the current SC.
 
-Caveat: from knowledge of the literature, not re-checked against the papers.
+Re-derived from knowledge of the literature, then checked against the papers (§2.4).
+
+### 2.4 Checked against the papers (2026-10-31)
+
+The 22 papers in `assets/` (one per measure, three for IIT, two each for SC and WZ) were
+read against these notes. What they confirm, correct or add:
+
+| Measure | Paper | Result |
+|---|---|---|
+| FID | Bohm et al. 2026 (arXiv v3) | **Corrected**: synergy is never negative. With every input combination weighted equally the inputs are independent, so I_syn = Σ H(X_i \| Y) − H(X \| Y) = I(X_1; X_2 \| Y) ≥ 0 (their eq. 3); there is no redundancy term. The code's description said "negative when redundant". Their Game of Life example (all 9 cells as inputs: total 0.84635, synergy 0.63765, centre 0.01092, each neighbour 0.02472 bits) is reproduced exactly and now tested. Bohm's "system" is the function itself, so the PDF's tag "system" means what §2.3 calls rule. |
+| TL | Hudcová & Mikolov 2020 | **Implementation differs**: the measure is the growth class of the mean transient with grid side n (fitted over n = 20–200: bounded, log, linear, polynomial, exponential), not a transient at one size. ECA: exponential ≈ chaotic; Life is linear (R² 0.98); in 2-D the linear (steep) and polynomial classes hold most complex rules. §5.7.1. |
+| FI | Hazen et al. 2007 | **Implementation differs**: configurations are all configurations of the system (sequences, patterns), and the degree of function E_x is graded. Here they are rule parameters near the creature's own and the function is pass or fail, so the value measures how fragile a creature is to its rule. §5.7.3. |
+| LE | Yevenko et al. 2025 (ISAL; the PDF says 2026) | **Adds**: on Asymptotic Lenia they compute the whole Lyapunov spectrum (Benettin's JVP + QR, ~10⁴ steps) and covariant Lyapunov vectors, and propose the Kaplan–Yorke dimension as *the* complexity measure for continuous CA (chaotic soliton: D_KY ≈ 8.5). Symmetry (two translations, rotation, time) gives up to 4 zero exponents: 3 for a translating or rotating soliton, so Orbium's near-zero values here are expected. Nearly all other exponents are negative (mean −1), which they give as the reason creatures withstand perturbation — the repair that M in §8.1b wants to measure. §5.6. |
+| IIT | Tononi 2004; Oizumi et al. 2014; Albantakis et al. 2023 (IIT 4.0) | **Refined**: interventional (do-operator), as assumed. Exclusion picks the maximal set of units ("complex"), and complexes can be found one after another over a larger substrate as non-overlapping regions — causal individuation with boundaries, close to Q13. φ is sensitive to "fault lines", weakly coupled parts. The PDF's Φ = D(intact ‖ partitioned) is the IIT 2–3 form; IIT 4.0 uses the intrinsic difference over directional partitions. §5.8. |
+| AT | Sharma et al. 2023 | **Refined**: the assembly index is per object; assembly A combines indices with copy numbers over an ensemble. Many copies of a many-step object signal selection — as do Aquarium colonies of dozens of identical units. §5.8, §8.2. |
+| ITI | Krakauer et al. 2020 | **Confirmed** (A*, A, nC as in §5.4; their fine decomposition by PID: A* = SI + UI(S), A = CI + UI(S), nC = CI + UI(E)). **Adds**: a boundary search — enlarge S with environment variables while nC falls — and the caveat that A* and A never decrease as S grows, so boundaries need a cost on size. The paper gives no algorithm; its examples are small Markov models. |
+| PID | Williams & Beer 2010 | **Confirmed**: I_spec and I_min exactly as §5.3.4. |
+| TE | Schreiber 2000 | **Confirmed** (histories k and l; l = 1 recommended). **Adds**: for coarse-grained continuous states TE converges as bins shrink, *except under deterministic coupling, where it diverges* — Lenia is deterministic, so TE grows with `n_levels` and values compare only at equal levels. |
+| SC | Crutchfield & Young 1989; Crutchfield & Feldman (SFI WP 1996) | **Confirmed** (C_μ as the entropy of causal states; the 1989 reconstruction merges subtrees within a tolerance, here a G-test). **Adds**: excess entropy E ≤ C_μ, and the complexity–entropy diagram (E or C_μ against entropy density h_μ) as a parameter-free way to compare systems. |
+| EC | Gell-Mann & Lloyd 1996 | **Confirmed, with more detail**: EC = K of the ensemble in which the entity is typical; total information Σ = EC + S(ensemble); the best ensemble minimizes Σ, then EC. The noise-band proxy fixes one ensemble instead of minimizing. §5.2.2. |
+| LD | Bennett 1988 | **Confirmed, with more detail**: depth at significance s = least time of a program at most s bits longer than the shortest. Bennett treats regional depth in CA, and notes that irreversibility lets noisy systems correct errors. The decompression-time proxy is not in the uploaded Zenil 2020 (it is Zenil, Delahaye & Gaucherel 2012). |
+| AC, LZC | Zenil 2020 | **Confirmed**: LZ-family compressors estimate entropy rate, not algorithmic complexity (so 🎲). **Adds**: CTM/BDM, BDM(s) = Σ CTM(block) + log2(copies), works on 2-D arrays and gives a per-block map; "algorithmic information dynamics" ranks parts by how perturbing them changes complexity — another interventional precedent (Q15). |
+| SE | Shannon 1948 | **Confirmed**: block entropy is Shannon's G_N, the entropy per symbol of N-blocks. |
+| FD | Mandelbrot 1967 | **Confirmed** (self-similarity dimension of a set in space). Not the attractor dimension of Yevenko et al. — that one is in phase space. |
+| LL | Langton 1990 | **Confirmed**: λ_Life = 0.273, in the transition region for 2-state, 9-cell CA. λ = 1 − 1/K is the most heterogeneous table (Life 0.5, 13 states 0.92), so min Orbium's 0.84 is near it. |
+| WZ | Wuensche 1994, 1998 | **Confirmed**: Z = max(Z_left, Z_right), the probability that the next cell of a pre-image is fixed by the rule table; low Z is ordered (many garden-of-Eden states), high Z chaotic, complex in between. **Adds** (1998): the variance of the input entropy (entropy of the rule-table lookup frequencies) over time — high for glider rules. It needs only the run and the lookup table, so it applies to Life and Integer Lenia now (§8.2). |
+| TD | Lloyd & Pagels 1988 | **Confirmed**: depth of a state = −k ln p(the trajectory that led to it \| the state); the mean over trajectories is their entropy, for Hamiltonian systems coarse- minus fine-grained entropy. |
 
 ## 3. Catalogue
 
@@ -273,6 +301,13 @@ with the frame's mean and variance would fill after the blur, mean ± z · std /
 z = 4. Noise of any kind and uniform frames collapse to one level (~0 bits); structure that
 noise cannot explain remains.
 
+**Against the definition.** Gell-Mann & Lloyd's EC is the algorithmic information of the
+*ensemble* in which the object is typical; the best ensemble minimizes the total information
+Σ = EC + S (the entropy left within the ensemble), then EC — a two-part code. The noise band
+fixes one ensemble (blur σ = 2, 3 levels) instead of minimizing. A closer proxy: over
+coarse-grainings (σ, levels), minimize compressed model bits + residual entropy, and report
+the model bits.
+
 **Why the noise band.** Fixed levels after blurring failed both ways: a blurred glider gun
 never reached 1/3, while blurred binary noise straddled 1/2 (noise scored above the gun).
 With z = 3, binary noise still leaked through (0.27 % of cells); z = 4 fixed it.
@@ -281,7 +316,9 @@ With z = 3, binary noise still leaked through (0.27 % of cells); z = 4 fixed it.
 
 **Definition.** Bennett: the running time of the shortest (or near-shortest) program that
 produces the object. Trivial and random objects are both shallow; deep objects need long
-computation from a short description. **Proxy** (Zenil et al.): time to decompress the
+computation from a short description. Precisely, depth at significance s is the least
+running time of a program at most s bits longer than the shortest. **Proxy** (Zenil,
+Delahaye & Gaucherel 2012): time to decompress the
 LZMA-compressed frame, median of 5 repeats, ns per cell.
 
 **Why "mixed"** (§9, Q2): the proxy measures LZMA's decoder work, which peaks at
@@ -341,7 +378,8 @@ full shape with the padding weighted out, so the start of a run does not recompi
 per window length. Parameters: window 16, offset 1, n_levels.
 
 **Limits.** k = 1 mixes information storage into the flow. For smooth fields (Lenia),
-offset 1 may be short; try ≈ R/4. Per-cell TE of a lone object shrinks with grid size.
+offset 1 may be short; try ≈ R/4. Lenia is deterministic, and for deterministic coupling
+TE diverges as the bins shrink (Schreiber): compare values only at equal `n_levels`. Per-cell TE of a lone object shrinks with grid size.
 
 #### 5.3.3 Block entropy (`block_entropy`, SE)
 
@@ -376,12 +414,16 @@ function, not of how often its inputs occur.
 **Implementation.** The same variables as PID. Following `fid-tools` 0.1.2
 (`TPM.from_data(...).neutral_completion_fid()`): every combination of the values each input
 takes is weighted equally; an unseen combination gets a uniform output over the observed
-targets; then I(T; X_i) and synergy = I(T; X) − Σ I(T; X_i), negative when the inputs are
-redundant. `component`: synergy (default), self, neighbour. Tested on XOR, copy and a
-completed OR.
+targets; then I(T; X_i) and synergy = I(T; X) − Σ I(T; X_i), never negative (the equally
+weighted inputs are independent, §2.4). `component`: synergy (default), self, neighbour.
+Tested on XOR, copy, a completed OR, and Bohm et al.'s Game of Life numbers.
 
 **Notes.** Synergy does not depend on how much of the grid is active, so a lone glider
-(0.086) scores above a Life soup (0.038): it describes the local rule as used.
+(0.086) scores above a Life soup (0.038): it describes the local rule as used. With only two
+of the nine inputs, the other seven are averaged over the run's own frames, so the value
+depends on the run, not on the rule alone. Bohm et al. use all 9 cells (512 combinations)
+and get one number for Life's rule, synergy 0.638 bits; that full form is exact from the rule
+table for Life (and small neighbourhoods), not for Lenia.
 
 ### 5.4 Individuality (ITI)
 
@@ -434,6 +476,17 @@ rate during the burn-in still counts, because iid noise decorrelates in one step
 
 **Notes.** Each value costs 128 extra steps. Its map is the twin's divergence field.
 
+**Against Yevenko et al. 2025** (Asymptotic Lenia). This is one finite-time rate of the
+largest exponent from one random perturbation over 64 steps; they compute the whole spectrum
+(Benettin: push k tangent vectors through `jvp` and re-orthonormalize by QR each step, ~10⁴
+steps) and the covariant Lyapunov vectors, which are spatial maps of the unstable, neutral
+and stable directions. Symmetry gives up to 4 zero exponents (3 for a translating or rotating
+soliton), so near-zero values for Orbium and other gliders are expected, not a failure of
+the estimate. They propose the Kaplan–Yorke dimension D_KY = j + Σ_{i≤j} λ_i / |λ_{j+1}| as the
+complexity measure for continuous CA, and read the many negative exponents as the reason
+creatures absorb perturbations. Both are direct in JAX (proposed, §8.2); our Lenia clips the
+state to [0, 1], so its Jacobian is zero on saturated cells, unlike their smooth system.
+
 ### 5.7 Rule-level measures
 
 `RuleMeasure`: computed once per (measure, parameters, system, pattern) from runs of its own,
@@ -446,6 +499,16 @@ Hudcová & Mikolov: how long random initial states take to settle. 8 soups of th
 `vmap`ped over the soups; continuous states quantized to 1e-3); the transient is the index
 where the first repeated state first occurred. Reported as the mean of log2(1 + transient);
 soups that never repeat count as 4096 (a lower bound).
+
+**Against the paper.** Hudcová & Mikolov's measure is how the mean transient grows with the
+grid side n — they fit bounded, log, linear, polynomial and exponential curves over
+n = 20–200 and keep the best R² — not the transient at one size. In elementary CA the
+exponential class is chaotic; Life is linear (R² 0.98); among 2-D 3-state rules most are
+exponential, and the linear (steep) and polynomial classes hold the complex ones. A faithful
+version runs the soups at several sizes (e.g. 16–96) and reports the class and slope; the
+value here is one point of that curve, and at 64² chaotic and complex rules both hit the
+cap. Continuous Lenia needs quantization to repeat at all, so its transients depend on the
+1e-3 grid.
 
 #### 5.7.2 Langton's λ (`langton_lambda`, LL)
 
@@ -464,17 +527,26 @@ area at most 2×). None found counts as half of one. Lenia only (`growth_params`
 An absolute box (m ∈ [0.05, 0.5], s ∈ [0.005, 0.1]) gave ~6 bits for every creature (1 of
 64 rules), too coarse to compare; the relative box asks how fragile a creature is to its rule.
 
+**Against the paper.** Hazen et al. count configurations of the system itself (sequences,
+here patterns) out of all possible ones, for a graded degree of function E_x, giving a curve
+I(E_x); FI is undefined when nothing functions (here: half of one). Sampling rules is a
+variant. Closer to Hazen: random patterns in the creature's bounding box under its own rule,
+with E_x graded (steps survived, or mass stability), reported as the curve.
+
 ### 5.8 Deferred
 
 - **Thermodynamic depth (TD; Lloyd & Pagels).** For a deterministic system it is the
   entropy over a state's possible histories; computable only for tiny lattices. Revisit
   with elementary CA (M4).
 - **Integrated information (IIT; Tononi).** Φ is exponential in system size: only ~3×3
-  binary patches are tractable (`pyphi`), and a patch's Φ is not the system's. It is a
-  whole-system measure, not a local one as the PDF tags it (§2.3).
+  binary patches are tractable (`pyphi`), and a patch's Φ is not the system's. It is not a
+  local measure as the PDF tags it (§2.3); its complexes are regions with causal boundaries
+  (§2.4), the idea behind individuation by intervention (§8.1b), which is affordable
+  where IIT is not.
 - **Assembly index (AT; Cronin, Walker).** The libraries target molecules and strings, and
   the index is exponential in object size. Revisit for small discrete patches, with copy
-  number (§8.2).
+  number (§8.2). Assembly A = Σ_i e^{a_i}(n_i − 1)/N_T is an ensemble quantity: unique objects
+  i with index a_i and copy number n_i among N_T objects.
 - **Wuensche's Z (WZ).** Rule-level, static, for elementary CA; added with that system (M4).
 
 ## 6. Validation
@@ -660,6 +732,24 @@ noise; frozen noise; Life still lifes, the glider, Scutium (disintegrate on coll
   relevant to the multi-scale part of the goal.
 - **Causal information flow** (Ay & Polani 2008): the formal, interventional counterpart
   of transfer entropy; the basis for M's "internal flow".
+- **Lyapunov spectrum and Kaplan–Yorke dimension** (Yevenko et al. 2025): the whole spectrum
+  by `jvp` + QR, D_KY as a rule- or trajectory-level complexity; restricted to a tracked
+  region, the stable part (how fast and how completely perturbations decay) and the
+  covariant vectors (where they go) are an exact small-perturbation form of M's repair and
+  containment.
+- **Input-entropy variance** (Wuensche 1998): entropy of the rule-table lookup frequencies
+  per step, and its variance over time; high for rules with gliders. Needs only the run and a
+  lookup table (Life: 512 or 18 totalistic entries; Integer Lenia: potential values), so
+  available without elementary CA.
+- **Excess entropy and the complexity–entropy diagram** (Crutchfield & Feldman): E from the
+  convergence of block entropies, cheap and structural; plotting E or C_μ against entropy
+  density compares systems without their parameters.
+- **Assembly for colonies** (Sharma et al. 2023): an Aquarium colony holds dozens of copies
+  of one many-step unit — high copy number × index is AT's signature of selection; with
+  tracked units as objects, assembly needs no molecular library.
+- **ITI boundary search** (Krakauer et al. 2020): grow a candidate individual by
+  environment cells while nC falls, with a cost on size since A* and A never decrease;
+  an observational counterpart to individuation by intervention.
 
 ## 9. Questions and answers
 
@@ -784,7 +874,22 @@ calibration against empty and matched noise; individuation by intervention in a 
 tracking; and autodiff for exact small-perturbation responses. Not Lenia-specific in
 concept — any simulator that can be perturbed and rerun works (Life with finite flips, as
 Beer did); Lenia is special in being differentiable and in having self-repairing,
-colony-forming individuals. (Citations from memory, to be checked before publication.)
+colony-forming individuals. Checked against the papers in `assets/` (2026-10-31): IIT is
+interventional and its complexes are causally bounded regions (Albantakis et al. 2023);
+Yevenko et al. 2025 tie Lenia's robustness to its negative Lyapunov exponents; Zenil's
+algorithmic information dynamics perturbs parts and follows the change in complexity. Not
+yet checked (papers not in `assets/`): Beer, Hoel, Ay & Polani, Hamon et al.
+
+**Q16. Do the papers confirm the definitions and implementations here?**
+Mostly (§2.4, checked 2026-10-31 against the 22 papers in `assets/`). One error: FID's
+synergy was described as possibly negative; it cannot be, by construction, and Bohm et
+al.'s Game of Life numbers are now a test. Two implementations are variants of the paper's
+measure: transient length at one grid size instead of its growth class, and functional
+information over rule parameters with a pass-or-fail function instead of over patterns with
+a graded one. Refinements: IIT's complexes are regions; AT's assembly is ensemble-level. New
+leads for the goal measure: the Lyapunov spectrum (repair), IIT's complexes and ITI's
+boundary search (individuation), assembly with copy number (colonies), input-entropy
+variance and excess entropy.
 
 ## 10. Open questions
 
@@ -797,3 +902,8 @@ colony-forming individuals. (Citations from memory, to be checked before publica
 - Logical depth: does dividing time by compressed size make it reliably structural?
 - Estimate causal states and probabilities from an ensemble of runs of the rule, then read
   local values on one run (§2.3), instead of from one 16-frame window.
+- Transient length as a growth class over grid sizes (§5.7.1); functional information over
+  patterns with a graded function (§5.7.3) — replace the current forms or add beside them?
+- Lyapunov spectrum by `jvp` + QR (§5.6): does the clipped Lenia give stable spectra, and do
+  the stable exponents of a tracked creature separate Orbium and the Aquarium (repair)
+  from Scutium (breaks)?

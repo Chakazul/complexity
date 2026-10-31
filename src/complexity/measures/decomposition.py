@@ -127,8 +127,9 @@ class FunctionalDecomposition(_Decomposition):
     description = (
         "Bohm et al.'s functional information decomposition of the map from (a cell's own "
         "state, a neighbour's state) to the cell's next state, weighting every input pattern "
-        "equally: synergy = I(next; both) - I(next; own) - I(next; neighbour), negative when "
-        "the inputs are redundant. `component`: synergy (default), self or neighbour. "
+        "equally: synergy = I(next; both) - I(next; own) - I(next; neighbour), never negative "
+        "(equally weighted inputs are independent, so there is no redundancy). `component`: "
+        "synergy (default), self or neighbour. "
         "Averaged over the 4 neighbours and the window; at most 4 levels."
     )
     component = "synergy"
