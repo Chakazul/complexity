@@ -267,3 +267,150 @@ def save_gif(frames, path, every: int = 2, scale: int = 2) -> None:
         img = Image.fromarray(a, "RGB" if a.ndim == 3 else "L")
         images.append(img.resize((img.width * scale, img.height * scale), Image.NEAREST))
     images[0].save(path, save_all=True, append_images=images[1:], duration=40, loop=0)
+
+
+# ---- a unit into a colony ----
+
+def crowd(unit: Unit, n: int, grid: int, seed: int) -> tuple[np.ndarray, float]:
+    """`n` copies of `unit`, randomly turned, packed around the grid's centre with centres
+    at least 1.1 sizes apart (a disc of radius ~ size · sqrt(n)); cells and the disc's
+    radius."""
+    system = registry.make_system(unit.system)
+    discrete = system.n_states(unit.pattern) is not None
+    rng = np.random.default_rng(seed)
+    radius = unit.size * math.sqrt(n) * 0.75
+    centre = np.array([grid / 2, grid / 2])
+    A = np.zeros((grid, grid) + unit.cells.shape[2:], unit.cells.dtype)
+    placed = []
+    while len(placed) < n:
+        r, a = radius * math.sqrt(rng.random()), rng.uniform(0, 2 * math.pi)
+        pos = centre + r * np.array([math.sin(a), math.cos(a)])
+        if all(np.hypot(*(pos - q)) >= 1.1 * unit.size for q in placed):
+            place(A, rotate(unit.cells, rng.uniform(0, 360) if not discrete
+                            else 90 * rng.integers(4), discrete), pos)
+            placed.append(pos)
+    return A, radius
+
+
+@dataclass
+class Intrusion:
+    """A unit thrown into a colony, against the same colony left alone (the control)."""
+    system: str
+    pattern: str
+    members: int  # copies in the colony
+    seed: int  # the colony's layout
+    approach: float  # degrees: the direction the intruder comes from
+    offset: float  # impact offset, in unit sizes
+    grid: int
+    steps: int  # after the colony settled
+    unit_mass: float
+    label: str = ""
+    colony_units: int = 0  # unit-like objects in the settled colony, before the intruder
+    control_units: list = field(default_factory=list)  # ... at the end, without the
+    #   intruder: the colony alone and slightly perturbed copies (its natural range)
+    final_units: int = 0  # ... at the end, with it
+    control_mass: list = field(default_factory=list)
+    final_mass: float = 0.0
+    intruder_mass: float = 0.0  # the tracked intruder's final mass (0 if lost)
+    contact: bool = False  # the intruder came within the colony's radius
+
+    def record(self) -> dict:
+        return asdict(self)
+
+
+def unit_like(masses, unit_mass: float) -> int:
+    m = np.asarray(masses, float)
+    return int(((m >= 0.4 * unit_mass) & (m <= 2 * unit_mass)).sum())
+
+
+def intrude(unit: Unit, members: int = 6, seed: int = 0, approaches=(0, 90, 180, 270),
+            offsets=(0.0, 0.5), settle_steps: int = 200, after: int = 400,
+            every: int = 2, controls: int = 5) -> list[Intrusion]:
+    """A colony of `members` copies settles for `settle_steps`; then, from that state, a
+    fresh copy is thrown at its centre from each approach direction and offset. The colony
+    also runs without it, as is and with `controls - 1` slight perturbations
+    (`System.perturb`): colonies change by themselves, chaotically, so the intrusion is
+    judged against that natural range (`intrusion_label`)."""
+    system = registry.make_system(unit.system)
+    discrete = system.n_states(unit.pattern) is not None
+    reach = system.reach(unit.pattern)
+    potential_fn = jax.jit(system.potential)
+    radius = unit.size * math.sqrt(members) * 0.75
+    lead = radius + 2 * unit.size
+    grid = max(256, -(-int(2 * lead + 3 * unit.size) // 64) * 64)
+    cells, radius = crowd(unit, members, grid, seed)
+    colony = engine.advance(system, system.with_cells(unit.pattern, cells), settle_steps)
+    frame, labels = objects(system, colony, potential_fn, reach)
+    colony_units = unit_like(np.bincount(labels.ravel(), weights=frame.ravel())[1:], unit.mass)
+    steps = int(lead / max(unit.speed, 1e-3)) + after
+    control_units, control_mass = [], []
+    for i in range(controls):
+        start_state = colony if i == 0 else system.perturb(colony, jax.random.key(i))
+        frame, labels = objects(system, engine.advance(system, start_state, steps),
+                                potential_fn, reach)
+        control_units.append(unit_like(np.bincount(labels.ravel(), weights=frame.ravel())[1:],
+                                       unit.mass))
+        control_mass.append(float(frame.sum()))
+    centre = np.array([grid / 2, grid / 2])
+    out = []
+    for approach in approaches:
+        for offset in offsets:
+            # coming from `approach`, towards the centre; a discrete unit turns in quarter
+            # turns, so it starts on the line of the heading it actually gets
+            turn = (approach + 180) - unit.heading
+            if discrete:
+                turn = 90 * round(turn / 90)
+            rad = math.radians(unit.heading + turn + 180)  # back along the heading
+            start = centre + lead * np.array([math.sin(rad), math.cos(rad)])
+            normal = np.array([math.sin(rad + math.pi / 2), math.cos(rad + math.pi / 2)])
+            start = start + offset * unit.size * normal
+            A = state_cells(colony).copy()
+            place(A, rotate(unit.cells, turn, discrete), start)
+            state = system.with_cells(unit.pattern, A)
+            frame, labels = objects(system, state, potential_fn, reach)
+            tracker = Tracker()
+            ids = np.unique(labels[labels > 0])
+            d = np.array([torus_centroid(labels == i) for i in ids]) - start
+            d = np.minimum(np.abs(d), grid - np.abs(d))
+            tracker.target = labels == ids[np.argmin(np.hypot(d[:, 0], d[:, 1]))]
+            tracker.last_centre = torus_centroid(tracker.target)
+            contact = False
+            for _ in range(0, steps, every):
+                state = engine.advance(system, state, every)
+                frame, labels = objects(system, state, potential_fn, reach)
+                tracker.step(frame, labels)
+                if not contact and tracker.target is not None:
+                    d = np.abs(tracker.last_centre - centre)
+                    contact = bool(np.hypot(*np.minimum(d, grid - d)) <= radius + unit.size / 2)
+            masses = np.bincount(labels.ravel(), weights=frame.ravel())[1:]
+            r = Intrusion(unit.system, unit.pattern, members, seed, approach, offset, grid,
+                          steps, unit.mass, colony_units=colony_units,
+                          control_units=control_units, control_mass=control_mass,
+                          final_units=unit_like(masses, unit.mass), final_mass=float(frame.sum()))
+            r.intruder_mass = float(frame[tracker.target].sum()) if tracker.target is not None else 0.0
+            r.contact = contact
+            r.label = intrusion_label(r)
+            out.append(r)
+    return out
+
+
+def intrusion_label(r: Intrusion) -> str:
+    """The run against the controls' range (min to max over the colony alone and its
+    perturbed copies): missed (the intruder never came within the colony's radius);
+    goo / collapsed (total mass over 2× the largest / under half the
+    smallest control's); divided (more unit-like objects than 1.15 × the most any control
+    has, + 2); disrupted (fewer than 0.85 × the fewest); otherwise within the colony's
+    natural range (the tolerances allow for more variation than a few controls show):
+    joined (the tracked intruder is still unit-like) or absorbed (it is not)."""
+    lo_mass, hi_mass = min(r.control_mass), max(r.control_mass)
+    if not r.contact:
+        return "missed"
+    if r.final_mass > 2 * hi_mass:
+        return "goo"
+    if r.final_mass < 0.5 * lo_mass:
+        return "collapsed"
+    if r.final_units > 1.15 * max(r.control_units) + 2:
+        return "divided"
+    if r.final_units < 0.85 * min(r.control_units):
+        return "disrupted"
+    return "joined" if 0.4 * r.unit_mass <= r.intruder_mass <= 2 * r.unit_mass else "absorbed"

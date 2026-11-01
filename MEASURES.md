@@ -933,8 +933,34 @@ of noise; the glider dies or leaves debris. Caveats: an outcome depends on the p
 which the units meet (Orbium at 90° survives or loses a unit with a few more settling
 steps), so labels are statistics over geometries, not per-run truths; in Life, still
 debris is unit-like by mass and counts as divided; "survived" does not yet check that the
-units separate and keep moving. Still to do: a unit into an existing colony, static
-Aquarium modes.
+units separate and keep moving. Still to do: static Aquarium modes.
+
+**A unit into a colony** (`collisions.intrude`, `scripts/collisions.py --colony`, records
+in `results/collisions/intrusions.jsonl`). A colony is 6 copies packed around the centre
+(random turns, centres 1.1 sizes apart), settled 200 steps; a fresh copy is thrown at its
+centre from 4 directions × 2 offsets (a discrete unit starts on the line of the heading
+its quarter turns give it), for 2 layouts. Colonies change by themselves — the Aquarium's
+chaotically, by replication — so each is also run without the intruder, as is and with 4
+slight perturbations (`System.perturb`), and the run is labelled against that natural
+range: *missed* (never within the colony's radius), *goo* / *collapsed* (mass over 2× /
+under half the controls'), *divided* / *disrupted* (unit-like objects over 1.15 × the most
++ 2 / under 0.85 × the fewest in the controls), otherwise *joined* (the tracked intruder
+still unit-like) or *absorbed* (not). Triscutium is left out: any contact makes it goo.
+
+| Unit | Into 6 copies (16 runs) | Units at the end without intruder |
+|---|---|---|
+| Aquarium unit | joined 11, disrupted 2, absorbed 1, missed 2 | 28-54 (controls disagree: chaotic replication) |
+| Orbium | joined 14, missed 2 | 3-4 (all controls agree) |
+| Life glider | joined 16 | 1-12 |
+
+Only the Aquarium forms a colony that stays together, and its intruders mostly become
+members within the colony's natural range (joined): the individuality-in-a-colony of §8.1.
+Orbia and gliders move on, so their "colony" is a crowd that scatters, and joined means
+the intruder survived the crowd; Orbium's deterministic crowd shows it cleanly (one more
+Orbium than the control, or one exchanged for a member). Two first versions were wrong and
+are fixed: a single control could not tell an intruder's effect from the Aquarium's own
+variation, and the glider, turning in quarter turns, flew past the colony while being
+labelled joined (hence *missed*).
 
 **A goo, found by collision.** Triscutium valvatus laterale's "goo" is a disc of
 labyrinthine stripes that grows from the point of contact until it fills the grid:

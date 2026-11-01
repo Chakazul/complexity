@@ -44,3 +44,24 @@ def test_labels_come_from_the_final_objects():
     c.contact = False
     c.final_masses, c.total_mass_ratio = [10, 10], 1.0
     assert co.label(c, 20.0) == "missed"
+
+
+def test_intrusion_labels_compare_with_the_colonys_natural_range():
+    r = co.Intrusion("lenia", "orbium", 6, 0, 0, 0.0, 256, 100, 10.0,
+                     control_units=[20, 22, 25], control_mass=[200.0, 220.0, 250.0],
+                     contact=True)
+    for units, mass, intruder, expected in [(23, 230, 10, "joined"), (23, 230, 0, "absorbed"),
+                                            (35, 300, 10, "divided"), (15, 180, 10, "disrupted"),
+                                            (40, 600, 10, "goo"), (5, 80, 0, "collapsed")]:
+        r.final_units, r.final_mass, r.intruder_mass = units, mass, intruder
+        assert co.intrusion_label(r) == expected, (units, mass, intruder)
+    r.contact = False
+    assert co.intrusion_label(r) == "missed"
+
+
+def test_a_unit_thrown_into_a_colony(orbium):
+    (run,) = co.intrude(orbium, members=4, approaches=(0,), offsets=(0.0,), after=200,
+                        controls=2)
+    assert run.colony_units >= 1 and len(run.control_units) == 2
+    assert run.contact  # thrown at the centre, it reaches the colony
+    assert run.label in ("joined", "absorbed", "divided", "disrupted", "goo", "collapsed")

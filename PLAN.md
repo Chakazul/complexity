@@ -432,8 +432,11 @@ then polishing and sharing.
       settled, cropped and thrown at a copy (Δ 180/135/90°, offsets, chirality) or at noise,
       with a control; outcomes labelled from K ∗ A objects (survived, merged, divided, died,
       goo, missed); Orbium, Triscutium, Aquarium unit, Life glider (74 runs)
-- [ ] Collisions still to run: a unit into an existing colony, Aquarium static modes, goo
-      (once found); check that survivors separate and keep moving
+- [x] A unit into a colony (2026-11-01, MEASURES.md §8.1c): 6 copies settled, an intruder
+      from 4 directions × 2 offsets, judged against 5 controls (the colony alone and
+      perturbed); the Aquarium's intruders mostly join its replicating colony
+- [ ] Collisions still to run: Aquarium static modes; check that survivors separate and
+      keep moving
 - [ ] Prototype the complexity field C = S × M × I (MEASURES.md §8.1b): S spatial
       structure across scales; M self-maintenance by perturbation (internal flow, repair,
       containment, tolerance), reusing the Lyapunov twin runs; I individuality
