@@ -295,7 +295,7 @@ src/complexity/
   vendor/lenium/         code and data copied from Lenium, with source notes
   vendor/lenia/          patterns and RLE decoder from the original Lenia, with source notes
   app/server.py          FastAPI + WebSocket streaming
-  app/static/            browser UI (no build step, no JS dependencies)
+  app/static/            browser UI (no build step; KaTeX from a CDN for equations, optional)
 ```
 
 Computation runs in Python on the server; the browser only draws. The same app can be

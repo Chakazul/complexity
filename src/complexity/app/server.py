@@ -63,6 +63,7 @@ def catalog():
              "temporal": cls.temporal, "backend": cls.backend,
              "map": cls.map, "map_unit": cls.map_unit or cls.unit,
              "ratio": cls.ratio, "ratio_unit": cls.ratio_unit, "icon": cls.icon,
+             "equation": cls.equation, "reference": cls.reference,
              "subject": cls.subject, "estimated_from": cls.estimated_from,
              "per_rule": issubclass(cls, RuleMeasure),
              "needs_discrete": cls.needs_discrete, "peaks_at": cls.peaks_at,

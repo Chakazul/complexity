@@ -68,6 +68,8 @@ def separation_field(system: System, state, rng: jax.Array, steps: int, discrete
 class Lyapunov(Measure):
     key = "lyapunov"
     icon = "🦋"
+    equation = r"\lambda = \lim_{t\to\infty} \frac{1}{t} \ln \frac{|\Delta x(t)|}{|\Delta x(0)|}"
+    reference = "Lyapunov 1892; for Lenia: Yevenko et al. 2025"
     name = "Lyapunov exponent"
     unit = "1/step"
     group = "Dynamics"

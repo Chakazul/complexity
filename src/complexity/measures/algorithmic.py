@@ -71,6 +71,8 @@ def lz76(symbols: np.ndarray) -> int:
 class LempelZiv(Measure):
     key = "lzc"
     icon = "🔤"
+    equation = r"C_{LZ}(x) = c(x)\,\frac{\log_L n}{n}"
+    reference = "Lempel & Ziv 1976; Kaspar & Schuster 1987"
     map = "tile"
     name = "Lempel-Ziv complexity"
     unit = "relative to noise"
@@ -114,6 +116,8 @@ def regular_part(frame: np.ndarray, sigma: float, z: float) -> np.ndarray:
 class EffectiveComplexity(Measure):
     key = "effective_complexity"
     icon = "💎"
+    equation = r"\mathcal{E}(x) = K(\tilde E_x),\qquad \Sigma = \mathcal{E} + S(\tilde E_x) \;\to\; \min"
+    reference = "Gell-Mann & Lloyd 1996"
     name = "Effective complexity (proxy)"
     unit = "bits/cell"
     group = "Algorithmic complexity"
@@ -140,6 +144,8 @@ class EffectiveComplexity(Measure):
 class LogicalDepth(Measure):
     key = "logical_depth"
     icon = "⏱️"
+    equation = r"D_s(x) = \min\{\,T(p) : U(p) = x,\ |p| - |p^*| < s\,\}"
+    reference = "Bennett 1988; proxy: Zenil, Delahaye & Gaucherel 2012"
     name = "Logical depth (proxy)"
     unit = "ns/cell"
     group = "Algorithmic complexity"

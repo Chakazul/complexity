@@ -76,6 +76,8 @@ class Measure(ABC):
     ratio: str | None = None  # None, "mass" or "change": see the docstring
     ratio_unit: str = ""
     icon: str = ""  # an emoji before the name in the UI; variants of a measure share one
+    equation: str = ""  # LaTeX, shown in the measure's info popup (KaTeX)
+    reference: str = ""  # short citations, as in assets/README.md
     params: tuple[str, ...] = ()
     choices: dict[str, tuple[str, ...]] = {}  # allowed values of text parameters
     applies_to: str = ""  # which systems, if not all: shown when a measure is greyed out

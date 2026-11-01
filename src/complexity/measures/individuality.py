@@ -113,6 +113,8 @@ def quantize(x: np.ndarray, q: int) -> np.ndarray:
 class FeatureIndividuality(Measure):
     key = "iti_features"
     icon = "🍄"
+    equation = r"A^* = I(S_{n+1}; S_n),\quad A = I(S_{n+1}; S_n \mid E_n),\quad nC = I(S_{n+1}; E_n \mid S_n)"
+    reference = "Krakauer et al. 2020"
     name = "Individuality (features)"
     unit = "bits"
     group = "Individuality"
@@ -172,6 +174,8 @@ class FeatureIndividuality(Measure):
 class LocalIndividuality(Measure):
     key = "iti_local"
     icon = "🍄"
+    equation = r"A^* = I(S_{n+1}; S_n),\quad A = I(S_{n+1}; S_n \mid E_n),\quad nC = I(S_{n+1}; E_n \mid S_n)"
+    reference = "Krakauer et al. 2020"
     name = "Individuality (local)"
     unit = "bits/cell"
     group = "Individuality"

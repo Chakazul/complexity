@@ -90,6 +90,8 @@ def video_bits(name: str, frames) -> float:
 class LZMAFrame(Measure):
     key = "lzma"
     icon = "🖼️"
+    equation = r"K(x) = \min\{|p| : U(p) = x\} \;\lesssim\; \frac{8\,|\mathrm{LZMA}(x)|}{N}"
+    reference = "Kolmogorov 1965; Chaitin 1977; Zenil 2020"
     map = "tile"
     name = "Image compression (LZMA)"
     unit = "bits/cell"
@@ -106,6 +108,8 @@ class LZMAFrame(Measure):
 class PNGSize(Measure):
     key = "png"
     icon = "🖼️"
+    equation = r"K(x) = \min\{|p| : U(p) = x\} \;\lesssim\; \frac{8\,|\mathrm{PNG}(x)|}{N}"
+    reference = "Kolmogorov 1965; Chaitin 1977; Zenil 2020"
     map = "tile"
     name = "Image compression (PNG)"
     unit = "bits/cell"
@@ -122,6 +126,8 @@ class PNGSize(Measure):
 class LZMAVideo(Measure):
     key = "video_lzma"
     icon = "🎬"
+    equation = r"\frac{8\,|\mathrm{LZMA}(x_{t-w+1}\,\cdots\,x_t)|}{N\,w}"
+    reference = "Zenil 2020"
     map = "tile"
     name = "Video compression (LZMA)"
     unit = "bits/cell/frame"
@@ -143,6 +149,8 @@ class LZMAVideo(Measure):
 class H264Video(Measure):
     key = "video_h264"
     icon = "🎬"
+    equation = r"\frac{8\,|\mathrm{H.264}(x_{t-w+1}\,\cdots\,x_t)|}{N\,w}"
+    reference = "Zenil 2020"
     name = "Video compression (H.264 lossless)"
     unit = "bits/cell/frame"
     group = "Compression"
@@ -166,6 +174,7 @@ class H264Video(Measure):
 class TemporalNovelty(Measure):
     key = "novelty"
     icon = "✨"
+    equation = r"\nu = \frac{\min_{c}\, |C^{\text{video}}_c(x_{t-w+1}\cdots x_t)| \,/\, w}{\tfrac{1}{w}\sum_{i} \min_{c}\, |C^{\text{image}}_c(x_i)|}"
     name = "Temporal novelty (video / image)"
     unit = "ratio"
     group = "Compression"

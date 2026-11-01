@@ -69,6 +69,8 @@ def causal_states(symbols: np.ndarray, n_levels: int, alpha: float):
 class StatisticalComplexity(Measure):
     key = "statistical_complexity"
     icon = "🔮"
+    equation = r"C_\mu = -\sum_{S} P(S)\log_2 P(S),\qquad c(\mathbf{r}, t) = -\log_2 P\big(S(\mathbf{r}, t)\big)"
+    reference = "Crutchfield & Young 1989; local form: Shalizi et al. 2006"
     name = "Statistical complexity"
     unit = "bits/cell"
     map_unit = "bits/cell"

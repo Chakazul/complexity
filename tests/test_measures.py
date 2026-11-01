@@ -488,3 +488,8 @@ def test_measures_are_listed_in_module_order():
     keys = list(registry.measures())
     assert keys[0] == "lzma" and keys[-3:] == ["mass", "speed", "change_rate"]
     assert all(cls.icon for cls in registry.measures().values())
+
+
+def test_every_measure_has_an_equation_for_its_info_popup():
+    for key, cls in registry.measures().items():
+        assert cls.equation and cls.equation.count("{") == cls.equation.count("}"), key

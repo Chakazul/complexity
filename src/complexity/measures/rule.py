@@ -107,6 +107,8 @@ def growth_class(sizes, means) -> int:
 class TransientLength(RuleMeasure):
     key = "transient_length"
     icon = "⏳"
+    equation = r"t_u = \min\{\,i : \exists\, j > i,\ F^i(u) = F^j(u)\,\},\qquad \mu_n = \mathbb{E}_u[t_u] \sim 1,\ \log n,\ n,\ n^k,\ e^{bn}"
+    reference = "Hudcová & Mikolov 2020"
     name = "Transient length"
     unit = "class"
     description = (
@@ -174,6 +176,8 @@ class TransientLength(RuleMeasure):
 class LangtonLambda(RuleMeasure):
     key = "langton_lambda"
     icon = "🎚️"
+    equation = r"\lambda = \frac{K^N - n_q}{K^N}"
+    reference = "Langton 1990"
     name = "Langton's λ"
     unit = "fraction"
     description = (
@@ -226,6 +230,8 @@ def survival(system: System, states, steps: int, checks: int, max_area) -> jax.A
 class FunctionalInformation(RuleMeasure):
     key = "functional_information"
     icon = "📚"
+    equation = r"I(E_x) = -\log_2 F(E_x) = -\log_2 \frac{M(E_x)}{N}"
+    reference = "Hazen et al. 2007"
     name = "Functional information"
     unit = "bits"
     description = (

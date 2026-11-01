@@ -127,7 +127,8 @@ plotting the start-up transient as data.
 ### 3.5 UI
 
 Python serves everything; the browser only draws (current design, kept). Plain HTML/JS
-with no build step and no JS dependencies. The same app deploys to a Hugging Face Space as
+with no build step and no bundled JS dependencies; the measure info popup renders its
+equation with KaTeX from a CDN when online and shows the LaTeX otherwise. The same app deploys to a Hugging Face Space as
 the online demo. A static results site (GitHub Pages) is generated from `results/`.
 
 ## 4. Systems
@@ -412,7 +413,8 @@ then polishing and sharing.
 - [x] Measure-expectation tests (MEASURES.md §6) for every measure (orientation and structure tests
       over all registered measures, plus per-measure tests); `warming_up` flag for window
       measures, sent per tick and drawn faint in the UI
-- [x] UI: measures grouped (by kind, with taxonomy tags and popups); per-measure settings
+- [x] UI: measures grouped (by kind, with taxonomy tags); an (i) per measure opens a popup
+      with its description, equation (KaTeX), facts and normalized form; per-measure settings
       behind a ⚙ (typed and checked by the server, kept per browser, applied at the next
       Start); compatibility hints name the skipped systems and what the measure needs
 

@@ -105,6 +105,8 @@ class _Decomposition(Measure):
 class PartialInformation(_Decomposition):
     key = "pid"
     icon = "🔗"
+    equation = r"I(T; Y, X) = U_Y + U_X + R + S,\qquad R = \sum_t p(t)\,\min_i\, I(T{=}t; S_i)"
+    reference = "Williams & Beer 2010"
     name = "Partial information (PID)"
     ratio = "change"
     ratio_unit = "bits/Δmass"
@@ -127,6 +129,8 @@ class PartialInformation(_Decomposition):
 class FunctionalDecomposition(_Decomposition):
     key = "fid"
     icon = "🔗"
+    equation = r"I(Y; X) = I_{\text{syn}} + \sum_i I(Y; X_i),\qquad I_{\text{syn}} = \sum_i H(X_i\mid Y) - H(X\mid Y)"
+    reference = "Bohm et al. 2026"
     name = "Functional information (FID)"
     description = (
         "Bohm et al.'s functional information decomposition of the map from (a cell's own "

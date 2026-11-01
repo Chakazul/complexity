@@ -63,6 +63,7 @@ class _Statistic(Measure):
 class Mass(_Statistic):
     key = "mass"
     icon = "🧊"
+    equation = r"m = \sum_{\mathbf{r}} A(\mathbf{r})"
     name = "Total mass"
     unit = "cells"
     description = (
@@ -79,6 +80,8 @@ class Mass(_Statistic):
 class Speed(_Statistic):
     key = "speed"
     icon = "💨"
+    equation = r"v = \frac{|\mathbf{c}_t - \mathbf{c}_{t-w+1}|}{w - 1},\qquad \mathbf{c} = \mathbf{o} + \frac{\sum_{\mathbf{r}} A(\mathbf{r})\,[\mathbf{r} - \mathbf{o}]_{\pm N/2}}{\sum_{\mathbf{r}} A(\mathbf{r})}"
+    reference = "the hand-coded Lenium (stat.calc_basic_stats)"
     name = "Moving speed"
     unit = "cells/step"
     description = (
@@ -105,6 +108,7 @@ class Speed(_Statistic):
 class ChangeRate(_Statistic):
     key = "change_rate"
     icon = "🔄"
+    equation = r"r = \frac{1}{w-1}\sum_{t}\sum_{\mathbf{r}} |A_{t+1}(\mathbf{r}) - A_t(\mathbf{r})|"
     name = "Change rate"
     unit = "mass/step"
     description = (

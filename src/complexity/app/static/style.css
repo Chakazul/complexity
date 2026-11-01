@@ -166,6 +166,32 @@ label.option + button.clear { margin-left: 6px; }
 }
 .pick-gear:hover { color: var(--text-primary); }
 .pick-gear.modified { color: var(--accent); }
+.pick-info span {  /* a circled "i", drawn so that it needs no symbol font */
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border: 1.5px solid currentColor; border-radius: 50%;
+  font: italic 700 10px/1 Georgia, serif;
+}
+.chart h3 { cursor: pointer; }
+
+/* measure info popup */
+dialog.info {
+  padding: 0; border: 1px solid var(--border); border-radius: 10px;
+  width: min(600px, calc(100vw - 32px)); max-height: calc(100vh - 64px);
+  background: var(--surface-1); color: var(--text-primary);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
+}
+dialog.info::backdrop { background: rgba(0, 0, 0, .35); }
+.info-body { padding: 18px 20px 16px; }
+.info-body h2 { font-size: 17px; text-transform: none; letter-spacing: 0; color: var(--text-primary); margin: 0 0 8px; }
+.info-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+.info-equation { overflow-x: auto; overflow-y: hidden; margin: 6px 0 12px; padding: 4px 0; }
+.info-equation.small { margin: 0 0 4px; font-size: 90%; }
+.info-equation.tex-source { font-family: ui-monospace, monospace; font-size: 12px; color: var(--text-secondary); white-space: pre-wrap; }
+.info-body p { margin: 0 0 12px; line-height: 1.45; }
+.info-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 0 0 14px; font-size: 13px; }
+.info-facts dt { color: var(--text-muted); }
+.info-facts dd { margin: 0; color: var(--text-secondary); line-height: 1.4; }
+.info-actions { display: flex; justify-content: flex-end; }
 .pick-settings {
   display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
   margin: -2px 30px 6px 12px; padding: 6px 8px; border-radius: 6px;
@@ -182,7 +208,7 @@ label.option + button.clear { margin-left: 6px; }
   letter-spacing: .05em; color: var(--text-muted);
 }
 .pick-group:not(:first-child) { margin-top: 6px; }
-.chart h3, .pick .tag[title] { cursor: help; }
+.pick .tag[title] { cursor: help; }
 .pick.selected { background: var(--surface-1); }
 #measures .pick.selected { border-color: var(--text-secondary); }
 .pick.full { cursor: not-allowed; }

@@ -102,11 +102,14 @@ function buildMeasureList() {
       selectedMeasures.has(m.key) ? selectedMeasures.delete(m.key) : selectedMeasures.add(m.key);
       updateSidebar();
     });
-    el.title = m.description + RATIO_NOTE(m) + SUBJECT_NOTE(m);
     measureItems.set(m.key, el);
     const row = document.createElement("div");
     row.className = "pick-row";
-    row.append(el);
+    const info = document.createElement("button");
+    info.type = "button"; info.className = "pick-gear pick-info"; info.innerHTML = "<span>i</span>";
+    info.setAttribute("aria-label", `About ${m.name}`);
+    info.onclick = () => openInfo(m);
+    row.append(el, info);
     box.append(row);
     if (Object.keys(m.params).length) buildSettings(m, row);
   }
@@ -237,6 +240,82 @@ const TAG_HELP = {
   dynamic: "Dynamic: uses changes over time (a window of frames, or runs of the system).",
   heatmap: "Has a spatial map: choose it under Heatmap (Run section) to see where the value comes from.",
 };
+
+// ---------- measure info popup ----------
+// (i) beside a measure (or a chart's title) opens its description, equation and facts.
+// Equations are LaTeX, rendered by KaTeX, loaded from a CDN on the first popup; without
+// it (offline) the LaTeX source is shown instead.
+
+const KATEX = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/";
+let katexLoading = null;
+function loadKatex() {
+  if (window.katex) return Promise.resolve(true);
+  return katexLoading ||= new Promise((resolve) => {
+    const css = document.createElement("link");
+    css.rel = "stylesheet"; css.href = KATEX + "katex.min.css";
+    const js = document.createElement("script");
+    js.src = KATEX + "katex.min.js";
+    js.onload = () => resolve(true);
+    js.onerror = () => { katexLoading = null; resolve(false); };
+    document.head.append(css, js);
+  });
+}
+
+function renderTex(el, tex) {
+  el.textContent = tex;  // the source until KaTeX is there
+  el.classList.add("tex-source");
+  loadKatex().then((ok) => {
+    if (!ok || el.dataset.tex !== tex) return;  // offline, or another measure opened since
+    katex.render(tex, el, { displayMode: true, throwOnError: false });
+    el.classList.remove("tex-source");
+  });
+  el.dataset.tex = tex;
+}
+
+const NORMALIZED_TEX = {
+  mass: String.raw`\frac{(f - f_\varnothing)\,HW}{m}`,
+  change: String.raw`\frac{(f - f_\varnothing)\,HW}{r}`,
+};
+
+function openInfo(m) {
+  const kind = PEAKS[m.peaks_at];
+  $("info-title").textContent = `${m.icon} ${m.name}`;
+  $("info-tags").innerHTML = [[kind.tag, kind.tag], [m.granularity, "granularity"], [m.scope, "scope"],
+    [m.temporal, "temporal"], ...(m.map ? [["heatmap", "heatmap"]] : [])]
+    .map(([t, cls]) => `<span class="tag tag-${cls} tag-v-${t}">${t}</span>`).join("");
+  renderTex($("info-equation"), m.equation);
+  $("info-description").textContent = m.description;
+  const facts = [
+    ["Unit", m.unit],
+    ["Peaks", TAG_HELP[kind.tag]],
+    ["Level", `${TAG_HELP[m.granularity]} ${TAG_HELP[m.scope]} ${TAG_HELP[m.temporal]}`],
+    ["Computed here", SUBJECT_NOTE(m).trim().replace(/^Computed here: /, "")],
+    m.window > 1 && ["Window", `${m.window} frames`],
+    m.map && ["Heatmap", m.map === "tile" ? "per tile of the frame" : "one value per cell"],
+    m.applies_to && ["Applies to", m.applies_to],
+    m.reference && ["Reference", m.reference],
+  ].filter(Boolean);
+  const dl = $("info-facts");
+  dl.innerHTML = "";
+  for (const [k, v] of facts) {
+    const dt = document.createElement("dt"), dd = document.createElement("dd");
+    dt.textContent = k; dd.textContent = v;
+    dl.append(dt, dd);
+  }
+  if (m.ratio) {  // the normalized version, with its formula
+    const dt = document.createElement("dt"), dd = document.createElement("dd"), eq = document.createElement("div");
+    dt.textContent = "Normalized";
+    dd.textContent = RATIO_NOTE(m).trim().replace(/^Normalized \(option beside the Measures title\): /, "") +
+      " f: the grid average, f∅: its value on empty frames, H×W: the grid, " +
+      (m.ratio === "mass" ? "m: the mass." : "r: the change rate Σ|ΔA| per step.");
+    eq.className = "info-equation small";
+    dd.prepend(eq);
+    dl.append(dt, dd);
+    renderTex(eq, NORMALIZED_TEX[m.ratio]);
+  }
+  $("info").showModal();
+  $("info").scrollTop = 0;  // showModal focuses Close, which would scroll a tall popup to its end
+}
 
 // The normalized version, for measures that have one (MEASURES.md §5.10).
 const RATIO_NOTE = (m) => !m.ratio ? "" : `\n\nNormalized (option beside the Measures title): the grid's total ${
@@ -478,7 +557,7 @@ function buildCharts() {
     const el = document.createElement("div");
     el.className = "chart";
     el.innerHTML = `<h3>${m.icon} ${m.name}${isNormalized(m) ? " (normalized)" : ""}</h3><span class="unit">${unitOf(m)} vs. time step</span>`;
-    el.querySelector("h3").title = m.description;  // as in the measure list
+    el.querySelector("h3").onclick = () => openInfo(m);  // the same popup as the list's (i)
     const c = document.createElement("canvas");
     const tip = document.createElement("div");
     tip.className = "tooltip";
@@ -634,6 +713,8 @@ async function main() {
   $("map-measure").onchange = (e) => { setMap(e.target.value); renderMapControls(); };
   $("clear-runs").onclick = () => { runRows = []; updateSidebar(); };
   $("clear-measures").onclick = () => { selectedMeasures.clear(); updateSidebar(); };
+  $("info-close").onclick = () => $("info").close();
+  $("info").onclick = (e) => { if (e.target === $("info")) $("info").close(); };  // the backdrop
   $("normalized").checked = normalized;
   $("normalized").onchange = (e) => {
     normalized = e.target.checked;

@@ -26,6 +26,8 @@ def box_counts(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 class FractalDimension(Measure):
     key = "fractal_dimension"
     icon = "❄️"
+    equation = r"D = \lim_{\epsilon \to 0} \frac{\log N(\epsilon)}{\log(1/\epsilon)}"
+    reference = "Mandelbrot 1967"
     name = "Fractal dimension (box counting)"
     unit = "dimension"
     group = "Geometry"

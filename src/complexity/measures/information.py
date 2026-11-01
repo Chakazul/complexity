@@ -83,6 +83,8 @@ def local_transfer_entropy(symbols: jax.Array, n_valid, n_levels: int, offset: i
 class TransferEntropy(Measure):
     key = "transfer_entropy"
     icon = "🌊"
+    equation = r"T_{X\to Y} = \sum p(y_{t+1}, y_t, x_t)\,\log_2 \frac{p(y_{t+1}\mid y_t, x_t)}{p(y_{t+1}\mid y_t)}"
+    reference = "Schreiber 2000; local TE: Lizier et al. 2008"
     name = "Transfer entropy"
     unit = "bits/cell/step"
     map_unit = "bits/cell/step"
@@ -154,6 +156,8 @@ def block_entropy(symbols: np.ndarray, n_levels: int, block: int) -> float:
 class BlockEntropy(Measure):
     key = "block_entropy"
     icon = "🪟"
+    equation = r"H_b = -\frac{1}{b^2}\sum_{B} p(B)\log_2 p(B)"
+    reference = "Shannon 1948"
     name = "Block entropy"
     unit = "bits/cell"
     group = "Information theory"
