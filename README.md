@@ -227,9 +227,11 @@ pattern.
 | `change_rate` | Σ\|ΔA\| per step over the cells: motion and change in place; the divisor of per-object transfer entropy | mass/step |
 
 **Per object** (checkbox beside the Measures title, on by default; CLI `--per-object`):
-statistical complexity is reported per unit of mass (bits/mass) and transfer entropy per
-unit of mass changed (bits/Δmass), instead of their grid averages, which mostly follow a
-creature's size and speed (MEASURES.md §5.10, Q17).
+compression, LZC, effective complexity, block entropy and statistical complexity are
+reported per unit of mass (bits/mass: the grid's total above an empty frame over the mass),
+and transfer entropy and PID per unit of mass changed (bits/Δmass), instead of their grid
+averages, which mostly follow a creature's size and how much it changes (MEASURES.md §5.10,
+Q17).
 
 ## Adding a system or a measure
 

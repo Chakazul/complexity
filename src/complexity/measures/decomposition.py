@@ -105,6 +105,8 @@ class _Decomposition(Measure):
 class PartialInformation(_Decomposition):
     key = "pid"
     name = "Partial information (PID)"
+    ratio = "change"
+    ratio_unit = "bits/Δmass"
     description = (
         "Williams & Beer's partial information decomposition of what a cell's own state and "
         "a neighbour's state (at distance `offset`) tell about the cell's next state, with "

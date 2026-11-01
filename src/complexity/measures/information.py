@@ -94,10 +94,7 @@ class TransferEntropy(Measure):
         "4 neighbours at distance `offset`, all cells and the window's steps. 0 for empty, "
         "still and frozen patterns, ~0 for iid noise (nothing is predictable), highest for "
         "moving structure. History length 1, so it mixes in some information storage. "
-        "Plug-in estimate with the Miller-Madow bias correction; clipped at 0. Per object: "
-        "the grid's total per step divided by the change rate Σ|ΔA| per step, bits per unit "
-        "of mass changed (0 if nothing changes, when TE is 0 too), since the grid average "
-        "mostly follows how much the creature changes: its size and speed."
+        "Plug-in estimate with the Miller-Madow bias correction; clipped at 0."
     )
     window = 16
     backend = "jax"
@@ -158,6 +155,8 @@ class BlockEntropy(Measure):
     name = "Block entropy"
     unit = "bits/cell"
     group = "Information theory"
+    ratio = "mass"
+    ratio_unit = "bits/mass"
     description = (
         "Shannon entropy of the discretized frame's `block` x `block` patches (every cell's "
         "patch, on the torus), per cell. `block = 1` is the entropy of single cell states; "

@@ -615,20 +615,40 @@ alive, is it moving), tagged 📏 *statistic* and skipped by the orientation tes
 
 ### 5.10 Per-object ratios (option "per object", on by default in the UI)
 
-Statistical complexity and transfer entropy are grid averages, so on a lone creature they
-mostly measure how much of the grid it covers and how fast it moves (Q17). Their
-per-object versions divide that out:
+Many measures are grid averages, so on a lone creature they mostly measure how much of the
+grid it covers and how much it changes (Q17). Their per-object versions divide that out:
+(value − value on empty frames) × cells / divisor, where `cells` is the grid's H × W, so
+the numerator is the grid's total above an empty frame (a compressor's fixed overhead
+removed; 0 for the information measures), and the divisor is the mean mass or change rate
+(§5.9) over the measure's own window of raw frames (SC sees only 2-level symbols).
 
-| Measure | Per object | Unit |
+| Measure | Divisor | Unit (grid average → per object) |
 |---|---|---|
-| statistical complexity | SC × cells / mass | bits/mass: bits per unit of mass |
-| transfer entropy | TE × cells / change rate | bits/Δmass: bits per unit of mass changed |
+| image compression (LZMA, PNG) | mass | bits/cell → bits/mass |
+| video compression (LZMA, H.264) | mass | bits/cell/frame → bits/mass/frame |
+| Lempel–Ziv complexity | mass | normalized → symbols/mass (c · log_L n symbols) |
+| effective complexity | mass | bits/cell → bits/mass |
+| block entropy | mass | bits/cell → bits/mass |
+| statistical complexity | mass | bits/cell → bits/mass |
+| transfer entropy | change rate | bits/cell/step → bits/Δmass: bits per unit of mass changed |
+| PID | change rate | bits/cell → bits/Δmass |
 
-`cells` is the grid's H × W, so SC × cells is the total local complexity over the grid
-(bits) and TE × cells the total transfer per step (bits/step); mass and change rate (§5.9)
-are means over the measure's own window of raw frames (SC sees only 2-level symbols). The
-ratio is 0 for an empty grid and, for TE, when nothing changes (then TE is 0 as well).
-Maps stay per cell (`map_unit`).
+The ratio is 0 for an empty grid and, with the change rate, when nothing changes (then TE
+and PID are 0 as well). Maps stay per cell (`map_unit`).
+
+**Which measures, which divisor** (2026-11-01). Every frame measure on the five creatures
+of Q17, 128² and Orbium on 256²: grid averages fall 3.4–3.9× on the 4× larger grid
+(LZMA, PNG, video LZMA, LZC, effective complexity, block entropy, PID, SC, TE); novelty,
+FID, `iti_local`, fractal dimension (≈ 1×) and logical depth (1.2×) already describe the
+creature, and the Lyapunov exponent (1.8×) is a rate. Mass and change rate correlate 0.8
+over the five, so the divisor follows the measure's kind and the outliers: static image
+measures divided by change rate make the slowly changing Tetralapillium an outlier (3× the
+others); PID follows change rate (log correlation 1.00) like TE. Video compression follows
+change rate a little better (0.96 against 0.86) but pays for the first frame's still
+content, so divided by change it has the same outlier and would spike when a creature
+slows down: it is divided by mass. Above an empty frame, compression per mass does not
+depend on the grid size (LZMA Orbium 31.16 on 128² and 256²); LZC and block entropy rise
+~10 % from 128² to 256², PID ~20 %, for the reason given below.
 
 **Why change rate, not speed × mass** (2026-11-01). TE was first divided by speed × mass,
 which matched it across the five creatures (Q17), but a creature that nearly stops while
@@ -643,7 +663,11 @@ Implemented in the run (`Measure.ratio`, `ratio_unit`; `Run(per_object=True)`, C
 `--per-object`, the UI's checkbox beside the Measures title, sent at Start); the library
 and CLI default to the grid averages. Other measures could declare a ratio the same way.
 
-Values (128², step 300): SC Orbium 20.1, Tetralapillium 22.0, Paraptera furiosus 16.4,
+Values (128², step ~300; LZMA, effective complexity and block entropy from the comparison
+above): LZMA Orbium 32.1, Paraptera furiosus 16.8, Paraptera pedes 15.6, Tetralapillium
+13.1, Florakronium 12.3; effective complexity Orbium 6.8, Tetralapillium 3.0, Paraptera
+furiosus 2.6, Florakronium 2.1, Paraptera pedes 1.7; PID Paraptera pedes 3.8, Paraptera
+furiosus 3.3, Florakronium 3.3, Orbium 2.7, Tetralapillium 2.4; SC Orbium 20.1, Tetralapillium 22.0, Paraptera furiosus 16.4,
 Florakronium 16.1, Paraptera pedes 14.0; TE Orbium 5.94, Paraptera pedes 5.68, Paraptera
 furiosus 5.48, Florakronium 5.14, Tetralapillium 3.28 — Tetralapillium changes the most in
 ways its neighbours do not predict. On 256² the grid averages drop ~3.5×, the ratios rise

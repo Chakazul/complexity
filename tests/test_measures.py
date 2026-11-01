@@ -455,13 +455,30 @@ def test_per_object_te_has_no_spikes_when_a_creature_slows_down():
     # Tetralapillium almost stops at times but keeps changing shape; TE / (speed × mass)
     # reached 39x its median there, TE / change rate stays within 2x (MEASURES §5.10)
     run = Run(RunSpec("lenia", "tetralapillium_metamorpha", (256, 256)),
-              ["transfer_entropy", "speed", "change_rate"], per_object=True)
+              ["transfer_entropy", "pid", "speed", "change_rate"], per_object=True)
     run.step(200)
-    te, speed = [], []
+    te, pid, speed = [], [], []
     for _ in range(40):
         run.step(10)
         values = run.measure()[0]
         te.append(values["transfer_entropy"])
+        pid.append(values["pid"])
         speed.append(values["speed"])
     assert min(speed) < 0.1 * max(speed)  # it does slow down
-    assert max(te) < 2 * np.median(te)
+    assert max(te) < 2 * np.median(te) and max(pid) < 2 * np.median(pid)
+
+
+def test_compression_per_object_counts_bits_above_an_empty_frame():
+    # LZMA's fixed overhead is subtracted, so the creature's bits per unit of mass do not
+    # depend on the grid size (MEASURES §5.10)
+    def lzma(size):
+        run = Run(RunSpec("lenia", "orbium", (size, size)), ["lzma", "effective_complexity"],
+                  per_object=True)
+        run.step(300)
+        return run.measure()[0]
+
+    small, large = lzma(128), lzma(256)
+    for key in small:
+        assert large[key] == pytest.approx(small[key], rel=0.03), key
+    empty = Run(RunSpec("baseline", "empty", (64, 64)), ["lzma", "lzc"], per_object=True)
+    assert empty.measure()[0] == {"lzma": 0, "lzc": 0}

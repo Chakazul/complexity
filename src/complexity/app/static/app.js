@@ -101,7 +101,7 @@ function buildMeasureList() {
       selectedMeasures.has(m.key) ? selectedMeasures.delete(m.key) : selectedMeasures.add(m.key);
       updateSidebar();
     });
-    el.title = m.description + SUBJECT_NOTE(m);
+    el.title = m.description + RATIO_NOTE(m) + SUBJECT_NOTE(m);
     measureItems.set(m.key, el);
     const row = document.createElement("div");
     row.className = "pick-row";
@@ -236,6 +236,11 @@ const TAG_HELP = {
   dynamic: "Dynamic: uses changes over time (a window of frames, or runs of the system).",
   heatmap: "Has a spatial map: choose it under Heatmap (Run section) to see where the value comes from.",
 };
+
+// The per-object version, for measures that have one (MEASURES.md §5.10).
+const RATIO_NOTE = (m) => !m.ratio ? "" : `\n\nPer object (option beside the Measures title): the grid's total ${
+  { mass: "above an empty frame, divided by the mass", change: "per step, divided by the change rate Σ|ΔA| per step" }[m.ratio]
+}, in ${m.ratio_unit}.`;
 
 // What this implementation computes, below the description (MEASURES.md §2.3).
 const SUBJECT_NOTE = (m) => `\n\nComputed here: a property of ${

@@ -74,6 +74,8 @@ class LempelZiv(Measure):
     name = "Lempel-Ziv complexity"
     unit = "normalized"
     group = "Algorithmic complexity"
+    ratio = "mass"
+    ratio_unit = "symbols/mass"
     description = (
         "Lempel-Ziv (1976) phrase count c of the discretized frame read row by row, "
         "normalized as c · log_L(n) / n for n cells and L levels: ~0 for a uniform frame, "
@@ -113,6 +115,8 @@ class EffectiveComplexity(Measure):
     name = "Effective complexity (proxy)"
     unit = "bits/cell"
     group = "Algorithmic complexity"
+    ratio = "mass"
+    ratio_unit = "bits/mass"
     description = (
         "LZMA size of the frame's regular part (Gell-Mann & Lloyd): the frame blurred "
         "(Gaussian, `sigma` cells) and cut into 3 levels, below / within / above the band "

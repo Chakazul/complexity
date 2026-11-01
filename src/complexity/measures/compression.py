@@ -93,6 +93,8 @@ class LZMAFrame(Measure):
     name = "Image compression (LZMA)"
     unit = "bits/cell"
     group = "Compression"
+    ratio = "mass"
+    ratio_unit = "bits/mass"
     description = "LZMA size of the current frame's raw bytes (1-D, no image model)."
 
     def compute(self, frames, ctx=NO_CONTEXT) -> float:
@@ -106,6 +108,8 @@ class PNGSize(Measure):
     name = "Image compression (PNG)"
     unit = "bits/cell"
     group = "Compression"
+    ratio = "mass"
+    ratio_unit = "bits/mass"
     description = "PNG size of the current frame (DEFLATE with 2-D row filters)."
 
     def compute(self, frames, ctx=NO_CONTEXT) -> float:
@@ -119,6 +123,8 @@ class LZMAVideo(Measure):
     name = "Video compression (LZMA)"
     unit = "bits/cell/frame"
     group = "Compression"
+    ratio = "mass"
+    ratio_unit = "bits/mass/frame"
     description = "LZMA size of a sliding window of frames; exact repeats across time compress away."
     window = 16
     params = ("window",)
@@ -136,6 +142,8 @@ class H264Video(Measure):
     name = "Video compression (H.264 lossless)"
     unit = "bits/cell/frame"
     group = "Compression"
+    ratio = "mass"
+    ratio_unit = "bits/mass/frame"
     description = (
         "Lossless x264 (qp 0) size of a sliding window of frames; motion compensation "
         "captures translating structures, including sub-pixel motion."

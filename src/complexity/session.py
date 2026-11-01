@@ -52,6 +52,7 @@ class Run:
                  per_object: bool = False):
         self.spec = spec
         self.per_object = per_object  # report measures' per-object ratios (Measure.ratio)
+        self._empty: dict[tuple[str, int], float] = {}  # measure values on empty frames
         self.system = registry.make_system(spec.system)
         self.size = tuple(spec.size or self.system.default_size)
         self.n_states = self.system.n_states(spec.pattern)
@@ -122,15 +123,34 @@ class Run:
         return values, ms
 
     def _per_object(self, m, value: float) -> float:
-        """`value` (a grid average) as a total over the grid divided by the mean mass, or
-        the change rate, of the measure's window: MEASURES.md §5.10. 0 if the divisor is
-        (near) 0: an empty grid, or nothing changing."""
+        """`value` (a grid average) as a total over the grid above an empty frame, divided
+        by the mean mass, or the change rate, of the measure's window: MEASURES.md §5.10.
+        0 if the divisor is (near) 0: an empty grid, or nothing changing."""
         frames = self.host_frames()[-m.window :]
         if m.ratio == "change":
             divisor = change_rate(frames)
         else:
             divisor = float(np.mean([f.sum(dtype=np.float64) for f in frames]))
-        return value * self.size[0] * self.size[1] / divisor if divisor > 1e-9 else 0.0
+        if divisor <= 1e-9:
+            return 0.0
+        excess = value - self._empty_value(m, len(frames))
+        return excess * self.size[0] * self.size[1] / divisor
+
+    def _empty_value(self, m, n: int) -> float:
+        """The measure on `n` empty frames of this grid (a compressor's fixed overhead; 0
+        for most measures), computed once per measure and window length."""
+        key = (m.key, n)
+        if key not in self._empty:
+            ctx = self.contexts[m.key]
+            zeros = np.zeros(self.size, np.float32)
+            if m.backend == "jax":
+                frames = jnp.zeros((n, *self.size), jnp.float32)
+                frames = discretize(frames, ctx.n_levels) if m.needs_discrete else frames
+            else:
+                frames = [discretize(zeros, ctx.n_levels) if m.needs_discrete else zeros
+                          for _ in range(n)]
+            self._empty[key] = float(m.compute(frames, ctx))
+        return self._empty[key]
 
     def map_tile(self) -> int:
         """Tile size for per-tile maps: about 16 tiles across, at least 8 cells."""
