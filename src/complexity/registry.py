@@ -24,6 +24,7 @@ _BUILTIN_MODULES = (
     "complexity.measures.individuality",
     "complexity.measures.geometry",
     "complexity.measures.dynamics",
+    "complexity.measures.autopoiesis",
     "complexity.measures.rule",
     "complexity.measures.statistics",
 )

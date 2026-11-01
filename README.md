@@ -239,6 +239,12 @@ and transfer entropy and PID per unit of mass changed (bits/Δmass), instead of 
 averages, which mostly follow a creature's size and how much it changes (MEASURES.md §5.10,
 Q17).
 
+**🧫 Autopoiesis**, the prototype goal measure C = S × M × I (M3b, MEASURES.md §8.1d):
+per detected object, structure × self-maintenance under perturbation × individuality; low
+for empty, noise, frozen noise, goo and the Life glider, highest for the Aquarium. In the
+measure list (computed in the background; its heatmap is the field C(x, y));
+`uv run python scripts/goal_ranking.py` ranks the reference scenes.
+
 **Collision experiments** (M3b, MEASURES.md §8.1c): `uv run python scripts/collisions.py`
 throws units at copies of themselves and at noise, and labels the outcomes (survived,
 merged, divided, died, goo, missed) from the objects detected in K ∗ A; records go to

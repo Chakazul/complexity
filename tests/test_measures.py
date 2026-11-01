@@ -17,7 +17,9 @@ from complexity.session import Run, RunSpec
 
 
 def measured(system: str, pattern: str, steps: int = 20, size=(64, 64), **params) -> dict:
-    """Every measure's value after `steps` steps (past every window)."""
+    """Every measure's value after `steps` steps (past every window); the goal measure
+    computed at once, not in the background."""
+    params = {"autopoiesis": {"background": False}, **params}
     run = Run(RunSpec(system, pattern, size), list(registry.measures()), params)
     run.step(steps)
     return run.measure()[0]

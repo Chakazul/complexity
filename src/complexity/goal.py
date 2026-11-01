@@ -10,11 +10,17 @@ threshold for systems without a potential), painted onto the object's cells:
 - M, self-maintenance (interventional): twin runs with the object's living cells
   perturbed at several strengths (Gaussian noise of σ = 0.1-0.4; discrete: each cell reset
   to a random state with probability 0.1-0.3), run `steps` steps; repair and containment
-  are averaged over the strengths that lowered the object's similarity by more than 0.02
-  below the ceiling (the similarity a negligible hit, σ = 0.02, ends at: a continuous
-  object never comes back in exactly the same phase; 1 for discrete systems), and repair
-  is measured up to that ceiling, so M is a tolerance. The ceiling also counts as
-  stability: M = ceiling × repair × containment (goo is chaotic, its ceiling low): a unit that withstands only the weaker hits scores less (Orbium dies at
+  are averaged over the strengths that changed the object (similarity below 0.995), and
+  repair is measured up to the ceiling (the similarity a negligible hit, σ = 0.02, ends
+  at: a continuous object never comes back in exactly the same phase, and a chaotic colony
+  drifts; 1 for discrete systems); a hit that dents the object less than that drift is
+  repaired as far as it gets back to the ceiling, so M is a tolerance. The ceiling also counts as
+  stability; and contact, a patch of full-strength noise of the object's size placed
+  beside it (the "unit into noise" collision), judged after 3 × `steps` (the patch takes
+  time to clear): 0 if the run's mass then exceeds twice the unperturbed run's plus the
+  noise added (goo) or the object is gone, else how far it is still itself.
+  M = ceiling × repair × containment × contact (Triscutium withstands noise inside but
+  turns to goo on any contact; a hit that makes an object grow counts as unrepaired): a unit that withstands only the weaker hits scores less (Orbium dies at
   σ = 0.4, the Aquarium unit does not). Repair: the share of the similarity to
   the unperturbed run that the perturbation took and that comes back (similarity at best
   alignment, so a small shift is no damage). Containment: the share of the difference
@@ -56,6 +62,7 @@ class ObjectScore:
     ceiling: float  # stability: the similarity after a negligible hit (1 if discrete)
     repair: float
     containment: float
+    contact: float  # still itself after a patch of noise beside it (0 if it set off growth)
     M: float
     I: float
     C: float
@@ -102,7 +109,13 @@ def aligned_similarity(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def window(mask: np.ndarray, margin: int) -> np.ndarray:
-    return ndimage.binary_dilation(mask, iterations=margin) if margin else mask
+    """`mask` grown by `margin` cells, wrapping around the torus (a plain dilation would
+    lose an object that crosses the grid's edge)."""
+    if not margin:
+        return mask
+    m = min(margin, max(mask.shape))
+    grown = ndimage.binary_dilation(np.pad(mask, m, mode="wrap"), iterations=margin)
+    return grown[m:-m, m:-m]
 
 
 def perturb(cells: np.ndarray, where: np.ndarray, strength: float, n_states: int | None,
@@ -144,10 +157,13 @@ def object_similarity(frame_a, mask_a, frame_b, mask_b) -> float:
 
 
 def complexity_field(system: System, pattern: str, state, steps: int = 60, seed: int = 0,
-                     max_objects: int = 64, strengths=None
+                     max_objects: int = 64, strengths=None, trials: int = 1
                      ) -> tuple[np.ndarray, list[ObjectScore]]:
     """C(x, y) at this state, and the scores per object (at most `max_objects`, the most
-    massive). See the module docstring."""
+    massive), each hit drawn `trials` times (more is steadier: where the noise lands
+    matters). See the module docstring. The contact test runs 3 × `steps`: on a grid
+    smaller than about twice the distance an object travels in that time, it may meet
+    the noise's remains or itself (Orbium at 128²)."""
     reach = system.reach(pattern)
     n_states = system.n_states(pattern)
     if strengths is None:  # σ of the noise, or the probability of resetting a cell
@@ -167,6 +183,7 @@ def complexity_field(system: System, pattern: str, state, steps: int = 60, seed:
     ids = ids[np.argsort(-masses[ids])][:max_objects]
     rng = np.random.default_rng(seed)
     ref_frame, ref_labels = look(engine.advance(system, state, steps))
+    long_frame, long_labels = look(engine.advance(system, state, 3 * steps))  # for contact
     cells = state_cells(state)
     travel = reach + steps  # how far an object may move during the test (≤ 1 cell/step)
     grid_area = frame.size
@@ -183,12 +200,26 @@ def complexity_field(system: System, pattern: str, state, steps: int = 60, seed:
         living = mask & (frame > (0 if n_states else 0.01))
         ref_obj = nearest_object(ref_frame, ref_labels, centre, travel)
 
-        def twin_after(strength, living=living):
-            perturbed = perturb(cells, living, strength, n_states, rng)
-            if np.array_equal(perturbed, cells) and living.any():
-                ys, xs = np.nonzero(living)
+        # contact, as a collision brings: a patch of noise of the object's size beside it,
+        # on cells outside every object (the "unit into noise" collision, §8.1c)
+        side = max(3, int(np.sqrt(area)))
+
+        def beside(area=area, side=side, centre=centre):
+            angle = rng.uniform(0, 2 * np.pi)
+            out = np.sqrt(area / np.pi) + side / 2 + 2
+            py, px = (centre + out * np.array([np.sin(angle), np.cos(angle)])).round().astype(int)
+            yy = (np.arange(side) + py - side // 2) % frame.shape[0]
+            xx = (np.arange(side) + px - side // 2) % frame.shape[1]
+            patch = np.zeros(frame.shape, bool)
+            patch[np.ix_(yy, xx)] = True
+            return patch & (labels == 0)
+
+        def twin_after(strength, where, living=living, steps=steps):
+            perturbed = perturb(cells, where, strength, n_states, rng)
+            if np.array_equal(perturbed, cells) and where.any():
+                ys, xs = np.nonzero(where)
                 k = rng.integers(len(ys))
-                perturbed[ys[k], xs[k]] = 0
+                perturbed[ys[k], xs[k]] = 0 if (where is living) else (1 if n_states else 0.5)
             twin = system.with_cells(pattern, perturbed)
             frame0 = np.asarray(system.observe(twin), np.float64)
             return frame0, *look(engine.advance(system, twin, steps))
@@ -197,25 +228,50 @@ def complexity_field(system: System, pattern: str, state, steps: int = 60, seed:
         # the similarity a negligible perturbation ends at is the best repair can reach
         ceiling = 1.0
         if not n_states:
-            _, tf, tl = twin_after(0.02)
+            _, tf, tl = twin_after(0.02, living)
             ceiling = object_similarity(tf, nearest_object(tf, tl, centre, travel), ref_frame, ref_obj)
+        ref_area = ref_obj.sum() if ref_obj is not None else area
         repairs, containments = [], []
-        for strength in strengths:
-            twin_frame0, twin_frame, twin_labels = twin_after(strength)
-            rho0 = object_similarity(twin_frame0, mask, frame, mask)
-            if rho0 > ceiling - 0.02:  # too slight to read a repair from
-                continue
-            # repair: the object against itself, found again in both runs, up to the ceiling
+        for strength in [x for x in strengths for _ in range(trials)]:  # hits inside
+            twin_frame0, twin_frame, twin_labels = twin_after(strength, living)
             twin_obj = nearest_object(twin_frame, twin_labels, centre, travel)
             rho = object_similarity(twin_frame, twin_obj, ref_frame, ref_obj)
-            repairs.append(float(np.clip((rho - rho0) / (ceiling - rho0), 0, 1)))
+            if twin_obj is not None and twin_obj.sum() > 1.5 * ref_area:
+                repairs.append(0.0)  # it grew: the hit set off growth
+            else:
+                rho0 = object_similarity(twin_frame0, mask, frame, mask)
+                if rho0 > 0.995:  # the hit did nothing to read a repair from
+                    continue
+                # repair: the object against itself, found again in both runs, up to
+                # the ceiling; a hit that dents it less than chaos does (rho0 above the
+                # ceiling, in a chaotic colony) is repaired as far as it gets back
+                if rho0 < ceiling - 0.02:
+                    repairs.append(float(np.clip((rho - rho0) / (ceiling - rho0), 0, 1)))
+                else:
+                    repairs.append(float(np.clip(rho / max(ceiling, 1e-6), 0, 1)))
             # containment: the difference between the runs near the object's path
             near = window(mask, travel)
             diff = np.abs(twin_frame - ref_frame)
             containments.append(float(diff[near].sum() / diff.sum()) if diff.sum() > 0 else 1.0)
+        # contact: full-strength noise beside it, judged after 3 × `steps` (the patch takes
+        # time to clear); is it still itself, and did nothing grow?
+        contacts = []
+        long_obj = nearest_object(long_frame, long_labels, centre, 3 * travel)
+        for _ in range(trials):
+            outside = beside()
+            if not outside.any():
+                continue
+            frame0, twin_frame, twin_labels = twin_after(1.0, outside, steps=3 * steps)
+            added = frame0.sum() - frame.sum()
+            twin_obj = nearest_object(twin_frame, twin_labels, centre, 3 * travel)
+            grew = twin_frame.sum() > 2 * (long_frame.sum() + added)  # goo
+            contacts.append(0.0 if twin_obj is None or grew else float(np.clip(
+                object_similarity(twin_frame, twin_obj, long_frame, long_obj)
+                / max(ceiling, 1e-6), 0, 1)))
+        contact = float(np.mean(contacts)) if contacts else 1.0
         repair = float(np.mean(repairs)) if repairs else 0.0
         containment = float(np.mean(containments)) if containments else 0.0
-        M = max(ceiling, 0.0) * repair * containment  # stability × repair × containment
+        M = max(ceiling, 0.0) * repair * containment * contact
         # individuality: bounded, isolated (its surroundings are background, not other
         # objects: goo's basins tile the space) and not spreading
         ring = window(mask, max(2, reach // 2)) & ~mask
@@ -223,7 +279,8 @@ def complexity_field(system: System, pattern: str, state, steps: int = 60, seed:
         grown = (ref_obj.sum() if ref_obj is not None else 0) / max(area, 1)
         I = isolation / (1 + area / (0.05 * grid_area)) * min(1.0, 1.5 / max(grown, 1e-9))
         score = ObjectScore(int(i), area, float(masses[i]), float(centre[0]), float(centre[1]),
-                            S, float(ceiling), repair, containment, M, float(I), float(S * M * I))
+                            S, float(ceiling), repair, containment, contact, M, float(I),
+                            float(S * M * I))
         scores.append(score)
         field[mask] = score.C
     return field, scores

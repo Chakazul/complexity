@@ -3,7 +3,7 @@ MEASURES.md §8.1, lowest expected first: empty, noise, frozen noise, goo, the L
 gun, Orbium, the Aquarium unit and an Aquarium colony. Prints per scene the objects, the
 largest and mean C, and the median S, M and I.
 
-Run: uv run python scripts/goal_ranking.py   (~2 min on GPU)
+Run: uv run python scripts/goal_ranking.py   (~6 min on GPU)
      uv run --with matplotlib python scripts/goal_ranking.py --figure   (also writes
      assets/figures/goal_field.png: each scene beside its C field)
 """
@@ -35,6 +35,8 @@ def goo():
     return system, "triscutium_valvatus_laterale", state
 
 
+TRIALS = 3  # draws per hit: where the noise lands matters
+
 SCENES = [
     ("empty", lambda: scene("baseline", "empty", 128, 1)),
     ("iid noise", lambda: scene("baseline", "iid_noise_continuous", 128, 1)),
@@ -42,7 +44,7 @@ SCENES = [
     ("goo (Triscutium labyrinth)", goo),
     ("Life glider", lambda: scene("life", "glider", 64, 20)),
     ("Life Gosper gun", lambda: scene("life", "gosper_glider_gun", 128, 200)),
-    ("Orbium", lambda: scene("lenia", "orbium", 128, 200)),
+    ("Orbium", lambda: scene("lenia", "orbium", 256, 200)),
     ("Aquarium unit", lambda: scene("lenia_multi", "aquarium_unit", 256, 300)),
     ("Aquarium colony", lambda: scene("lenia_multi", "aquarium_scene", 256, 600)),
 ]
@@ -53,7 +55,7 @@ if __name__ == "__main__":
     for name, make in SCENES:
         t = time.perf_counter()
         system, pattern, state = make()
-        _, scores = complexity_field(system, pattern, state)
+        _, scores = complexity_field(system, pattern, state, trials=TRIALS)
         if not scores:
             print(f"{name:28s} {0:7d} {0:7.3f} {0:7.3f}")
             continue
@@ -75,7 +77,7 @@ def figure(path) -> None:
     fields = []
     for name, make in shown:
         system, pattern, state = make()
-        field, _ = complexity_field(system, pattern, state)
+        field, _ = complexity_field(system, pattern, state, trials=TRIALS)
         frame = np.asarray(system.render(state) if system.render(state) is not None
                            else system.observe(state))
         fields.append((name, frame, field))

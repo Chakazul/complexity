@@ -29,7 +29,31 @@ def test_noise_and_empty_score_zero():
 
 
 def test_a_self_maintaining_unit_scores_above_a_glider():
-    _, orbium = complexity_field(*scene("lenia", "orbium", 128, 200))
+    # room for the contact test, and 3 draws per hit: one patch of noise can land where
+    # it kills Orbium
+    _, orbium = complexity_field(*scene("lenia", "orbium", 256, 200), trials=3)
     _, glider = complexity_field(*scene("life", "glider", 64, 20))
     assert orbium[0].C > 0 and orbium[0].M > 0  # repairs the weaker hits
     assert glider[0].C == 0  # a perturbed glider does not come back
+
+
+def test_autopoiesis_measure_runs_in_the_background():
+    import time
+
+    from complexity.session import Run, RunSpec
+
+    now = Run(RunSpec("lenia", "orbium", (256, 256)), ["autopoiesis"],
+              {"autopoiesis": {"background": False}})
+    now.step(200)
+    now.measure()
+    assert now.measures[0]._scores and now.map("autopoiesis").shape == (256, 256)
+    later = Run(RunSpec("lenia", "orbium", (256, 256)), ["autopoiesis"])
+    later.step(200)
+    later.measure()
+    assert not later.measures[0]._scores  # the first field is still being computed
+    for _ in range(200):
+        time.sleep(0.1)
+        later.measure()
+        if later.measures[0]._scores:
+            break
+    assert later.measures[0]._scores  # it arrived, without the run waiting for it

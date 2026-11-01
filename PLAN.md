@@ -437,10 +437,11 @@ then polishing and sharing.
       perturbed); the Aquarium's intruders mostly join its replicating colony
 - [ ] Collisions still to run: Aquarium static modes; check that survivors separate and
       keep moving
-- [x] First prototype of C = S × M × I (2026-11-01, MEASURES.md §8.1d, `complexity.goal`,
-      `scripts/goal_ranking.py`): ranks empty, noise, frozen noise, goo, glider < gun <
-      Orbium < Aquarium unit ≈ colony; open: colony members' M, a stronger S, calibration,
-      speed (not in the UI yet)
+- [x] First prototype of C = S × M × I, named 🧫 Autopoiesis (2026-11-01, MEASURES.md
+      §8.1d, `complexity.goal`, measure `autopoiesis` with a heatmap, computed in the
+      background; `scripts/goal_ranking.py`): empty, noise, frozen noise, goo, glider <
+      gun < Orbium < Aquarium soliton < Aquarium colony, and units ranked as by their
+      collision outcomes; open: a stronger S, calibration, speed
 - [ ] (planned design) The complexity field C = S × M × I (MEASURES.md §8.1b): S spatial
       structure across scales; M self-maintenance by perturbation (internal flow, repair,
       containment, tolerance), reusing the Lyapunov twin runs; I individuality
