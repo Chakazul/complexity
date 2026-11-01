@@ -2,9 +2,12 @@
 headings, offsets and chiralities, and against a patch of noise; outcomes labelled from the
 objects detected in K ∗ A. Writes results/collisions/collisions.jsonl and prints a summary.
 
-Run: uv run python scripts/collisions.py   (~5 min on GPU)
+Run: uv run python scripts/collisions.py   (~6 min on GPU)
+     uv run python scripts/collisions.py --gifs   (also an animated GIF per unit of the
+     90° collision without offset, and Orbium's head-on one, in results/collisions/)
 """
 import json
+import sys
 import time
 from collections import Counter
 from pathlib import Path
@@ -24,8 +27,13 @@ for system, pattern in UNITS:
     runs = [("pair", d, b, m) for d in deltas for b in (0.0, 0.25, 0.5) for m in (False, True)]
     runs += [("noise", 180, 0.0, False), ("alone", 0, 0.0, False)]
     for kind, delta, offset, mirror in runs:
-        result = co.collide(unit, kind, delta, offset, mirror)
+        gif = "--gifs" in sys.argv and kind == "pair" and offset == 0 and not mirror and (
+            delta == 90 or (delta == 180 and pattern == "orbium"))
+        frames = [] if gif else None
+        result = co.collide(unit, kind, delta, offset, mirror, frames=frames)
         records.append(result.record())
+        if gif:
+            co.save_gif(frames, OUT / f"{pattern}_{delta}_{result.label}.gif")
     own = [r for r in records if r["pattern"] == pattern]
     pairs = Counter(r["label"] for r in own if r["kind"] == "pair")
     noise, alone = (next(r["label"] for r in own if r["kind"] == k) for k in ("noise", "alone"))

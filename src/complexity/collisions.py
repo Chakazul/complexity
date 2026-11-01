@@ -127,12 +127,13 @@ class Collision:
 
 def collide(unit: Unit, kind: str = "pair", delta: float = 180, offset: float = 0.0,
             mirror: bool = False, grid: int | None = None, after: int = 400,
-            every: int = 2) -> Collision:
+            every: int = 2, frames: list | None = None) -> Collision:
     """Throw two copies of `unit` at each other (`kind` "pair": headings `delta` degrees
     apart, impact offset `offset` unit sizes, the second copy mirrored if `mirror`), or the
     unit at a patch of noise of its own size ("noise"), meeting at the grid's centre, or
     the unit alone ("alone", a control); run until they meet and `after` steps more,
-    detecting every `every` steps; label it. The grid (square) is large enough that the
+    detecting every `every` steps; label it (and append the observed frames to `frames`,
+    if given, every `every` steps). The grid (square) is large enough that the
     courses do not wrap around the torus: at least 256 and 2 × start distance + 3 sizes."""
     system = registry.make_system(unit.system)
     discrete = system.n_states(unit.pattern) is not None
@@ -187,6 +188,9 @@ def collide(unit: Unit, kind: str = "pair", delta: float = 180, offset: float = 
     for _ in range(0, steps, every):
         state = engine.advance(system, state, every)
         frame, labels = objects(system, state, potential_fn, reach)
+        if frames is not None:
+            frames.append(np.asarray(system.render(state)) if system.render(state) is not None
+                          else frame)
         for i, tracker in enumerate(trackers):
             others = [t.target for j, t in enumerate(trackers) if j != i and t.target is not None]
             tracker.step(frame, labels, np.any(others, axis=0) if others else None)
@@ -249,3 +253,17 @@ def label(c: Collision, initial_mass: float | None = None) -> str:
     if unit_sized < thrown and large:
         return "merged"
     return "changed"
+
+
+def save_gif(frames, path, every: int = 2, scale: int = 2) -> None:
+    """The frames as an animated GIF (every `every`-th, upscaled by `scale`), grey for
+    single-channel frames, colour for RGB renders."""
+    from PIL import Image
+
+    images = []
+    for f in frames[::every]:
+        a = np.clip(np.asarray(f, np.float32), 0, 1)
+        a = (a * 255).astype(np.uint8)
+        img = Image.fromarray(a, "RGB" if a.ndim == 3 else "L")
+        images.append(img.resize((img.width * scale, img.height * scale), Image.NEAREST))
+    images[0].save(path, save_all=True, append_images=images[1:], duration=40, loop=0)

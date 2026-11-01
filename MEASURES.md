@@ -933,8 +933,15 @@ of noise; the glider dies or leaves debris. Caveats: an outcome depends on the p
 which the units meet (Orbium at 90° survives or loses a unit with a few more settling
 steps), so labels are statistics over geometries, not per-run truths; in Life, still
 debris is unit-like by mass and counts as divided; "survived" does not yet check that the
-units separate and keep moving. Still to do: a unit into an existing colony, goo (none
-found yet), static Aquarium modes.
+units separate and keep moving. Still to do: a unit into an existing colony, static
+Aquarium modes.
+
+**A goo, found by collision.** Triscutium valvatus laterale's "goo" is a disc of
+labyrinthine stripes that grows from the point of contact until it fills the grid:
+self-organizing, of one level, with no individuals — the goo reference case of §8.1 that
+the search near the Aquarium's parameters was meant to find. Lone Triscutium is stable;
+any touch, even of noise, seeds it. `scripts/collisions.py --gifs` saves one GIF per unit
+(the 90° collision without offset, and Orbium head-on) in `results/collisions/`.
 
 ### 8.2 Other proposals
 

@@ -425,7 +425,9 @@ then polishing and sharing.
       level); single creatures (Aquarium unit); **Aquarium** networks: self-replicating
       (`aquarium`) and dividing on collision (`aquarium_scene`) (highest) — the Aquarium
       patterns are in (§4.2b), goo is not found yet
-- [ ] Find goo-like structures at parameters near the Aquarium's (experiments by Bert)
+- [ ] Find goo-like structures at parameters near the Aquarium's (experiments by Bert).
+      A first goo, found by the collision experiments: Triscutium valvatus laterale grows
+      into an expanding labyrinth on any contact (MEASURES.md §8.1c)
 - [x] Collision harness and first experiments (2026-11-01, MEASURES.md §8.1c): units
       settled, cropped and thrown at a copy (Δ 180/135/90°, offsets, chirality) or at noise,
       with a control; outcomes labelled from K ∗ A objects (survived, merged, divided, died,
