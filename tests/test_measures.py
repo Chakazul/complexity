@@ -546,3 +546,23 @@ def test_neighbour_sum_and_objects_maps():
     noise = Run(RunSpec("baseline", "iid_noise_binary", (32, 32)), [])
     assert noise.map("potential") is None  # no potential: no map, but objects still
     assert noise.map("objects").shape == (32, 32)
+
+
+def test_one_target_per_run_across_ticks():
+    run = Run(RunSpec("lenia_multi", "aquarium_scene", (256, 256)), ["iti_features"],
+              {"iti_features": {"window": 32}})
+    run.step(300)
+    centres = []
+    for _ in range(20):
+        run.step(1)
+        run.measure()
+        target = run.map("objects") == 1
+        assert target.any()  # never lost while creatures exist
+        ys, xs = np.nonzero(target)
+        centres.append((np.median(ys), np.median(xs)))
+    assert run.measures[0]._tracker.switches == 0  # followed by overlap all along
+    # the same unit: near where it started (it may merge with a touching neighbour for a
+    # while, which moves the patch's centre by up to a unit's width)
+    shift = np.abs(np.array(centres) - centres[0])
+    shift = np.minimum(shift, 256 - shift)
+    assert np.hypot(shift[:, 0], shift[:, 1]).max() < 20

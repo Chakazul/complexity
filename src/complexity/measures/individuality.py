@@ -10,8 +10,8 @@ its environment E:
 `iti_features` follows the paper: S and E are coarse-grained features (mass) of a tracked
 creature and of its environment, as time series over the window. Creatures are found in
 the potential K ∗ A, how the model sees the world (`System.potential`): the catchment
-basins of its peaks, neighbouring basins merged across shallow saddles; a target is followed
-through the window by overlap (MEASURES.md §5.4). `iti_local` is a local
+basins of its peaks, neighbouring basins merged across shallow saddles; one target per run
+is followed frame by frame across ticks (`Tracker`; MEASURES.md §5.4). `iti_local` is a local
 adaptation: per cell of a creature, S = the cell and its neighbours in the same creature,
 E = its other neighbours (background or other creatures); it estimates well and gives a map.
 Creatures are connected components above a threshold, on the torus.
@@ -23,6 +23,7 @@ import numpy as np
 from scipy import ndimage
 
 from complexity.measures.base import NO_CONTEXT, Measure
+from complexity.measures.statistics import circular_center
 from complexity.registry import register_measure
 
 _EIGHT = np.ones((3, 3), bool)
@@ -160,7 +161,8 @@ def detect(frame: np.ndarray, potential: np.ndarray | None, threshold: float, sa
     return np.where(sizes[labels] >= min_area, labels, 0) * (labels > 0)
 
 
-MIN_OVERLAP = 0.5  # of the target's cells, for its successor; else the target is lost
+MIN_OVERLAP = 0.5  # of the target's cells, for its successor; else the nearest creature takes over
+MAX_TAKEOVERS = 0.25  # of a window's frames; more, and the target is no individual (value 0)
 
 
 def disk_mask(radius: float) -> np.ndarray:
@@ -169,52 +171,77 @@ def disk_mask(radius: float) -> np.ndarray:
     return x * x + y * y <= radius * radius
 
 
-def follow_target(frames, label_maps, target_kind: str = "typical"):
-    """The target creature's mask in each frame (None once lost): chosen in the first frame
-    (the one closest to the median mass, "typical", or the most massive, "largest"), then
-    followed by overlap: the creature sharing most cells with the previous target, at
-    least MIN_OVERLAP of them; when it divides, the larger part."""
-    target = None
-    for i, (frame, labels) in enumerate(zip(frames, label_maps)):
-        if i == 0:
-            ids = np.unique(labels[labels > 0])
-            if len(ids):
-                masses = np.bincount(labels.ravel(), weights=frame.ravel())
-                if target_kind == "largest":
-                    pick = ids[np.argmax(masses[ids])]
-                else:
-                    pick = ids[np.argmin(np.abs(masses[ids] - np.median(masses[ids])))]
-                target = labels == pick
-        elif target is not None:
-            overlap = labels[target & (labels > 0)]
+def torus_centroid(mask: np.ndarray) -> np.ndarray:
+    """The (y, x) centre of a mask on the torus: the circular mean along each axis."""
+    h, w = mask.shape
+    return np.array([circular_center(mask.sum(1).astype(float), h),
+                     circular_center(mask.sum(0).astype(float), w)])
+
+
+class Tracker:
+    """One target creature followed frame by frame. The first frame picks it (the creature
+    closest to the median mass, "typical", or the most massive, "largest"); each next frame
+    takes the creature sharing most of its cells, if they are at least MIN_OVERLAP of the
+    target (when it divides, the larger part). When that fails (a division, a merge, a lost
+    detection), the creature whose centre is nearest the target's last centre takes over,
+    and `switches` counts it. The target is None only in frames without creatures."""
+
+    def __init__(self, kind: str = "typical"):
+        self.kind, self.target, self.last_centre, self.switches = kind, None, None, 0
+
+    def step(self, frame: np.ndarray, labels: np.ndarray) -> np.ndarray | None:
+        ids = np.unique(labels[labels > 0])
+        follow = None
+        if self.target is not None and len(ids):
+            overlap = labels[self.target & (labels > 0)]
             best = np.bincount(overlap).argmax() if len(overlap) else 0
-            keep = best and np.count_nonzero(overlap == best) >= MIN_OVERLAP * target.sum()
-            target = labels == best if keep else None
-        yield target
+            if best and np.count_nonzero(overlap == best) >= MIN_OVERLAP * self.target.sum():
+                follow = best
+        if follow is None and len(ids):
+            if self.last_centre is None:  # the first frame: pick by mass
+                masses = np.bincount(labels.ravel(), weights=frame.ravel())[ids]
+                pick = np.argmax(masses) if self.kind == "largest" else \
+                    np.argmin(np.abs(masses - np.median(masses)))
+                follow = ids[pick]
+            else:  # lost: the nearest creature takes over
+                h, w = labels.shape
+                d = np.array([torus_centroid(labels == i) for i in ids]) - self.last_centre
+                d = np.minimum(np.abs(d), [h, w] - np.abs(d))
+                follow = ids[np.argmin(np.hypot(d[:, 0], d[:, 1]))]
+                self.switches += 1
+        self.target = labels == follow if follow is not None else None
+        if self.target is not None:
+            self.last_centre = torus_centroid(self.target)
+        return self.target
+
+
+def follow_target(frames, label_maps, target_kind: str = "typical"):
+    """The target creature's mask in each frame, followed by a `Tracker`."""
+    tracker = Tracker(target_kind)
+    for frame, labels in zip(frames, label_maps):
+        yield tracker.step(frame, labels)
+
+
+def target_features(frame, labels, target, environment: str, near: np.ndarray | None):
+    """(S, E) of one frame: the target's mass, and the mass of the other creatures within
+    the `near` disk of it ("near") or of everything else ("all"); (0, ...) without target."""
+    total = float(frame.sum())
+    if target is None or not target.any():
+        return 0.0, total if environment == "all" else 0.0
+    s = float(frame[target].sum())
+    if environment == "all":
+        return s, total - s
+    r = near.shape[0] // 2
+    zone = ndimage.binary_dilation(np.pad(target, r, mode="wrap"), near)[r:-r, r:-r]
+    return s, float(frame[zone & (labels > 0) & ~target].sum())
 
 
 def track_features(frames, label_maps, environment: str, reach: float,
                    target_kind: str = "typical") -> np.ndarray:
-    """(S, E) per frame: S = the mass of the target creature (`follow_target`), E = the
-    mass of the other creatures within `reach` of it ("near") or of everything else
-    ("all"). A lost target has S = 0."""
+    """(S, E) per frame (`target_features`) for the target followed by a `Tracker`."""
     near = disk_mask(reach) if environment == "near" else None
-    out = []
-    for frame, labels, target in zip(frames, label_maps,
-                                     follow_target(frames, label_maps, target_kind)):
-        total = float(frame.sum())
-        if target is None or not target.any():
-            out.append((0.0, total if environment == "all" else 0.0))
-            continue
-        s = float(frame[target].sum())
-        if environment == "all":
-            e = total - s
-        else:
-            r = near.shape[0] // 2
-            zone = ndimage.binary_dilation(np.pad(target, r, mode="wrap"), near)[r:-r, r:-r]
-            e = float(frame[zone & (labels > 0) & ~target].sum())
-        out.append((s, e))
-    return np.array(out)
+    return np.array([target_features(f, lab, t, environment, near) for f, lab, t in
+                     zip(frames, label_maps, follow_target(frames, label_maps, target_kind))])
 
 
 def object_map(labels: np.ndarray, target: np.ndarray | None) -> np.ndarray:
@@ -251,8 +278,11 @@ class FeatureIndividuality(Measure):
         "series. Creatures are found in the potential K ∗ A, how the model sees the world: "
         "the basins of its peaks above `threshold`, merged across saddles at least `saddle` "
         "× the lower peak, at least a disk of radius R/4 (frames above `threshold` for "
-        "systems without a potential). `target`: typical (the creature closest to the median "
-        "mass at the window's start, default) or largest, followed by overlap. `environment`: near (other creatures within "
+        "systems without a potential). One target per run: picked at the start (`target`: "
+        "typical, the creature closest to the median mass, default, or largest), then "
+        "followed frame by frame by overlap; when that fails (a division or merge), the "
+        "creature nearest its last position takes over; with takeovers in more than a "
+        "quarter of the window's frames (noise) the value is 0. `environment`: near (other creatures within "
         "the rule's reach R of the target, default) or all (everything else). `component`: "
         "organismal A* = I(S'; S) (default), colonial A = I(S'; S | E), driven "
         "nC = I(S'; E | S), less their mean over `shuffles` time-shuffled S' (removes the "
@@ -279,34 +309,42 @@ class FeatureIndividuality(Measure):
 
     def __init__(self, **params):
         super().__init__(**params)
-        self._cache: dict[int, tuple] = {}  # id(frame) -> (frame, labels)
+        # One target per run, followed across ticks: each frame is processed once, in
+        # order, and keeps (frame, labels, target, (S, E), taken over?), keyed by id(frame)
+        self._tracker = Tracker(self.target)
+        self._frames: dict[int, tuple] = {}
 
-    def _labels(self, frame, potential, reach) -> np.ndarray:
-        hit = self._cache.get(id(frame))
-        if hit is None or hit[0] is not frame:
-            min_area = np.pi * (reach / 4) ** 2
-            hit = (frame, detect(frame, potential, self.threshold, self.saddle, min_area))
-            self._cache[id(frame)] = hit
-        return hit[1]
+    def _update(self, frames, potentials, reach) -> list[tuple]:
+        """The window's frames through the tracker (new ones only), oldest first."""
+        min_area = np.pi * (reach / 4) ** 2
+        near = disk_mask(reach) if self.environment == "near" else None
+        pots = potentials if potentials is not None else [None] * len(frames)
+        out = []
+        for frame, potential in zip(frames, pots):
+            hit = self._frames.get(id(frame))
+            if hit is None or hit[0] is not frame:
+                labels = detect(frame, potential, self.threshold, self.saddle, min_area)
+                switches = self._tracker.switches
+                target = self._tracker.step(frame, labels)
+                feats = target_features(frame, labels, target, self.environment, near)
+                hit = (frame, labels, target, feats, self._tracker.switches > switches)
+                self._frames[id(frame)] = hit
+            out.append(hit)
+        live = {id(f) for f in frames}
+        self._frames = {k: v for k, v in self._frames.items() if k in live}
+        return out
 
     def objects(self, frames, ctx=NO_CONTEXT, potentials=None) -> np.ndarray:
-        """The latest frame's creatures for display (`object_map`), the target tracked over
-        the window as `compute` tracks it."""
-        reach = ctx.reach or 1
-        pots = potentials if potentials is not None else [None] * len(frames)
-        labels = [self._labels(f, u, reach) for f, u in zip(frames, pots)]
-        *_, target = follow_target(frames, labels, self.target)
-        return object_map(labels[-1], target)
+        """The latest frame's creatures for display (`object_map`), with the run's target."""
+        _, labels, target, *_ = self._update(frames, potentials, ctx.reach or 1)[-1]
+        return object_map(labels, target)
 
     def compute(self, frames, ctx=NO_CONTEXT, potentials=None) -> float:
-        reach = ctx.reach or 1
-        pots = potentials if potentials is not None else [None] * len(frames)
-        labels = [self._labels(f, u, reach) for f, u in zip(frames, pots)]
-        live = {id(f) for f in frames}
-        self._cache = {k: v for k, v in self._cache.items() if k in live}
-        if len(frames) < 3:
-            return 0.0
-        feats = track_features(frames, labels, self.environment, reach, self.target)
+        track = self._update(frames, potentials, ctx.reach or 1)
+        takeovers = sum(took for *_, took in track)
+        if len(track) < 3 or takeovers > MAX_TAKEOVERS * len(track):
+            return 0.0  # too short, or not one creature (noise: a takeover every frame)
+        feats = np.array([feats for *_, feats, _ in track])
         s, e = quantize(feats[:, 0], self.levels_q), quantize(feats[:, 1], self.levels_q)
         q, rng = self.levels_q, np.random.default_rng(0)
 

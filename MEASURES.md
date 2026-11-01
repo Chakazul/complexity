@@ -263,7 +263,7 @@ useful for the goal in §8: dark on noise and empty, following what structures d
 - **Not measures**, always listed first: the neighbour sum K ∗ A (`System.potential`, the
   orange ramp) and the detected objects (§5.4: the target in one colour, the other
   creatures in a muted palette; the target is the one `iti_features` tracks when it runs,
-  else the typical creature of the current frame). Systems without a potential show no
+  else the run's own tracker, picked and followed the same way). Systems without a potential show no
   neighbour sum, and their objects come from the frame.
 - Left out: effective complexity (a 2-cell blur leaves nothing on 8×8), fractal dimension
   (2 box sizes), logical depth (timing noise), H.264 and novelty (cost).
@@ -472,15 +472,25 @@ over 20 time-shuffled S′ is subtracted instead.
   neighbouring basins merged when their saddle is at least `saddle` (0.8) × the lower peak,
   and basins smaller than a disk of radius R/4 dropped (Q18). Systems without a potential
   fall back to the frame above the threshold.
-- *Target*: `typical` (the creature closest to the median mass at the window's start,
-  default) or `largest`, then followed by overlap: its successor is the creature sharing
-  most of its cells, at least half of them; when it divides, the larger part; otherwise
-  it is lost (S = 0). Without the half-overlap rule, tracking on iid noise kept finding a
-  "creature" and scored 0.21 bits; with it, 0.
+- *Target, one per run* (`Tracker`): picked in the first frame the measure sees
+  (`typical`, the creature closest to the median mass, default, or `largest`), then
+  followed frame by frame across ticks: its successor is the creature sharing most of its
+  cells, at least half of them (when it divides, the larger part); when none does (a
+  division, a merge, a lost detection), the creature nearest its last centre takes over.
+  Each frame is processed once and keeps its labels, target and (S, E), so a tick costs
+  one frame (29 ms on the Aquarium scene). Until 2026-11-01 the target was picked afresh
+  at the start of every tick's window: over 60 one-step ticks it changed creature 26
+  times and was lost 6 times (the objects heatmap showed it jumping), and each tick's
+  value described a different unit; now 1 takeover and no loss. With takeovers in more
+  than a quarter of the window's frames the target is no individual and the value is 0:
+  on iid noise every frame's creatures are unrelated and a takeover happens almost every
+  frame (without the rule, 0.17 bits on 20 frames).
 - *Environment*: `near` (the other creatures within the rule's reach R of the target,
   default: what can affect it in Lenia) or `all` (everything else, as in the paper).
 
-Values (256², step; organismal A* / colonial A / driven nC, near): Aquarium scene at 600
+Values (256², step; organismal A* / colonial A / driven nC, near; on the GPU runs are not
+bit-reproducible, chaotic Lenia drifts apart, and the scene at 600 has also given 0.92):
+Aquarium scene at 600
 0.69 / 0.39 / 0.09, at 2000 1.31 / 0.63 / 0; self-replicating Aquarium at 1000
 0.87 / 0.46 / 0; a lone Aquarium unit 0.12 / 0.12 / 0; Orbium (128²) 0.32 / 0.32 / 0.
 With `all`, colonial A is higher (scene 0.55 at 600, 0.98 at 2000) and nC 0. In the

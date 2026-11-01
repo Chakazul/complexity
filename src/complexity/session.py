@@ -84,6 +84,7 @@ class Run:
                            if has_potential and any(m.needs_potential for m in self.measures) else None)
         self.potentials = deque(maxlen=self.window)
         self._potential_once = None  # for the "potential" and "objects" maps without a measure
+        self._objects = None  # the "objects" map's tracker when iti_features does not run
         self._host_potentials = deque(maxlen=self.window)
         self._unsynced_potentials = 0
         if self._potential:
@@ -236,10 +237,12 @@ class Run:
             pots = self.host_potentials()
             return iti.objects(frames, self.contexts[iti.key],
                                pots[-len(frames):] if pots is not None else None)
-        frame = self.host_frames()[-1]
+        if self._objects is None:  # a tracker of its own, kept across ticks like the measure's
+            self._objects = FeatureIndividuality()
         ctx = Context(self.n_states, None, self.spec.system, self.spec.pattern,
                       self.system.reach(self.spec.pattern))
-        return FeatureIndividuality().objects([frame], ctx, None if potential is None else [potential])
+        return self._objects.objects(self.host_frames()[-1:], ctx,
+                                     None if potential is None else [potential])
 
     def warming_up(self) -> list[str]:
         """Measures whose window is not full yet: their values cover fewer frames."""
