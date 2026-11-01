@@ -984,6 +984,61 @@ the search near the Aquarium's parameters was meant to find. Lone Triscutium is 
 any touch, even of noise, seeds it. `scripts/collisions.py --gifs` saves one GIF per unit
 (the 90° collision without offset, and Orbium head-on) in `results/collisions/`.
 
+### 8.1d A first prototype of C = S × M × I (2026-11-01)
+
+`complexity.goal.complexity_field(system, pattern, state)`, ranked over the reference
+scenes by `scripts/goal_ranking.py` (`--figure` writes
+[goal_field.png](assets/figures/goal_field.png): each scene beside its field). Per object
+(the K ∗ A basins of §5.4), its value painted onto its cells:
+
+- **S, structure**: 1 − bits(object) / bits(its cells shuffled within its outline), LZMA,
+  mean over scales 1 and 2: the arrangement that matched noise (the same values) lacks.
+- **M, self-maintenance**: twin runs with the object's living cells perturbed — Gaussian
+  noise σ = 0.1, 0.2, 0.3, 0.4 (discrete: cells reset at random with probability 0.1-0.3)
+  — run 60 steps. *Repair*: the share of the object's similarity (aligned
+  cross-correlation, so a shift is no damage) that the hit took and that comes back,
+  comparing the object with itself found again in both runs (not its neighbours);
+  measured up to a *ceiling*, the similarity a negligible hit (σ = 0.02) ends at, since a
+  continuous object never returns in exactly the same phase (Orbium ~0.96). *Containment*:
+  the share of the runs' difference near the object's path. Averaged over the strengths
+  that lowered the similarity by more than 0.02 (a tolerance curve); M = ceiling × repair
+  × containment.
+- **I, individuality**: the share of a ring around the object that lies outside every
+  object (goo's basins tile the space), over 1 + area / (5 % of the grid), times
+  1.5 / growth if it grows more than 1.5× in 60 steps.
+
+| Scene | C max | S | M | I | (medians over objects) |
+|---|---|---|---|---|---|
+| empty, iid noise, frozen noise | 0 | 0 | 0 | ≤ 0.05 | |
+| goo (Triscutium labyrinth) | 0 | 0.30 | 0.86 | 0 | 33 basins |
+| Life glider | 0 | 0.03 | 0 | 0.90 | |
+| Life Gosper gun | 0.009 | 0 | 0.33 | 0.84 | 13 objects |
+| Orbium | 0.021 | 0.15 | 0.23 | 0.63 | |
+| Aquarium unit | 0.09-0.10 | 0.20 | 0.66 | 0.75 | |
+| Aquarium colony (step 600) | 0.08-0.11 | 0.18 | 0 | 0.5-0.8 | 25-42 objects |
+
+The expected order holds: each component rules out a reference case — S the noise, M the
+glider (it does not come back) and the frozen noise (nothing repairs), I the goo (it
+maintains itself locally, M 0.86, but has no individuals). Orbium repairs the weaker hits
+and dies at σ = 0.4 (M 0.23); the Aquarium unit withstands all (M 0.66), as the
+collisions showed (§8.1c).
+
+How it got there, each step a lesson: erasing a disk (radius 2 at Orbium's centre, 15 %
+of its mass) kills Orbium, so holes probe only the strong end; with one strength, either
+the hit was too slight to read (Orbium's similarity barely drops at σ = 0.02) or it
+killed; repair against 1 failed for every continuous creature (they never come back to
+exactly the same phase), hence the ceiling; comparing a window around the object let
+chaotic neighbours in, hence the object against itself; isolation first counted the
+gaps between goo's stripes as background, hence "outside every object".
+
+Open: (1) colony members mostly get M = 0 — a perturbed member of a replicating colony
+divides or merges, so "the same object" is not found again; the colony's best member
+equals a lone unit, not more; (2) S is weak (0.15-0.3) and only spatial; (3) no
+calibration between empty and matched noise yet, as §8.1b proposes; (4) cost: 5 twin runs
+of 60 steps per object (3 s for a unit, ~30 s for a 40-unit colony), too slow for every
+tick — not yet in the UI; (5) on the GPU runs are not bit-reproducible, so values move by
+~10 % between runs.
+
 ### 8.2 Other proposals
 
 - **Local information dynamics** (Lizier): local active information storage, transfer and

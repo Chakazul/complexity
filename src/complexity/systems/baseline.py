@@ -13,6 +13,7 @@ from functools import partial
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from complexity.registry import register_system
 from complexity.systems.base import System
@@ -75,6 +76,15 @@ class Baseline(System):
 
     def observe(self, state: BaselineState) -> jax.Array:
         return state.A
+
+    def cells(self, pattern: str) -> np.ndarray:
+        return np.zeros((1, 1), np.float32)
+
+    def with_cells(self, pattern: str, A) -> BaselineState:
+        """The pattern's noise kind with cells A, and a noise stream of its own: a copy
+        with other cells is a different run (iid noise diverges at once)."""
+        st = self.init(pattern, np.shape(A), jax.random.key(1))
+        return BaselineState(jnp.asarray(A, jnp.float32), st.rng, st.levels, st.fresh)
 
     def perturb(self, state: BaselineState, rng: jax.Array) -> BaselineState:
         """One cell to the next level (discrete) or small noise (continuous), and a different
