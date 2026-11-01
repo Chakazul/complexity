@@ -9,7 +9,7 @@ from complexity.measures.base import Context, discretize
 from complexity.measures.causal import causal_states
 from complexity.measures.decomposition import fid, pid
 from complexity.measures.geometry import box_counts
-from complexity.measures.individuality import decompose, torus_label
+from complexity.measures.individuality import basins, decompose, detect, torus_label, track_features
 from complexity.measures.information import block_entropy, transfer_entropy
 from complexity.measures.rule import growth_class, transient
 from complexity.measures.statistics import centers
@@ -36,8 +36,10 @@ def test_structure_peaked_measures_rate_a_glider_stream_above_noise_and_empty():
     stream = measured("life", "gosper_glider_gun", steps=100, size=(128, 128))
     noise = measured("baseline", "iid_noise_binary", size=(128, 128))
     empty = measured("baseline", "empty", size=(128, 128))
+    # iti_features tracks one creature: in a glider stream a glider, whose mass is constant,
+    # so A* = I(S'; S) <= H(S) = 0 by definition (MEASURES §5.4); tested on the Aquarium instead
     peaked = [k for k, cls in registry.measures().items()
-              if cls.peaks_at == "structure" and k in stream and k in noise]
+              if cls.peaks_at == "structure" and k in stream and k in noise and k != "iti_features"]
     assert peaked
     for key in peaked:
         assert stream[key] > max(noise[key], empty[key]), key
@@ -366,6 +368,46 @@ def test_torus_label_joins_creatures_across_edges():
     labels = torus_label(mask)
     assert labels[3, 0] == labels[3, 7] and labels[0, 4] == labels[7, 5]
     assert labels[3, 0] != labels[0, 4]
+
+
+def test_basins_of_the_potential_separate_creatures_and_merge_bumps():
+    y, x = np.mgrid[0:64, 0:64]
+
+    def bump(cy, cx, r, height=1.0):  # on the torus
+        dy, dx = (y - cy + 32) % 64 - 32, (x - cx + 32) % 64 - 32
+        return height * np.exp(-(dy**2 + dx**2) / (2 * r**2))
+
+    two = bump(20, 20, 4) + bump(20, 44, 4)  # far apart: a deep valley between them
+    assert len(np.unique(detect(None, two, 0.05, 0.8, 1))) - 1 == 2
+    lumpy = bump(32, 28, 4) + bump(32, 38, 4, 0.9)  # one hill with two tops
+    assert len(np.unique(basins(lumpy, 0.05))) - 1 == 2
+    assert len(np.unique(detect(None, lumpy, 0.05, 0.8, 1))) - 1 == 1
+    edge = bump(32, 0, 4)  # across the left/right edge: one creature
+    assert len(np.unique(detect(None, edge, 0.05, 0.8, 1))) - 1 == 1
+
+
+def test_target_is_tracked_by_overlap():
+    frames, labels = [], []
+    for t in range(6):  # a unit moving right, and a heavier one far away
+        f = np.zeros((32, 32)); lab = np.zeros((32, 32), int)
+        f[5:9, 2 + t:6 + t] = 1; lab[5:9, 2 + t:6 + t] = 1
+        f[20:26, 20:26] = 1; lab[20:26, 20:26] = 2
+        frames.append(f); labels.append(lab)
+    feats = track_features(frames, labels, "all", 3, "typical")
+    assert np.all(feats == feats[0])  # the same unit throughout, with the rest as E
+    largest = track_features(frames, labels, "all", 3, "largest")
+    assert largest[0, 0] == 36 and largest[0, 1] == 16
+    near = track_features(frames, labels, "near", 3, "largest")
+    assert np.all(near[:, 1] == 0)  # the other unit is beyond reach
+
+
+def test_iti_features_on_an_aquarium_scene():
+    run = Run(RunSpec("lenia_multi", "aquarium_scene", (256, 256)), ["iti_features"],
+              {"iti_features": {"window": 64}})
+    run.step(300)
+    pots = run.host_potentials()
+    assert pots is not None and len(pots) == len(run.host_frames())
+    assert run.measure()[0]["iti_features"] > 0.3
 
 
 def test_iti_decomposition_of_self_and_environment_driven_systems():

@@ -203,7 +203,7 @@ connected cells above a threshold, joined across the torus's edges.
 
 | Key | Measure | Unit |
 |---|---|---|
-| `iti_features` | as in the paper: S = mass of the largest creature, E = mass of the rest, over a 128-frame window, less a time-shuffled surrogate; meant for scenes of several creatures (the Aquarium) | bits |
+| `iti_features` | as in the paper: S = mass of a tracked target creature, E = mass of the creatures within its reach (or of everything else), over a 128-frame window, less a time-shuffled surrogate; creatures are found in the potential K ∗ A (basins of its peaks); meant for scenes of several creatures (the Aquarium) | bits |
 | `iti_local` | local adaptation: per creature cell, S = the cell and its neighbours in the creature, E = other creatures within radius 3; has a heatmap | bits/cell |
 
 **Rule-level measures** describe the rule (the system with a pattern's parameters), not

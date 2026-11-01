@@ -21,6 +21,7 @@ import numpy as np
 from complexity import engine, registry
 from complexity.measures.base import Context, RuleMeasure, discretize, to_uint8
 from complexity.measures.statistics import change_rate
+from complexity.systems.base import System
 
 # Rule-measure values by (measure key, its parameters, system, pattern): they depend on the
 # rule only, and some take seconds, so restarts and other runs of the same rule reuse them.
@@ -65,12 +66,22 @@ class Run:
         self.skipped = [m.key for m in all_measures if not m.accepts(self.system)]
         self.contexts = {
             m.key: Context(self.n_states, m.levels(self.n_states) if m.needs_discrete else None,
-                           spec.system, spec.pattern)
+                           spec.system, spec.pattern, self.system.reach(spec.pattern))
             for m in self.measures
         }
         self.window = max([1] + [m.window for m in self.measures])
         # device frames, oldest first
         self.frames = deque([self.system.observe(self.state)], maxlen=self.window)
+        # the potential K ∗ A of the same frames, when a measure needs it and the system has it
+        has_potential = type(self.system).potential is not System.potential
+        self._potential = (jax.jit(self.system.potential)
+                           if has_potential and any(m.needs_potential for m in self.measures) else None)
+        self.potentials = deque(maxlen=self.window)
+        self._host_potentials = deque(maxlen=self.window)
+        self._unsynced_potentials = 0
+        if self._potential:
+            self.potentials.append(self._potential(self.state))
+            self._unsynced_potentials = 1
         self._host = deque(maxlen=self.window)  # host copies of the same frames
         self._unsynced = 1  # frames at the end of `frames` not yet in `_host`
         self.t = 0
@@ -84,7 +95,11 @@ class Run:
         for _ in range(observed):
             self.state, frame = engine.step_observe(self.system, self.state)
             self.frames.append(frame)
+            if self._potential:
+                self.potentials.append(self._potential(self.state))
         self._unsynced = min(self._unsynced + observed, self.window)
+        if self._potential:
+            self._unsynced_potentials = min(self._unsynced_potentials + observed, self.window)
         self.t += n
 
     def host_frames(self) -> list[np.ndarray]:
@@ -95,6 +110,17 @@ class Run:
             self._host.extend(np.asarray(f) for f in jax.device_get(new))
             self._unsynced = 0
         return list(self._host)
+
+    def host_potentials(self) -> list[np.ndarray] | None:
+        """The window's potentials on the host, aligned with `host_frames`; None if not
+        recorded."""
+        if not self._potential:
+            return None
+        if self._unsynced_potentials:
+            new = list(self.potentials)[-self._unsynced_potentials :]
+            self._host_potentials.extend(np.asarray(u, np.float64) for u in jax.device_get(new))
+            self._unsynced_potentials = 0
+        return list(self._host_potentials)
 
     def _frames_for(self, m):
         ctx = self.contexts[m.key]
@@ -115,6 +141,11 @@ class Run:
             elif m.needs_state:
                 rng = jax.random.fold_in(self.rng, self.t + 1)  # differs from init's key
                 values[m.key] = float(m.compute_state(self.system, self.state, rng, ctx))
+            elif m.needs_potential:
+                pots = self.host_potentials()
+                frames = self._frames_for(m)
+                values[m.key] = float(m.compute(
+                    frames, ctx, potentials=pots[-len(frames):] if pots is not None else None))
             else:
                 values[m.key] = float(m.compute(self._frames_for(m), ctx))
             if self.normalized and m.ratio:

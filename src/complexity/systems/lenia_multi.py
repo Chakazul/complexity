@@ -128,6 +128,11 @@ class MultiLenia(System):
         A = model.multi_step(st.A, st.fK, st.m, st.s, st.h, st.Mk, st.Mc, st.T)
         return MultiLeniaState(A, st.fK, st.m, st.s, st.h, st.Mk, st.Mc, st.T)
 
+    def potential(self, st: MultiLeniaState) -> jax.Array:
+        """The mean of the kernels' potentials K_k ∗ A_c0(k) (each kernel normalized)."""
+        fA = jnp.fft.rfft2(st.A, axes=(0, 1))
+        return jnp.fft.irfft2(fA @ st.Mk * st.fK, s=st.A.shape[:2], axes=(0, 1)).mean(-1)
+
     def observe(self, st: MultiLeniaState) -> jax.Array:
         return st.A.mean(-1)
 

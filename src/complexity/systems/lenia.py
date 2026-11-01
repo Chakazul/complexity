@@ -165,6 +165,13 @@ class Lenia(System):
             A = model.step(st.A, st.K, st.m, st.s, st.T)
         return LeniaState(A, st.K, st.g, st.P, st.T, st.m, st.s)
 
+    def potential(self, st: LeniaState) -> jax.Array:
+        """K ∗ A with the normalized kernel; Integer Lenia's integer potential over its
+        largest value P · ΣK (ΣK is the kernel FFT's zero-frequency term)."""
+        if st.P:
+            return model.potential_fft(st.A, st.K) / (st.P * jnp.real(st.K[0, 0]))
+        return jnp.fft.irfft2(jnp.fft.rfft2(st.A) * st.K, s=st.A.shape)
+
     def perturb(self, st: LeniaState, rng: jax.Array) -> LeniaState:
         """Integer: one active cell up or down one level. Continuous: Gaussian noise of
         standard deviation 1e-5 on every cell, clipped to [0, 1]."""

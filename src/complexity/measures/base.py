@@ -21,6 +21,7 @@ class Context:
     n_levels: int | None = None  # symbols in discretized frames (set for `needs_discrete`)
     system: str = ""
     pattern: str = ""
+    reach: int | None = None  # how far a cell's next state looks, in cells (System.reach)
 
 
 NO_CONTEXT = Context()  # a continuous system, no discretization
@@ -69,6 +70,7 @@ class Measure(ABC):
     backend: str = "host"  # "host" or "jax"
     needs_discrete: bool = False
     needs_state: bool = False
+    needs_potential: bool = False  # compute also gets `potentials=`: K ∗ A per frame, or None
     map: str | None = None  # "local", "tile" or None
     map_unit: str = ""  # unit of the map if it differs from `unit`
     n_levels: int | None = None  # None: n_states if discrete, else DEFAULT_LEVELS

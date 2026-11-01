@@ -62,6 +62,12 @@ class GameOfLife(System):
         )
         return ((n == 3) | ((grid == 1) & (n == 2))).astype(jnp.uint8)
 
+    def potential(self, grid: jax.Array) -> jax.Array:
+        """The live-neighbour count over 8."""
+        n = sum(jnp.roll(grid, (dy, dx), (0, 1)) for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+                if dy or dx)
+        return n.astype(jnp.float32) / 8
+
     def observe(self, grid: jax.Array) -> jax.Array:
         return grid.astype(jnp.float32)
 

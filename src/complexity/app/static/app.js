@@ -125,6 +125,10 @@ try { measureParams = JSON.parse(localStorage.getItem("measureParams") || "{}");
 const PARAM_HELP = {
   window: "frames in the sliding window", n_levels: "symbols per cell (empty: auto, the system's states or the measure's default)",
   offset: "distance to the neighbour", component: "which part of the decomposition to report",
+  environment: "near: other creatures within the rule's reach of the target; all: everything else",
+  target: "typical: the creature closest to the median mass; largest: the most massive",
+  saddle: "merge neighbouring potential basins whose saddle is at least this fraction of the lower peak",
+  threshold: "the level below which the field is background",
 };
 
 function buildSettings(m, row) {

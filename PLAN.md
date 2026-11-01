@@ -404,8 +404,9 @@ then polishing and sharing.
       (MEASURES.md §5.7)
 - [x] Statistical complexity (SC), PID, FID (MEASURES.md §5.3)
 - [x] Individuality (ITI) in both forms, `iti_features` and `iti_local` (MEASURES.md §5.4)
-- [ ] ITI features: target creature and environment of several creatures, once the
-      Aquarium exists (M3b)
+- [x] ITI features on scenes (2026-11-01): creatures detected in the potential K ∗ A (basins
+      of its peaks, shallow saddles merged), a target tracked by overlap, environment = the
+      creatures within reach R or everything else (MEASURES.md §5.4, Q18)
 - [x] Heatmaps (MEASURES.md §4): a spatial map for every measure with spatial granularity, local
       fields (TE, SC, block entropy, Lyapunov separation) or per tile (compression, LZC,
       PID, FID); shown overlaid on the frame or side by side

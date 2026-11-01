@@ -456,12 +456,33 @@ and its environment E at step n:
 a threshold, joined across the torus's edges (`torus_label`). Both forms were requested
 (Bert, 2026-10-30).
 
-**`iti_features` (as in the paper).** S = mass of the largest creature, E = mass of the rest,
-each cut into 4 quantile levels over a 128-frame window of the run's own frames.
-Miller–Madow left iid noise at 0.10–0.12 bits (64 bins, 127 samples), so the mean over 20
-time-shuffled S′ is subtracted instead (noise: 0.03). For a lone creature E is empty and A*
-measures how predictable its mass is. Its intended test bed is the Aquarium: a target
-creature among other copies, some moving, some still (to be elaborated, M3b).
+**`iti_features` (as in the paper; scenes since 2026-11-01).** S = mass of a tracked target
+creature, E = mass of its environment, each cut into 4 quantile levels over a 128-frame
+window. Miller–Madow left iid noise at 0.10–0.12 bits (64 bins, 127 samples), so the mean
+over 20 time-shuffled S′ is subtracted instead.
+- *Detection, in the potential K ∗ A* (Bert's suggestion: how the model sees the world;
+  `System.potential`, recorded by the run beside the frames for measures with
+  `needs_potential`): the catchment basins of its peaks above `threshold` (0.05; every cell
+  points to its highest 3×3 neighbour, pointers followed to a peak, on the torus), then
+  neighbouring basins merged when their saddle is at least `saddle` (0.8) × the lower peak,
+  and basins smaller than a disk of radius R/4 dropped (Q18). Systems without a potential
+  fall back to the frame above the threshold.
+- *Target*: `typical` (the creature closest to the median mass at the window's start,
+  default) or `largest`, then followed by overlap: its successor is the creature sharing
+  most of its cells, at least half of them; when it divides, the larger part; otherwise
+  it is lost (S = 0). Without the half-overlap rule, tracking on iid noise kept finding a
+  "creature" and scored 0.21 bits; with it, 0.
+- *Environment*: `near` (the other creatures within the rule's reach R of the target,
+  default: what can affect it in Lenia) or `all` (everything else, as in the paper).
+
+Values (256², step; organismal A* / colonial A / driven nC, near): Aquarium scene at 600
+0.69 / 0.39 / 0.09, at 2000 1.31 / 0.63 / 0; self-replicating Aquarium at 1000
+0.87 / 0.46 / 0; a lone Aquarium unit 0.12 / 0.12 / 0; Orbium (128²) 0.32 / 0.32 / 0.
+With `all`, colonial A is higher (scene 0.55 at 600, 0.98 at 2000) and nC 0. In the
+scenes, conditioning on the neighbours (A) removes about half of A*: half of what predicts
+a unit's mass is shared with what its neighbours do. A glider stream scores 0: the typical
+target is a glider, of constant mass, and A* ≤ H(S) = 0. Paraptera cavus furiosus is
+detected as two lobes, so each is the other's environment (nC 0.03).
 
 **`iti_local` (adaptation).** Per creature cell: S = (own state, summed state of its 8
 neighbours in the same creature — the live-neighbour count for Life), E = summed state of
@@ -1058,11 +1079,29 @@ Hence the normalized versions (§5.10), which keep what is specific to each crea
 divisor became the change rate rather than speed × mass, which spiked when a creature slowed
 down while still changing shape.
 
+**Q18. To find creatures, threshold the frame A and flood-fill, or use the neighbour sum
+K ∗ A, which is how the Lenia model "sees" the world?** (Bert, 2026-11-01)
+Use K ∗ A, but not by thresholding it. Thresholding A (the earlier method) splits large
+creatures into fragments (Amoebium 7, Urium 4, Tetralapillium 2 patches). Thresholding
+K ∗ A keeps creatures whole, but K ∗ A is A blurred over the kernel radius R, so colony
+members closer than R share one hill: 12–16 patches where 30–80 Aquarium units are
+visible. What separates them is that each unit is its own *peak*: flooding from the peaks
+(catchment basins) splits the colony, and merging neighbouring basins whose saddle is high
+relative to the lower peak rejoins the bumps of one creature. At a saddle ratio of 0.8:
+Aquarium 24 of 24 units (step 500), 31 of 32, 52 of 68 (step 2000, touching units merged),
+single creatures whole except Paraptera furiosus (2 lobes), Hydrogeminium (2), Urium (4)
+and Amoebium (5); 0.75 keeps those whole but merges more colony members and made the
+tracked target flicker between one and two units. No single ratio does both: in the
+model's own view, touching units do share one potential hill. Gating merges by the
+connectivity of A was tried and made it worse.
+
 ## 10. Open questions
 
 - Multi-scale structural complexity: which base measure, which combination across scales
   (minimum, product, area under the profile), and how to set each scale's noise baseline.
-- `iti_features` on the Aquarium: choosing and tracking the target creature among copies.
+- `iti_features`: richer features than mass (speed, shape) for S and E; detection that
+  keeps touching colony members apart without splitting big creatures (Q18); following a
+  target through divisions and merges rather than taking the larger part.
 - Does H.264 beat video LZMA for smoother (larger-R) creatures or longer windows?
 - Transfer entropy for smooth fields: offset ≈ R/4, and history length k > 1.
 - Validate statistical complexity against `emic` on 1-D series.

@@ -7,8 +7,11 @@ its environment E:
   colonial individuality    A  = I(S_{n+1}; S_n | E_n)
   environmental determination nC = I(S_{n+1}; E_n | S_n)
 
-`iti_features` follows the paper: S and E are coarse-grained features (mass) of a segmented
-creature and of everything else, as time series over the window. `iti_local` is a local
+`iti_features` follows the paper: S and E are coarse-grained features (mass) of a tracked
+creature and of its environment, as time series over the window. Creatures are found in
+the potential K ∗ A, how the model sees the world (`System.potential`): the catchment
+basins of its peaks, neighbouring basins merged across shallow saddles; a target is followed
+through the window by overlap (MEASURES.md §5.4). `iti_local` is a local
 adaptation: per cell of a creature, S = the cell and its neighbours in the same creature,
 E = its other neighbours (background or other creatures); it estimates well and gives a map.
 Creatures are connected components above a threshold, on the torus.
@@ -92,15 +95,120 @@ def local_samples(symbols: np.ndarray, n_levels: int, radius: int):
     return nxt, cur * (8 * (L - 1) + 1) + same_sum, e, labels > 0
 
 
-def creature_features(frame: np.ndarray, threshold: float) -> tuple[float, float]:
-    """(mass of the largest creature, mass of everything else) in a frame."""
-    labels = torus_label(frame > threshold)
-    if labels.max() == 0:
-        return 0.0, float(frame.sum())
-    masses = ndimage.sum(frame, labels, np.arange(labels.max() + 1))
-    masses[0] = 0
-    target = float(masses.max())
-    return target, float(frame.sum()) - target
+def basins(U: np.ndarray, threshold: float) -> np.ndarray:
+    """Catchment basins of U's peaks on the torus: every cell points to its highest 3x3
+    neighbour (itself if none is higher), and following the pointers ends at a peak, whose
+    flat index + 1 labels the cell. Cells at or below `threshold` are 0."""
+    h, w = U.shape
+    idx = np.arange(h * w).reshape(h, w)
+    best_u, best_i = U.copy(), idx.copy()
+    for dy, dx in _NEIGHBOURS:
+        u, i = np.roll(U, (dy, dx), (0, 1)), np.roll(idx, (dy, dx), (0, 1))
+        higher = u > best_u
+        best_u, best_i = np.where(higher, u, best_u), np.where(higher, i, best_i)
+    ptr = best_i.ravel()
+    while not np.array_equal(nxt := ptr[ptr], ptr):  # pointer jumping to the peaks
+        ptr = nxt
+    return np.where(U > threshold, ptr.reshape(h, w) + 1, 0)
+
+
+def merge_shallow(U: np.ndarray, labels: np.ndarray, saddle: float) -> np.ndarray:
+    """Basins merged with a neighbour when the saddle between them (the highest point of
+    their common border) is at least `saddle` × the lower peak: bumps on one creature, not
+    separate creatures. Highest saddles first; a merged basin keeps the higher peak."""
+    ids = np.unique(labels[labels > 0])
+    if len(ids) < 2:
+        return labels
+    peak = dict(zip(ids, U.ravel()[ids - 1]))
+    a, b, height = [], [], []  # every border crossing, in 4 directions
+    for dy, dx in ((0, 1), (1, 0), (1, 1), (1, -1)):
+        other, u_other = np.roll(labels, (-dy, -dx), (0, 1)), np.roll(U, (-dy, -dx), (0, 1))
+        m = (labels > 0) & (other > 0) & (labels != other)
+        a.append(np.minimum(labels[m], other[m]))
+        b.append(np.maximum(labels[m], other[m]))
+        height.append(np.minimum(U[m], u_other[m]))
+    a, b, height = np.concatenate(a), np.concatenate(b), np.concatenate(height)
+    order = np.lexsort((height, b, a))  # per pair, its highest crossing last
+    pairs = dict(zip(zip(a[order], b[order]), height[order]))
+    parent = {i: i for i in ids}
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    for (x, y), v in sorted(pairs.items(), key=lambda kv: -kv[1]):
+        rx, ry = find(x), find(y)
+        if rx != ry and v >= saddle * min(peak[rx], peak[ry]):
+            hi, lo = (rx, ry) if peak[rx] >= peak[ry] else (ry, rx)
+            parent[lo] = hi
+    lut = np.zeros(labels.max() + 1, labels.dtype)
+    lut[ids] = [find(i) for i in ids]
+    return lut[labels]
+
+
+def detect(frame: np.ndarray, potential: np.ndarray | None, threshold: float, saddle: float,
+           min_area: float) -> np.ndarray:
+    """Creatures as labels (0 = background). With the potential: its basins above
+    `threshold`, merged across shallow saddles, those smaller than `min_area` cells dropped.
+    Without: 8-connected cells of the frame above `threshold`."""
+    if potential is None:
+        return torus_label(frame > threshold)
+    labels = merge_shallow(potential, basins(potential, threshold), saddle)
+    sizes = np.bincount(labels.ravel())
+    return np.where(sizes[labels] >= min_area, labels, 0) * (labels > 0)
+
+
+MIN_OVERLAP = 0.5  # of the target's cells, for its successor; else the target is lost
+
+
+def disk_mask(radius: float) -> np.ndarray:
+    r = int(np.ceil(radius))
+    y, x = np.mgrid[-r : r + 1, -r : r + 1]
+    return x * x + y * y <= radius * radius
+
+
+def track_features(frames, label_maps, environment: str, reach: float,
+                   target_kind: str = "typical") -> np.ndarray:
+    """(S, E) per frame: S = the mass of a target creature chosen in the first frame (the
+    one closest to the median mass, "typical", or the most massive, "largest"), followed
+    by overlap (the creature sharing most cells with the previous target, at least
+    MIN_OVERLAP of them; when it divides, the larger part); E = the mass of the other creatures within `reach` of it ("near") or
+    of everything else ("all"). A lost target has S = 0."""
+    near = disk_mask(reach) if environment == "near" else None
+    target = None
+    out = []
+    for frame, labels in zip(frames, label_maps):
+        total = float(frame.sum())
+        if target is None:  # the first frame, or lost
+            ids = labels[labels > 0]
+            if out == [] and len(ids):
+                masses = np.bincount(labels.ravel(), weights=frame.ravel())
+                ids = np.unique(ids)
+                if target_kind == "largest":
+                    pick = ids[np.argmax(masses[ids])]
+                else:
+                    pick = ids[np.argmin(np.abs(masses[ids] - np.median(masses[ids])))]
+                target = labels == pick
+        else:  # the creature sharing most cells, if they are at least `MIN_OVERLAP` of the target
+            overlap = labels[target & (labels > 0)]
+            best = np.bincount(overlap).argmax() if len(overlap) else 0
+            keep = best and np.count_nonzero(overlap == best) >= MIN_OVERLAP * target.sum()
+            target = labels == best if keep else None
+        if target is None or not target.any():
+            out.append((0.0, total if environment == "all" else 0.0))
+            target = None
+            continue
+        s = float(frame[target].sum())
+        if environment == "all":
+            e = total - s
+        else:
+            r = near.shape[0] // 2
+            zone = ndimage.binary_dilation(np.pad(target, r, mode="wrap"), near)[r:-r, r:-r]
+            e = float(frame[zone & (labels > 0) & ~target].sum())
+        out.append((s, e))
+    return np.array(out)
 
 
 def quantize(x: np.ndarray, q: int) -> np.ndarray:
@@ -120,22 +228,32 @@ class FeatureIndividuality(Measure):
     group = "Individuality"
     description = (
         "Krakauer et al.'s information theory of individuality on coarse-grained features, "
-        "as in the paper: S = the mass of the largest creature (connected cells above "
-        "`threshold`, on the torus), E = the mass of everything else, each cut into "
-        "`levels_q` quantile levels over the window's time series; `component`: organismal "
-        "A* = I(S'; S) (default), colonial A = I(S'; S | E), driven nC = I(S'; E | S), "
-        "less their mean over `shuffles` time-shuffled S' (removes the bias of short "
-        "series). For a lone creature E is empty and A* is the mass's "
-        "predictability; meant for scenes of several creatures (e.g. the Aquarium)."
+        "as in the paper: S = the mass of a target creature, E = the mass of its "
+        "environment, each cut into `levels_q` quantile levels over the window's time "
+        "series. Creatures are found in the potential K ∗ A, how the model sees the world: "
+        "the basins of its peaks above `threshold`, merged across saddles at least `saddle` "
+        "× the lower peak, at least a disk of radius R/4 (frames above `threshold` for "
+        "systems without a potential). `target`: typical (the creature closest to the median "
+        "mass at the window's start, default) or largest, followed by overlap. `environment`: near (other creatures within "
+        "the rule's reach R of the target, default) or all (everything else). `component`: "
+        "organismal A* = I(S'; S) (default), colonial A = I(S'; S | E), driven "
+        "nC = I(S'; E | S), less their mean over `shuffles` time-shuffled S' (removes the "
+        "bias of short series). For a lone creature E is empty and A* is the mass's "
+        "predictability; meant for scenes of several creatures (the Aquarium)."
     )
     window = 128
     peaks_at = "structure"
+    needs_potential = True
     component = "organismal"
-    threshold = 0.1
+    environment = "near"
+    target = "typical"
+    threshold = 0.05
+    saddle = 0.8
     levels_q = 4
     shuffles = 20
-    params = ("component", "window", "threshold", "levels_q", "shuffles")
-    choices = {"component": COMPONENTS}
+    params = ("component", "environment", "target", "window", "threshold", "saddle", "levels_q",
+              "shuffles")
+    choices = {"component": COMPONENTS, "environment": ("near", "all"), "target": ("typical", "largest")}
     scope = "local"
     temporal = "dynamic"
     subject = "trajectory"
@@ -143,21 +261,25 @@ class FeatureIndividuality(Measure):
 
     def __init__(self, **params):
         super().__init__(**params)
-        self._cache: dict[int, tuple] = {}  # id(frame) -> (frame, features)
+        self._cache: dict[int, tuple] = {}  # id(frame) -> (frame, labels)
 
-    def _features(self, frame) -> tuple[float, float]:
+    def _labels(self, frame, potential, reach) -> np.ndarray:
         hit = self._cache.get(id(frame))
         if hit is None or hit[0] is not frame:
-            hit = (frame, creature_features(frame, self.threshold))
+            min_area = np.pi * (reach / 4) ** 2
+            hit = (frame, detect(frame, potential, self.threshold, self.saddle, min_area))
             self._cache[id(frame)] = hit
         return hit[1]
 
-    def compute(self, frames, ctx=NO_CONTEXT) -> float:
-        feats = np.array([self._features(f) for f in frames])
+    def compute(self, frames, ctx=NO_CONTEXT, potentials=None) -> float:
+        reach = ctx.reach or 1
+        pots = potentials if potentials is not None else [None] * len(frames)
+        labels = [self._labels(f, u, reach) for f, u in zip(frames, pots)]
         live = {id(f) for f in frames}
         self._cache = {k: v for k, v in self._cache.items() if k in live}
-        if len(feats) < 3:
+        if len(frames) < 3:
             return 0.0
+        feats = track_features(frames, labels, self.environment, reach, self.target)
         s, e = quantize(feats[:, 0], self.levels_q), quantize(feats[:, 1], self.levels_q)
         q, rng = self.levels_q, np.random.default_rng(0)
 

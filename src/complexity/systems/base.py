@@ -82,6 +82,12 @@ class System(ABC):
         under the pattern's rule (functional information). Optional, like `perturb`."""
         raise NotImplementedError
 
+    def potential(self, state: State) -> jax.Array:
+        """The neighbour sum K ∗ A that the rule reads, (height, width) in [0, 1]: how the
+        model "sees" the world (object detection, MEASURES.md §5.4). Optional; measures
+        fall back to the frame. Pure and jit-able."""
+        raise NotImplementedError
+
     def perturb(self, state: State, rng: jax.Array) -> State:
         """A slightly different state, for measures of the dynamics (Lyapunov exponent):
         one active cell changed by one level if discrete, small noise if continuous.
