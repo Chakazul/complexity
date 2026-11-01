@@ -516,8 +516,13 @@ function drawMaps(msg) {
 }
 
 function onInit(msg) {
-  // Labels under the views, in the table and the charts drop "(…)" descriptions.
-  const runs = msg.runs.map((r, i) => ({ ...r, label: r.label.replace(/\s*\([^)]*\)/g, ""), slot: pending.slots[i] }));
+  // Labels under the views, in the table and the charts drop "(…)" descriptions, unless
+  // that would make two different patterns look alike (Aquarium (soliton), Aquarium (8 units)).
+  const short = (l) => l.replace(/\s*\([^)]*\)/g, "");
+  const runs = msg.runs.map((r, i) => {
+    const clash = msg.runs.some((o) => short(o.label) === short(r.label) && o.label !== r.label);
+    return { ...r, label: clash ? r.label : short(r.label), slot: pending.slots[i] };
+  });
   active = { runs, normalized: pending.normalized,
     measures: pending.measures.filter((k) => runs.some((r) => r.measures.includes(k))) };
   const perRun = () => Object.fromEntries(active.measures.map((k) => [k, active.runs.map(() => [])]));

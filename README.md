@@ -90,7 +90,7 @@ uv run complexity run life:random --measures png,video_h264 --size 256x256 --eve
 | `lenia` — Lenia (continuous) | Orbium (default), random soup, Gyrorbium gyrans, Triscutium valvatus laterale, Helicium serratus turbulentus, Hydrogeminium natans, Paraptera arcus pedes, Paraptera cavus furiosus, Tetralapillium metamorpha, Florakronium arcus, Heptadentium scintillans, Asterium vagus, Asterium metamorpha currens, Amoebium foliatus, Urium longus |
 | `integer_lenia` — Integer Lenia (`P = 12`, 13 states) | minimum Orbium (default), random soup |
 | `life` — Game of Life (discrete) | glider (default), Gosper glider gun, lightweight / middleweight / heavyweight spaceships, Copperhead, Galaxy, Weekender, Lobster, Sir Robin, Pufferfish, Switch engine, Max, Sidecar gun, Star gate, R-pentomino, acorn, random soup |
-| `lenia_multi` — Multi-channel Lenia (3 channels, 15 kernels) | Aquarium (self-replicating), Aquarium unit (VT049W, does not divide alone), Aquarium with 8 units (VT049W, divide on collision) |
+| `lenia_multi` — Multi-channel Lenia (3 channels, 15 kernels) | Aquarium (self-replicating), Aquarium (soliton: VT049W, a lone unit that does not divide), Aquarium (8 units: VT049W, divide on collision) |
 | `baseline` — reference frames | empty (default); iid noise (new every step) and frozen noise (one frame held), each binary, 13-level or continuous |
 
 Multi-channel Lenia is shown in RGB (one colour per channel); measures read the mean of

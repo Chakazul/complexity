@@ -77,8 +77,8 @@ class MultiLenia(System):
     name = "Multi-channel Lenia"
     patterns = {
         "aquarium": "Aquarium (self-replicating)",
-        "aquarium_unit": "Aquarium unit (VT049W, does not divide alone)",
-        "aquarium_scene": "Aquarium, 8 units (VT049W, divide on collision)",
+        "aquarium_unit": "Aquarium (soliton)",
+        "aquarium_scene": "Aquarium (8 units)",
     }
     default_size = (256, 256)
     # pattern -> (creature, how to place its cells); random soups die out under both rules
