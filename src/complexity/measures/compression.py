@@ -89,7 +89,7 @@ def video_bits(name: str, frames) -> float:
 @register_measure
 class LZMAFrame(Measure):
     key = "lzma"
-    icon = "🗜️"
+    icon = "🖼️"
     map = "tile"
     name = "Image compression (LZMA)"
     unit = "bits/cell"
@@ -105,7 +105,7 @@ class LZMAFrame(Measure):
 @register_measure
 class PNGSize(Measure):
     key = "png"
-    icon = "🗜️"
+    icon = "🖼️"
     map = "tile"
     name = "Image compression (PNG)"
     unit = "bits/cell"
@@ -121,7 +121,7 @@ class PNGSize(Measure):
 @register_measure
 class LZMAVideo(Measure):
     key = "video_lzma"
-    icon = "🗜️"
+    icon = "🎬"
     map = "tile"
     name = "Video compression (LZMA)"
     unit = "bits/cell/frame"
@@ -142,7 +142,7 @@ class LZMAVideo(Measure):
 @register_measure
 class H264Video(Measure):
     key = "video_h264"
-    icon = "🗜️"
+    icon = "🎬"
     name = "Video compression (H.264 lossless)"
     unit = "bits/cell/frame"
     group = "Compression"

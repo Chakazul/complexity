@@ -62,7 +62,7 @@ class _Statistic(Measure):
 @register_measure
 class Mass(_Statistic):
     key = "mass"
-    icon = "⚖️"
+    icon = "🧊"
     name = "Total mass"
     unit = "cells"
     description = (

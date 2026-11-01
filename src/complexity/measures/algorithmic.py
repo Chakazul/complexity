@@ -139,7 +139,7 @@ class EffectiveComplexity(Measure):
 @register_measure
 class LogicalDepth(Measure):
     key = "logical_depth"
-    icon = "⏳"
+    icon = "⏱️"
     name = "Logical depth (proxy)"
     unit = "ns/cell"
     group = "Algorithmic complexity"

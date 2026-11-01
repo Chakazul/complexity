@@ -48,11 +48,11 @@ Every measure declares `peaks_at`, shown in the UI as a tag:
 | statistic | not a complexity measure; for reference | total mass, moving speed, change rate (§5.9) |
 
 Each measure also has an emoji before its name in the UI (`Measure.icon`), by meaning;
-variants share one: 🗜️ compression (image and video), ✨ novelty, 🔤 Lempel–Ziv, 💎 effective
-complexity, ⏳ logical depth, 🔮 statistical complexity, 📡 transfer entropy, 🧱 block
-entropy, 🤝 PID and FID, 🦠 individuality (both), ❄️ fractal dimension, 🦋 Lyapunov
-exponent, ⏱️ transient length, 🎚️ Langton's λ, 🔑 functional information, ⚖️ mass, 💨 speed,
-🔄 change rate. (Until 2026-11-01 the emoji showed the kind: 🎲 randomness, 🌿 structural.)
+variants share one: 🖼️ image compression (LZMA, PNG), 🎬 video compression (LZMA, H.264),
+✨ novelty, 🔤 Lempel–Ziv, 💎 effective complexity, ⏱️ logical depth, 🔮 statistical
+complexity, 🌊 transfer entropy, 🪟 block entropy, 🔗 PID and FID, 🍄 individuality (both),
+❄️ fractal dimension, 🦋 Lyapunov exponent, ⏳ transient length, 🎚️ Langton's λ, 📚
+functional information, 🧊 mass, 💨 speed, 🔄 change rate. (Until 2026-11-01 the emoji showed the kind: 🎲 randomness, 🌿 structural.)
 
 This is the classic split between measures of randomness (Kolmogorov complexity is often
 called algorithmic randomness) and measures of structured complexity, which are low at both

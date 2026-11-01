@@ -112,7 +112,7 @@ def quantize(x: np.ndarray, q: int) -> np.ndarray:
 @register_measure
 class FeatureIndividuality(Measure):
     key = "iti_features"
-    icon = "🦠"
+    icon = "🍄"
     name = "Individuality (features)"
     unit = "bits"
     group = "Individuality"
@@ -171,7 +171,7 @@ class FeatureIndividuality(Measure):
 @register_measure
 class LocalIndividuality(Measure):
     key = "iti_local"
-    icon = "🦠"
+    icon = "🍄"
     name = "Individuality (local)"
     unit = "bits/cell"
     group = "Individuality"
