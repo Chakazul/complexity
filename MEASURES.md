@@ -52,8 +52,8 @@ variants share one: 🖼️ image compression (LZMA, PNG), 🎬 video compressio
 ✨ novelty, 🔤 Lempel–Ziv, 💎 effective complexity, ⏱️ logical depth, 🔮 statistical
 complexity, 🌊 transfer entropy, 🪟 block entropy, 🔗 PID and FID, 🍄 individuality (both),
 ❄️ fractal dimension, 🦋 Lyapunov exponent, ⏳ transient length, 🎚️ Langton's λ, 📚
-functional information, 🧊 mass, 💨 speed, 🔄 change rate. The (i) beside each measure in the UI opens its description, equation
-(`Measure.equation`, LaTeX, rendered by KaTeX), facts, reference and normalized form.
+functional information, 🧊 mass, 💨 speed, 🔄 change rate. The ⓘ beside each measure in the UI opens its description, equation
+(`Measure.equation`, LaTeX, rendered by KaTeX), facts, reference and normalized form; clicking a tag lists all tags with their meanings.
 (Until 2026-11-01 the emoji showed the kind: 🎲 randomness, 🌿 structural.)
 
 This is the classic split between measures of randomness (Kolmogorov complexity is often

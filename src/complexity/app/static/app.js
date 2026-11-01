@@ -106,7 +106,7 @@ function buildMeasureList() {
     const row = document.createElement("div");
     row.className = "pick-row";
     const info = document.createElement("button");
-    info.type = "button"; info.className = "pick-gear pick-info"; info.innerHTML = "<span>i</span>";
+    info.type = "button"; info.className = "pick-gear pick-info"; info.textContent = "ⓘ";
     info.setAttribute("aria-label", `About ${m.name}`);
     info.onclick = () => openInfo(m);
     row.append(el, info);
@@ -242,7 +242,7 @@ const TAG_HELP = {
 };
 
 // ---------- measure info popup ----------
-// (i) beside a measure (or a chart's title) opens its description, equation and facts.
+// ⓘ beside a measure (or a chart's title) opens its description, equation and facts.
 // Equations are LaTeX, rendered by KaTeX, loaded from a CDN on the first popup; without
 // it (offline) the LaTeX source is shown instead.
 
@@ -282,7 +282,7 @@ function openInfo(m) {
   $("info-title").textContent = `${m.icon} ${m.name}`;
   $("info-tags").innerHTML = [[kind.tag, kind.tag], [m.granularity, "granularity"], [m.scope, "scope"],
     [m.temporal, "temporal"], ...(m.map ? [["heatmap", "heatmap"]] : [])]
-    .map(([t, cls]) => `<span class="tag tag-${cls} tag-v-${t}">${t}</span>`).join("");
+    .map(([t, cls]) => `<span class="tag tag-${cls} tag-v-${t}" title="${TAG_HELP[t] || ""}">${t}</span>`).join("");
   renderTex($("info-equation"), m.equation);
   $("info-description").textContent = m.description;
   const facts = [
@@ -315,6 +315,55 @@ function openInfo(m) {
   }
   $("info").showModal();
   $("info").scrollTop = 0;  // showModal focuses Close, which would scroll a tall popup to its end
+}
+
+// ---------- tags popup ----------
+// Clicking any tag (in the measure list or a measure's popup) lists all tags with their
+// meanings, the clicked one highlighted.
+
+const TAG_GROUPS = [
+  ["Where it peaks", [["randomness", "randomness"], ["structural", "structural"], ["mixed", "mixed"], ["statistic", "statistic"]]],
+  ["Granularity", [["pattern", "granularity"], ["rule", "granularity"], ["system", "granularity"]]],
+  ["Scope", [["local", "scope"], ["global", "scope"]]],
+  ["Time", [["static", "temporal"], ["dynamic", "temporal"]]],
+  ["Map", [["heatmap", "heatmap"]]],
+];
+
+function openTags(clicked) {
+  const box = $("tags-list");
+  box.innerHTML = "";
+  for (const [title, tags] of TAG_GROUPS) {
+    const h = document.createElement("h3");
+    h.className = "tags-group"; h.textContent = title;
+    const dl = document.createElement("dl");
+    dl.className = "info-facts tags-facts";
+    for (const [t, cls] of tags) {
+      const dt = document.createElement("dt"), dd = document.createElement("dd");
+      dt.innerHTML = `<span class="tag tag-${cls} tag-v-${t}">${t}</span>`;
+      dd.textContent = TAG_HELP[t] || "";
+      if (t === clicked) { dt.classList.add("current"); dd.classList.add("current"); }
+      dl.append(dt, dd);
+    }
+    box.append(h, dl);
+  }
+  $("tags").showModal();
+  $("tags").scrollTop = 0;
+}
+
+// Any tag opens the tags popup instead of toggling the measure it sits in.
+function tagClicks(container) {
+  container.addEventListener("click", (e) => {
+    const tag = e.target.closest(".tag");
+    if (!tag) return;
+    e.stopPropagation(); e.preventDefault();
+    openTags(tag.textContent);
+  }, true);  // capture: before the measure's own click handler
+}
+
+// Close by the button, Esc (native) or a click on the backdrop.
+function closable(dialog, button) {
+  button.onclick = () => dialog.close();
+  dialog.onclick = (e) => { if (e.target === dialog) dialog.close(); };
 }
 
 // The normalized version, for measures that have one (MEASURES.md §5.10).
@@ -557,7 +606,7 @@ function buildCharts() {
     const el = document.createElement("div");
     el.className = "chart";
     el.innerHTML = `<h3>${m.icon} ${m.name}${isNormalized(m) ? " (normalized)" : ""}</h3><span class="unit">${unitOf(m)} vs. time step</span>`;
-    el.querySelector("h3").onclick = () => openInfo(m);  // the same popup as the list's (i)
+    el.querySelector("h3").onclick = () => openInfo(m);  // the same popup as the list's ⓘ
     const c = document.createElement("canvas");
     const tip = document.createElement("div");
     tip.className = "tooltip";
@@ -713,8 +762,10 @@ async function main() {
   $("map-measure").onchange = (e) => { setMap(e.target.value); renderMapControls(); };
   $("clear-runs").onclick = () => { runRows = []; updateSidebar(); };
   $("clear-measures").onclick = () => { selectedMeasures.clear(); updateSidebar(); };
-  $("info-close").onclick = () => $("info").close();
-  $("info").onclick = (e) => { if (e.target === $("info")) $("info").close(); };  // the backdrop
+  closable($("info"), $("info-close"));
+  closable($("tags"), $("tags-close"));
+  tagClicks($("measures"));
+  tagClicks($("info-tags"));
   $("normalized").checked = normalized;
   $("normalized").onchange = (e) => {
     normalized = e.target.checked;

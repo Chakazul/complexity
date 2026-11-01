@@ -166,11 +166,13 @@ label.option + button.clear { margin-left: 6px; }
 }
 .pick-gear:hover { color: var(--text-primary); }
 .pick-gear.modified { color: var(--accent); }
-.pick-info span {  /* a circled "i", drawn so that it needs no symbol font */
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 14px; height: 14px; border: 1.5px solid currentColor; border-radius: 50%;
-  font: italic 700 10px/1 Georgia, serif;
-}
+.pick-info { font-size: 15px; }  /* ⓘ, about as large as ⚙ */
+.pick .tag, .info-tags .tag { cursor: pointer; }
+.tags-group { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); margin: 12px 0 6px; }
+.tags-group:first-child { margin-top: 0; }
+.tags-facts { margin-bottom: 4px; align-items: baseline; grid-template-columns: 92px 1fr; }
+.tags-facts .current { font-weight: 600; color: var(--text-primary); }
+.tags-facts dt.current .tag { outline: 2px solid var(--accent); outline-offset: 1px; }
 .chart h3 { cursor: pointer; }
 
 /* measure info popup */
@@ -208,7 +210,7 @@ dialog.info::backdrop { background: rgba(0, 0, 0, .35); }
   letter-spacing: .05em; color: var(--text-muted);
 }
 .pick-group:not(:first-child) { margin-top: 6px; }
-.pick .tag[title] { cursor: help; }
+
 .pick.selected { background: var(--surface-1); }
 #measures .pick.selected { border-color: var(--text-secondary); }
 .pick.full { cursor: not-allowed; }
