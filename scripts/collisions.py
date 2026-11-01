@@ -42,7 +42,9 @@ records = []
 for system, pattern in UNITS:
     t = time.perf_counter()
     unit = co.settle(system, pattern)
-    deltas = (180, 90) if system == "life" else (180, 135, 90)  # Life turns in quarter turns
+    # Life turns in quarter turns; near-parallel courses (60°, 30°) are where two Orbia can
+    # fuse into a Synorbium
+    deltas = (180, 90) if system == "life" else (180, 135, 90, 60, 30)
     runs = [("pair", d, b, m) for d in deltas for b in (0.0, 0.25, 0.5) for m in (False, True)]
     runs += [("noise", 180, 0.0, False), ("alone", 0, 0.0, False)]
     for kind, delta, offset, mirror in runs:

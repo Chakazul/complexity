@@ -900,8 +900,8 @@ outcome labels) and share the record format.
   cropped with a margin of R/2, and its heading and speed are measured over 64 steps.
 - **Scenes.** Copies are rotated (by interpolation; Life in quarter turns, keeping its own
   heading) onto courses that meet at the grid's centre: `pair` (two copies, headings Δ
-  apart: 180° head-on, 135°, 90°; impact offset 0, 0.25, 0.5 unit sizes; the second copy
-  mirrored or not), `noise` (the unit into an iid patch of its own size) and `alone`
+  apart: 180° head-on, 135°, 90°, 60°, 30° (Life 180°, 90°); impact offset 0, 0.25, 0.5
+  unit sizes; the second copy mirrored or not), `noise` (the unit into an iid patch of its own size) and `alone`
   (the control). The grid is large enough that no course wraps around the torus (at
   least 256, 2 × start distance + 3 sizes); a 256 grid for the 73-cell Triscutium made
   the copies overlap through the edge before they met.
@@ -911,24 +911,39 @@ outcome labels) and share the record format.
   size.
 - **Labels**, from the final objects, not the trackers (identity through a merge and a
   split is ambiguous): unit-sized = ±25 % of a unit's mass, unit-like = 0.4-2×. *missed*
-  (no contact), *died* (under half the mass left; for noise, the unit under half its
-  mass), *divided* (more unit-like objects than thrown, holding 70 % of the mass:
+  (no contact), *fused* (two units moving as one: objects with one velocity, within 1.5
+  sizes, together 1.6-2.4 units' mass and 80 % of what is left), *lost one* (one
+  unit-sized object left, nothing larger), *died* (under half the mass and no unit left;
+  for noise, the unit under half its mass), *divided* (more unit-like objects than thrown, holding 70 % of the mass:
   replication), *goo* (more than twice the mass otherwise), *survived* (the thrown units
   unit-sized again, nothing else of half a unit's mass), *merged* (fewer unit-sized
   objects, a large one), *changed* (anything else). The unit-like range matters: a lone
   Aquarium unit settles at 264 cells, units among others at ~140.
 
-| Unit | 18 collisions with a copy | Into noise | Alone |
+| Unit | 30 collisions with a copy (Life 12) | Into noise | Alone |
 |---|---|---|---|
-| Orbium | survived 10, died 7 (all head-on and most 135°: annihilation), changed 1 (one left) | survived | survived |
-| Triscutium valvatus laterale | goo 18: runaway growth, ~90 objects of ~3000 cells, 70× the mass | goo | survived |
-| Aquarium unit (VT049W) | divided 18: replicates on contact into 4-30 units of ~145 cells | survived | survived |
-| Life glider (Δ 180°, 90°: 12) | died 6, divided 3 (still debris), changed 2, merged 1 | divided (debris) | survived |
+| Orbium | survived 17, lost one 6, died 5, fused 2 | survived | survived |
+| Triscutium valvatus laterale | goo 30: runaway growth, ~90 objects of ~3000 cells, 70× the mass | goo | survived |
+| Aquarium unit (VT049W) | divided 30: replicates on contact into 4-30 units of ~145 cells | survived | survived |
+| Life glider | died 6, divided 3 (still debris), lost one 2, merged 1 | divided (debris) | survived |
+
+Orbium by heading difference: 180° survived 4, died 2; 135° lost one 3, survived 2, died
+1; 90° survived 4, lost one 2; 60° fused 2, died 2, lost one 1, survived 1; 30° survived
+6 (glancing, they part again).
+
+**Synorbium** (Bert, 2026-11-01): two Orbia can fuse into Synorbium, two Orbia conjoined
+and moving in one direction, which disrupted can split into two Orbia again. The
+collisions find it at 60° without offset, in both chiralities: three potential basins
+(its bumps) of 43-56 cells moving with one velocity, 147 cells in all, stable for at
+least 800 steps after meeting. Before the near-parallel headings were added (60°, 30°)
+none of the 18 geometries produced it, and earlier labels would have called it divided.
+In a wider scan of near-parallel courses (20-60°, offsets to 0.75) one Orbium collision
+also turned into goo (60°, offset 0.75, mirrored): Orbium's rule can grow goo too.
 
 Readings: the controls survive, so the harness does not break units. The ranking expected
 above holds in its order: the Aquarium unit survives every encounter by reproducing, and
-each product is again an individual; Orbium survives glancing collisions and noise, and
-annihilates head-on; Triscutium (the Scutium-like unit) turns into goo at any touch, even
+each product is again an individual; Orbium survives most glancing collisions and noise,
+loses one or both units at steeper angles, and sometimes fuses into a Synorbium; Triscutium (the Scutium-like unit) turns into goo at any touch, even
 of noise; the glider dies or leaves debris. Caveats: an outcome depends on the phase in
 which the units meet (Orbium at 90° survives or loses a unit with a few more settling
 steps), so labels are statistics over geometries, not per-run truths; in Life, still

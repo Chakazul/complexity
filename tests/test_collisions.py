@@ -65,3 +65,17 @@ def test_a_unit_thrown_into_a_colony(orbium):
     assert run.colony_units >= 1 and len(run.control_units) == 2
     assert run.contact  # thrown at the centre, it reaches the colony
     assert run.label in ("joined", "absorbed", "divided", "disrupted", "goo", "collapsed")
+
+
+def test_two_units_moving_as_one_are_fused():
+    c = co.Collision("lenia", "orbium", "pair", 60, 0, False, 256, 100, 73.0, 39, contact=True)
+    # Synorbium as the detector sees it: three bumps, one velocity, two Orbia's mass
+    c.final_objects = [(43, 100, 100, 0.26, 0.54), (55, 105, 110, 0.26, 0.53),
+                       (49, 95, 108, 0.28, 0.54)]
+    c.final_masses, c.total_mass_ratio = [55, 49, 43], 1.0
+    assert co.fused(c) and co.label(c) == "fused"
+    c.final_objects = [(73, 100, 100, 0.0, 0.6), (73, 200, 30, 0.5, -0.3)]  # apart, diverging
+    c.final_masses = [73, 73]
+    assert not co.fused(c) and co.label(c) == "survived"
+    c.final_objects, c.final_masses, c.total_mass_ratio = [(73, 100, 100, 0.0, 0.6)], [73], 0.5
+    assert co.label(c) == "lost one"

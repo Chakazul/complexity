@@ -22,7 +22,7 @@ from complexity.measures.individuality import FeatureIndividuality, Tracker, det
 from complexity.measures.statistics import centers
 
 THRESHOLD, SADDLE = FeatureIndividuality.threshold, FeatureIndividuality.saddle
-LABELS = ("survived", "merged", "divided", "died", "goo", "missed", "changed")
+LABELS = ("survived", "fused", "lost one", "merged", "divided", "died", "goo", "missed", "changed")
 
 
 def state_cells(state) -> np.ndarray:
@@ -112,6 +112,7 @@ class Collision:
     grid: int
     steps: int
     unit_mass: float
+    unit_size: int = 0
     label: str = ""
     final_units: int = 0  # objects of at least half a unit's mass
     final_masses: list = field(default_factory=list)
@@ -120,6 +121,8 @@ class Collision:
     total_mass_ratio: float = 0.0  # final total mass / initial
     takeovers: int = 0  # tracker takeovers (lost overlaps)
     contact: bool = False  # the units touched: one object, or centres within a unit size
+    final_objects: list = field(default_factory=list)  # (mass, y, x, vy, vx) per object of
+    #   at least a quarter of a unit's mass, velocity over the 20 steps after the end
 
     def record(self) -> dict:
         return asdict(self)
@@ -204,7 +207,9 @@ def collide(unit: Unit, kind: str = "pair", delta: float = 180, offset: float = 
     masses = np.bincount(labels.ravel(), weights=frame.ravel())[1:]
     masses = masses[masses > 0]
     result = Collision(unit.system, unit.pattern, kind, delta, offset, mirror, grid, steps,
-                       unit.mass)
+                       unit.mass, unit.size)
+    result.final_objects = moving_objects(system, state, frame, labels, potential_fn, reach,
+                                          0.25 * unit.mass)
     result.final_masses = sorted((float(m) for m in masses), reverse=True)
     result.final_units = int((masses >= 0.5 * unit.mass).sum())
     result.target_masses = [float(frame[t.target].sum()) if t.target is not None else 0.0
@@ -218,13 +223,69 @@ def collide(unit: Unit, kind: str = "pair", delta: float = 180, offset: float = 
     return result
 
 
+def moving_objects(system, state, frame, labels, potential_fn, reach, min_mass,
+                   steps: int = 20) -> list:
+    """(mass, y, x, vy, vx) of the objects of at least `min_mass`, each matched to the
+    nearest object `steps` steps later for its velocity (cells/step, on the torus)."""
+    def centres(frame, labels):
+        out = []
+        for i in np.unique(labels[labels > 0]):
+            mass = float(frame[labels == i].sum())
+            if mass >= min_mass:
+                out.append((mass, *torus_centroid(labels == i)))
+        return out
+
+    now = centres(frame, labels)
+    later = centres(*objects(system, engine.advance(system, state, steps), potential_fn, reach))
+    n = np.array(frame.shape, float)
+    result = []
+    for mass, y, x in now:
+        if later:
+            d = np.array([(ly - y, lx - x) for _, ly, lx in later])
+            d = (d + n / 2) % n - n / 2  # shortest way round the torus
+            vy, vx = d[np.argmin(np.hypot(d[:, 0], d[:, 1]))] / steps
+        else:
+            vy = vx = 0.0
+        result.append((mass, float(y), float(x), float(vy), float(vx)))
+    return result
+
+
+def fused(c: Collision) -> bool:
+    """Two units moving as one (Orbium's Synorbium): objects moving with one velocity
+    (within 20° and 20 % of the heaviest one's), within 1.5 unit sizes of their common
+    centre, that together hold 1.6-2.4 units' mass and at least 80 % of what is left (not
+    a few units of a crowd moving alike). The detector may see the conjoined
+    pair as one object, two, or a few (its bumps)."""
+    objs = [o for o in c.final_objects if o[0] >= 0.25 * c.unit_mass]
+    if not objs:
+        return False
+    objs.sort(key=lambda o: -o[0])
+    v0 = np.array(objs[0][3:])
+    if np.linalg.norm(v0) < 0.1:
+        return False
+    n, size = c.grid, c.unit_size or 1
+
+    def together(o) -> bool:
+        v = np.array(o[3:])
+        cos = v @ v0 / (np.linalg.norm(v) * np.linalg.norm(v0) + 1e-12)
+        d = np.abs(np.array(o[1:3]) - objs[0][1:3])
+        d = np.minimum(d, n - d)
+        return (cos > np.cos(np.radians(20)) and abs(np.linalg.norm(v) - np.linalg.norm(v0))
+                <= 0.2 * np.linalg.norm(v0) and np.hypot(*d) <= 1.5 * size)
+
+    group = sum(o[0] for o in objs if together(o))
+    total = sum(o[0] for o in objs)  # the fused pair is all that is left (not a moving
+    return 1.6 * c.unit_mass <= group <= 2.4 * c.unit_mass and group >= 0.8 * total  # crowd)
+
+
 def label(c: Collision, initial_mass: float | None = None) -> str:
     """From the final objects, not from the trackers (identity through a merge and a split
     is ambiguous). Objects are unit-sized at ±25 % of a unit's mass, unit-like at 0.4-2×
     (a lone unit may settle larger than units among others: the Aquarium unit at about
     twice), large above 1.25×.
-    missed: the two never touched; died: under half the initial mass is left (a pair), or
-    the unit under half its mass (noise: the patch's own mass may vanish); divided: more
+    missed: the two never touched; fused: two units moving as one (`fused`); lost one: one
+    unit-sized object left of a pair, nothing larger; died: under half the initial mass
+    and no unit-sized object left (a pair), or the unit under half its mass (noise: the patch's own mass may vanish); divided: more
     unit-like objects than thrown, holding 70 % of the mass (replication); goo: more than
     twice the initial mass otherwise (in Life: growing debris); survived: the thrown units
     are unit-sized objects again, and nothing else of half a unit's mass or more is left;
@@ -240,10 +301,14 @@ def label(c: Collision, initial_mass: float | None = None) -> str:
     others = int(((m >= 0.5 * u) & (m < 0.75 * u)).sum())
     if c.kind != "pair" and c.target_masses[0] < 0.5 * u and c.total_mass_ratio <= 2:
         return "died"
-    if c.kind == "pair" and c.total_mass_ratio < 0.5:
+    if c.kind == "pair" and c.total_mass_ratio < 0.5 and unit_sized == 0:
         return "died"
+    if c.kind == "pair" and unit_sized == 1 and large == 0 and c.total_mass_ratio < 0.75:
+        return "lost one" if c.contact else "missed"
     if not c.contact:
         return "missed"
+    if c.kind == "pair" and fused(c):
+        return "fused"
     if unit_like.sum() > thrown and m[unit_like].sum() >= 0.7 * m.sum():
         return "divided"
     if c.total_mass_ratio > 2:
