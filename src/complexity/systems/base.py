@@ -93,6 +93,12 @@ class System(ABC):
         `cells` returns them). Optional, with `cells`."""
         raise NotImplementedError
 
+    def replace_cells(self, state: State, A) -> State:
+        """`state` with its cells replaced by A, the rule's parts (kernels) kept: cheap and
+        traceable, so a batch of cell arrays can share one state under `vmap` (twin runs of
+        the goal measure). Optional, with `with_cells`."""
+        raise NotImplementedError
+
     def potential(self, state: State) -> jax.Array:
         """The neighbour sum K ∗ A that the rule reads, (height, width) in [0, 1]: how the
         model "sees" the world (object detection, MEASURES.md §5.4). Optional; measures

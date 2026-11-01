@@ -86,6 +86,11 @@ class Baseline(System):
         st = self.init(pattern, np.shape(A), jax.random.key(1))
         return BaselineState(jnp.asarray(A, jnp.float32), st.rng, st.levels, st.fresh)
 
+    def replace_cells(self, state: BaselineState, A) -> BaselineState:
+        """Other cells and another noise stream, as `with_cells`."""
+        return BaselineState(jnp.asarray(A, jnp.float32), jax.random.fold_in(state.rng, 1),
+                             state.levels, state.fresh)
+
     def perturb(self, state: BaselineState, rng: jax.Array) -> BaselineState:
         """One cell to the next level (discrete) or small noise (continuous), and a different
         noise stream, so a perturbed iid noise run diverges completely."""

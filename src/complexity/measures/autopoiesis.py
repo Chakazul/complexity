@@ -1,7 +1,7 @@
 """The goal measure (MEASURES.md §8.1d), in the measure list: autopoiesis, the complexity
 field C = S × M × I of `complexity.goal` — structure, self-maintenance under perturbation and
-individuality, per object. A field costs seconds (twin runs per object), so by default it is
-computed in a background thread: each tick reports the latest finished field and starts a
+individuality, per object. A field costs about a second per unit (twin runs, batched under
+`vmap`), so by default it is computed in a background thread: each tick reports the latest finished field and starts a
 new one once the last is done and `every` ticks have passed; the simulation never waits.
 """
 
@@ -35,8 +35,9 @@ class Autopoiesis(Measure):
         "difference stays near it. I, individuality: isolated from other objects, bounded, "
         "not spreading. Low for empty space, noise, frozen noise, goo and the Life glider; "
         "highest for the Aquarium. `report`: the largest C over objects (default) or the "
-        "mean. Computed in the background every `every` ticks (seconds per field); the map "
-        "is the field C(x, y)."
+        "mean. Each hit drawn `trials` times. Computed in the background every `every` "
+        "ticks (all twin runs batched on the device: ~1 s per unit, ~12 s for a 25-unit "
+        "colony); the map is the field C(x, y)."
     )
     needs_state = True
     map = "local"
@@ -45,8 +46,9 @@ class Autopoiesis(Measure):
     every = 10
     steps = 60
     max_objects = 64
+    trials = 3  # draws per hit: one patch of noise can land where it kills a unit
     background = True
-    params = ("report", "every", "steps", "max_objects", "background")
+    params = ("report", "every", "trials", "steps", "max_objects", "background")
     choices = {"report": ("max", "mean")}
     granularity = "pattern"
     scope = "local"
@@ -73,7 +75,7 @@ class Autopoiesis(Measure):
         from complexity.goal import complexity_field  # imports collisions, which needs the registry
 
         return complexity_field(system, ctx.pattern, state, steps=self.steps,
-                                max_objects=self.max_objects)
+                                max_objects=self.max_objects, trials=self.trials)
 
     def _update(self, system, state, ctx) -> None:
         if not self.background:

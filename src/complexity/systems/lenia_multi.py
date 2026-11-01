@@ -135,6 +135,9 @@ class MultiLenia(System):
         st = self._init(pattern, np.shape(A)[:2], jax.random.key(0), "pattern")
         return replace(st, A=jnp.asarray(A, jnp.float32))
 
+    def replace_cells(self, st, A) -> MultiLeniaState:
+        return replace(st, A=jnp.asarray(A, jnp.float32))
+
     def potential(self, st: MultiLeniaState) -> jax.Array:
         """The mean of the kernels' potentials K_k ∗ A_c0(k) (each kernel normalized)."""
         fA = jnp.fft.rfft2(st.A, axes=(0, 1))

@@ -173,6 +173,9 @@ class Lenia(System):
         st = self.init(pattern, np.shape(A), jax.random.key(0))
         return replace(st, A=jnp.asarray(A, st.A.dtype))
 
+    def replace_cells(self, st: LeniaState, A) -> LeniaState:
+        return replace(st, A=jnp.asarray(A).astype(st.A.dtype))
+
     def potential(self, st: LeniaState) -> jax.Array:
         """K ∗ A with the normalized kernel; Integer Lenia's integer potential over its
         largest value P · ΣK (ΣK is the kernel FFT's zero-frequency term)."""

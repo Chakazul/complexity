@@ -988,8 +988,8 @@ any touch, even of noise, seeds it. `scripts/collisions.py --gifs` saves one GIF
 
 `complexity.goal.complexity_field(system, pattern, state)`; in the measure list as
 **🧫 Autopoiesis (goal measure C)** (`autopoiesis`: the largest or mean C over objects, its
-map the field C(x, y), computed in a background thread every 10 ticks since a field takes
-0.5-90 s; the simulation does not wait). The name: autopoiesis (Maturana & Varela) is a
+map the field C(x, y), computed in a background thread every 10 ticks; the simulation
+does not wait). The name: autopoiesis (Maturana & Varela) is a
 bounded unit that produces and maintains itself, which is what S × M × I scores.
 `scripts/goal_ranking.py` ranks the reference scenes (`--figure` writes
 [goal_field.png](assets/figures/goal_field.png): each scene beside its field). Per object
@@ -1017,8 +1017,14 @@ bounded unit that produces and maintains itself, which is what S × M × I score
   object (goo's basins tile the space), over 1 + area / (5 % of the grid), times
   1.5 / growth if it grows more than 1.5× in 60 steps.
 
-Each hit is drawn 3 times in the ranking (`trials`; 1 in the UI): where the noise lands
-matters, and single draws moved Orbium's C between 0.009 and 0.059.
+Each hit is drawn 3 times (`trials`, in the ranking and the UI): where the noise lands
+matters, and single draws moved Orbium's C between 0.009 and 0.059. All twin runs of all
+objects are prepared first and run 16 at a time under `vmap` (`System.replace_cells`
+swaps the cells into one shared state, so the rule's kernels are not copied per twin):
+a field takes 0.4 s for Orbium, 1 s for the Aquarium soliton and 12 s for a 25-unit
+colony with 3 draws, 7× faster than one twin after another (89 s); most of what is left
+is detecting objects in each twin on the host. No autograd: every hit is a finite twin
+run (strong hits and the contact patch are far from linear, and Life is discrete).
 
 | Scene (256² unless noted) | C max | C mean | S | M | I |
 |---|---|---|---|---|---|
@@ -1061,9 +1067,10 @@ patch to clear around units that survive it; and a plain dilation lost objects c
 the grid's edge, so containment collapsed at random — the neighbourhoods now wrap.
 
 Open: (1) S is weak (0.14-0.30) and only spatial; (2) no calibration between empty and
-matched noise yet, as §8.1b proposes; (3) cost: per object 4-5 hits × `trials` twin runs
-of 60 steps and a contact run of 180 (5 s for a unit, 90 s for a 25-unit colony with 3
-trials), so the UI shows a field every few seconds at best; (4) grids must be large
+matched noise yet, as §8.1b proposes; (3) cost: per object 5 hits × `trials` twin runs of
+60 steps and `trials` contact runs of 180, batched (1 s for a unit, 12 s for a 25-unit
+colony), and the field describes the state it started from, so on the heatmap moving
+creatures run ahead of their C patch by the time a field takes; (4) grids must be large
 enough for the contact test (Orbium at 128² meets the noise's remains or itself: C = 0);
 (5) on the GPU runs are not bit-reproducible, so values move by ~10 % between runs.
 

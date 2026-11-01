@@ -68,6 +68,9 @@ class GameOfLife(System):
     def with_cells(self, pattern: str, A) -> jax.Array:
         return jnp.asarray(A, jnp.uint8)
 
+    def replace_cells(self, grid: jax.Array, A) -> jax.Array:
+        return jnp.asarray(A).astype(jnp.uint8)
+
     def potential(self, grid: jax.Array) -> jax.Array:
         """The live-neighbour count over 8."""
         n = sum(jnp.roll(grid, (dy, dx), (0, 1)) for dy in (-1, 0, 1) for dx in (-1, 0, 1)

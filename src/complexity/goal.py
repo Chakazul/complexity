@@ -37,9 +37,11 @@ from __future__ import annotations
 
 import lzma
 from dataclasses import asdict, dataclass
+from functools import partial
 
 import jax
 import numpy as np
+from jax import lax
 from scipy import ndimage
 
 from complexity import engine
@@ -156,14 +158,45 @@ def object_similarity(frame_a, mask_a, frame_b, mask_b) -> float:
     return aligned_similarity(np.where(mask_a, frame_a, 0), np.where(mask_b, frame_b, 0))
 
 
+BATCH = 16  # twin runs per vmap call (padded to it: one compile per run length)
+
+
+@partial(jax.jit, static_argnums=(0, 3, 4))
+def _twins(system: System, state, cells, steps: int, with_potential: bool):
+    """A batch of twin runs that share `state`'s rule and differ in their cells: for each,
+    the first frame, the frame after `steps` steps and (if asked) its potential."""
+    def one(A):
+        start = system.replace_cells(state, A)
+        end = lax.fori_loop(0, steps, lambda _, s: system.step(s), start)
+        out = (system.observe(start), system.observe(end))
+        return out + (system.potential(end),) if with_potential else out
+
+    return jax.vmap(one)(cells)
+
+
+def run_twins(system: System, state, cells: list, steps: int, with_potential: bool) -> list:
+    """`_twins` over any number of cell arrays, BATCH at a time; per twin (frame0, frame,
+    potential or None) as float64 NumPy arrays."""
+    out = []
+    for i in range(0, len(cells), BATCH):
+        chunk = cells[i : i + BATCH]
+        padded = np.stack(chunk + [chunk[-1]] * (BATCH - len(chunk)))
+        result = [np.asarray(r, np.float64) for r in
+                  _twins(system, state, padded, steps, with_potential)]
+        for j in range(len(chunk)):
+            out.append((result[0][j], result[1][j], result[2][j] if with_potential else None))
+    return out
+
+
 def complexity_field(system: System, pattern: str, state, steps: int = 60, seed: int = 0,
                      max_objects: int = 64, strengths=None, trials: int = 1
                      ) -> tuple[np.ndarray, list[ObjectScore]]:
     """C(x, y) at this state, and the scores per object (at most `max_objects`, the most
     massive), each hit drawn `trials` times (more is steadier: where the noise lands
-    matters). See the module docstring. The contact test runs 3 × `steps`: on a grid
-    smaller than about twice the distance an object travels in that time, it may meet
-    the noise's remains or itself (Orbium at 128²)."""
+    matters). See the module docstring. All twin runs (every hit of every object) are
+    prepared first and run in batches under `vmap`. The contact test runs 3 × `steps`: on
+    a grid smaller than about twice the distance an object travels in that time, it may
+    meet the noise's remains or itself (Orbium at 128²)."""
     reach = system.reach(pattern)
     n_states = system.n_states(pattern)
     if strengths is None:  # σ of the noise, or the probability of resetting a cell
@@ -172,10 +205,13 @@ def complexity_field(system: System, pattern: str, state, steps: int = 60, seed:
     potential_fn = jax.jit(system.potential) if has_potential else None
     min_area = np.pi * (reach / 4) ** 2
 
+    def labelled(frame, potential):
+        return detect(frame, potential, THRESHOLD, SADDLE, min_area)
+
     def look(st):
         frame = np.asarray(system.observe(st), np.float64)
         potential = np.asarray(potential_fn(st), np.float64) if potential_fn else None
-        return frame, detect(frame, potential, THRESHOLD, SADDLE, min_area)
+        return frame, labelled(frame, potential)
 
     frame, labels = look(state)
     ids = np.unique(labels[labels > 0])
@@ -186,25 +222,35 @@ def complexity_field(system: System, pattern: str, state, steps: int = 60, seed:
     long_frame, long_labels = look(engine.advance(system, state, 3 * steps))  # for contact
     cells = state_cells(state)
     travel = reach + steps  # how far an object may move during the test (≤ 1 cell/step)
-    grid_area = frame.size
     background = labels == 0  # outside every object (the gaps of goo's stripes are not)
-    field = np.zeros(frame.shape, np.float32)
-    scores = []
+
+    # 1. every object's hits, as perturbed cells: (object, kind, cells); kinds: "ceiling" (a
+    # negligible hit, continuous systems), "inside" (each strength × trials), "contact"
+    # (a patch of noise of its size beside it, × trials)
+    objects_, short, long = [], [], []
     for i in ids:
         mask = labels == i
         area = int(mask.sum())
         centre = torus_centroid(mask)
-        S = structure(frame, mask, rng)
-        # the intervention, at each strength: the object's living cells perturbed (at
-        # least one cell, so that no change is never read as a full repair)
         living = mask & (frame > (0 if n_states else 0.01))
-        ref_obj = nearest_object(ref_frame, ref_labels, centre, travel)
+        objects_.append((i, mask, area, centre))
 
-        # contact, as a collision brings: a patch of noise of the object's size beside it,
-        # on cells outside every object (the "unit into noise" collision, §8.1c)
+        def hit(where, strength, living=living):
+            # at least one cell changes, so that no change is never read as a full repair
+            perturbed = perturb(cells, where, strength, n_states, rng)
+            if np.array_equal(perturbed, cells) and where.any():
+                ys, xs = np.nonzero(where)
+                k = rng.integers(len(ys))
+                perturbed[ys[k], xs[k]] = 0 if where is living else (1 if n_states else 0.5)
+            return perturbed
+
+        k = len(objects_) - 1
+        if not n_states:
+            short.append((k, "ceiling", hit(living, 0.02)))
+        for strength in [x for x in strengths for _ in range(trials)]:
+            short.append((k, "inside", hit(living, strength)))
         side = max(3, int(np.sqrt(area)))
-
-        def beside(area=area, side=side, centre=centre):
+        for _ in range(trials):
             angle = rng.uniform(0, 2 * np.pi)
             out = np.sqrt(area / np.pi) + side / 2 + 2
             py, px = (centre + out * np.array([np.sin(angle), np.cos(angle)])).round().astype(int)
@@ -212,62 +258,64 @@ def complexity_field(system: System, pattern: str, state, steps: int = 60, seed:
             xx = (np.arange(side) + px - side // 2) % frame.shape[1]
             patch = np.zeros(frame.shape, bool)
             patch[np.ix_(yy, xx)] = True
-            return patch & (labels == 0)
+            patch &= background
+            if patch.any():
+                long.append((k, "contact", hit(patch, 1.0)))
 
-        def twin_after(strength, where, living=living, steps=steps):
-            perturbed = perturb(cells, where, strength, n_states, rng)
-            if np.array_equal(perturbed, cells) and where.any():
-                ys, xs = np.nonzero(where)
-                k = rng.integers(len(ys))
-                perturbed[ys[k], xs[k]] = 0 if (where is living) else (1 if n_states else 0.5)
-            twin = system.with_cells(pattern, perturbed)
-            frame0 = np.asarray(system.observe(twin), np.float64)
-            return frame0, *look(engine.advance(system, twin, steps))
+    # 2. all twins, batched on the device; objects found again on the host
+    results = {}
+    for hits, n in ((short, steps), (long, 3 * steps)):
+        if hits:
+            runs = run_twins(system, state, [c for *_, c in hits], n, has_potential)
+            for (k, kind, _), (f0, f, u) in zip(hits, runs):
+                results.setdefault(k, []).append((kind, f0, f, labelled(f, u)))
 
+    # 3. the scores
+    grid_area = frame.size
+    field = np.zeros(frame.shape, np.float32)
+    scores = []
+    for k, (i, mask, area, centre) in enumerate(objects_):
+        S = structure(frame, mask, rng)
+        ref_obj = nearest_object(ref_frame, ref_labels, centre, travel)
+        long_obj = nearest_object(long_frame, long_labels, centre, 3 * travel)
+        ref_area = ref_obj.sum() if ref_obj is not None else area
+        near = window(mask, travel)
         # the ceiling: a continuous object never comes back in exactly the same phase, so
         # the similarity a negligible perturbation ends at is the best repair can reach
         ceiling = 1.0
-        if not n_states:
-            _, tf, tl = twin_after(0.02, living)
-            ceiling = object_similarity(tf, nearest_object(tf, tl, centre, travel), ref_frame, ref_obj)
-        ref_area = ref_obj.sum() if ref_obj is not None else area
-        repairs, containments = [], []
-        for strength in [x for x in strengths for _ in range(trials)]:  # hits inside
-            twin_frame0, twin_frame, twin_labels = twin_after(strength, living)
-            twin_obj = nearest_object(twin_frame, twin_labels, centre, travel)
-            rho = object_similarity(twin_frame, twin_obj, ref_frame, ref_obj)
-            if twin_obj is not None and twin_obj.sum() > 1.5 * ref_area:
-                repairs.append(0.0)  # it grew: the hit set off growth
-            else:
-                rho0 = object_similarity(twin_frame0, mask, frame, mask)
-                if rho0 > 0.995:  # the hit did nothing to read a repair from
-                    continue
-                # repair: the object against itself, found again in both runs, up to
-                # the ceiling; a hit that dents it less than chaos does (rho0 above the
-                # ceiling, in a chaotic colony) is repaired as far as it gets back
-                if rho0 < ceiling - 0.02:
-                    repairs.append(float(np.clip((rho - rho0) / (ceiling - rho0), 0, 1)))
+        for kind, _, f, lab in results.get(k, []):
+            if kind == "ceiling":
+                ceiling = object_similarity(f, nearest_object(f, lab, centre, travel), ref_frame, ref_obj)
+        repairs, containments, contacts = [], [], []
+        for kind, f0, f, lab in results.get(k, []):
+            if kind == "inside":
+                twin_obj = nearest_object(f, lab, centre, travel)
+                rho = object_similarity(f, twin_obj, ref_frame, ref_obj)
+                if twin_obj is not None and twin_obj.sum() > 1.5 * ref_area:
+                    repairs.append(0.0)  # it grew: the hit set off growth
                 else:
-                    repairs.append(float(np.clip(rho / max(ceiling, 1e-6), 0, 1)))
-            # containment: the difference between the runs near the object's path
-            near = window(mask, travel)
-            diff = np.abs(twin_frame - ref_frame)
-            containments.append(float(diff[near].sum() / diff.sum()) if diff.sum() > 0 else 1.0)
-        # contact: full-strength noise beside it, judged after 3 × `steps` (the patch takes
-        # time to clear); is it still itself, and did nothing grow?
-        contacts = []
-        long_obj = nearest_object(long_frame, long_labels, centre, 3 * travel)
-        for _ in range(trials):
-            outside = beside()
-            if not outside.any():
-                continue
-            frame0, twin_frame, twin_labels = twin_after(1.0, outside, steps=3 * steps)
-            added = frame0.sum() - frame.sum()
-            twin_obj = nearest_object(twin_frame, twin_labels, centre, 3 * travel)
-            grew = twin_frame.sum() > 2 * (long_frame.sum() + added)  # goo
-            contacts.append(0.0 if twin_obj is None or grew else float(np.clip(
-                object_similarity(twin_frame, twin_obj, long_frame, long_obj)
-                / max(ceiling, 1e-6), 0, 1)))
+                    rho0 = object_similarity(f0, mask, frame, mask)
+                    if rho0 > 0.995:  # the hit did nothing to read a repair from
+                        continue
+                    # repair: the object against itself, found again in both runs, up to
+                    # the ceiling; a hit that dents it less than chaos does (rho0 above
+                    # the ceiling, in a chaotic colony) is repaired as far as it gets back
+                    if rho0 < ceiling - 0.02:
+                        repairs.append(float(np.clip((rho - rho0) / (ceiling - rho0), 0, 1)))
+                    else:
+                        repairs.append(float(np.clip(rho / max(ceiling, 1e-6), 0, 1)))
+                # containment: the difference between the runs near the object's path
+                diff = np.abs(f - ref_frame)
+                containments.append(float(diff[near].sum() / diff.sum()) if diff.sum() > 0 else 1.0)
+            elif kind == "contact":
+                # judged after 3 × `steps` (the patch takes time to clear): is it still
+                # itself, and did nothing grow?
+                added = f0.sum() - frame.sum()
+                twin_obj = nearest_object(f, lab, centre, 3 * travel)
+                grew = f.sum() > 2 * (long_frame.sum() + added)  # goo
+                contacts.append(0.0 if twin_obj is None or grew else float(np.clip(
+                    object_similarity(f, twin_obj, long_frame, long_obj)
+                    / max(ceiling, 1e-6), 0, 1)))
         contact = float(np.mean(contacts)) if contacts else 1.0
         repair = float(np.mean(repairs)) if repairs else 0.0
         containment = float(np.mean(containments)) if containments else 0.0
