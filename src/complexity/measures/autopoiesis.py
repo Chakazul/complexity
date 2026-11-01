@@ -25,7 +25,7 @@ class Autopoiesis(Measure):
     name = "Autopoiesis (goal measure C)"
     unit = "C"
     map_unit = "C"
-    group = "Goal measure"
+    group = "Individuality"
     description = (
         "The prototype goal measure: per object (the basins of the potential K ∗ A), "
         "C = S × M × I. S, structure: how much better the object compresses than its cells "
