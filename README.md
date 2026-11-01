@@ -218,15 +218,16 @@ the frames. Each is computed once from runs of its own, cached, and shown as a c
 They make the first tick of a run slower (about 12 s for the default four runs), once per
 pattern.
 
-**Statistics** for reference, not complexity measures (📏):
+**Statistics** for reference, not complexity measures (tagged *statistic*):
 
 | Key | Measure | Unit |
 |---|---|---|
 | `mass` | total mass: the sum of the frame's cell values | cells |
 | `speed` | moving speed of the center of mass over a 33-frame window, centering each frame on the previous center first so that a creature crossing the torus's edge is not split (as the hand-coded Lenium does) | cells/step |
-| `change_rate` | Σ\|ΔA\| per step over the cells: motion and change in place; the divisor of per-object transfer entropy | mass/step |
+| `change_rate` | Σ\|ΔA\| per step over the cells: motion and change in place; the divisor of normalized transfer entropy and PID | mass/step |
 
-**Per object** (checkbox beside the Measures title, on by default; CLI `--per-object`):
+**Normalized** (checkbox beside the Measures title, on by default; CLI `--normalized`; charts
+say "(normalized)"): per-object versions of the measures that have one —
 compression, LZC, effective complexity, block entropy and statistical complexity are
 reported per unit of mass (bits/mass: the grid's total above an empty frame over the mass),
 and transfer entropy and PID per unit of mass changed (bits/Δmass), instead of their grid

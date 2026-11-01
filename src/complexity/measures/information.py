@@ -82,6 +82,7 @@ def local_transfer_entropy(symbols: jax.Array, n_valid, n_levels: int, offset: i
 @register_measure
 class TransferEntropy(Measure):
     key = "transfer_entropy"
+    icon = "📡"
     name = "Transfer entropy"
     unit = "bits/cell/step"
     map_unit = "bits/cell/step"
@@ -152,6 +153,7 @@ def block_entropy(symbols: np.ndarray, n_levels: int, block: int) -> float:
 @register_measure
 class BlockEntropy(Measure):
     key = "block_entropy"
+    icon = "🧱"
     name = "Block entropy"
     unit = "bits/cell"
     group = "Information theory"

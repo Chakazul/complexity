@@ -52,14 +52,22 @@ def register_measure(cls: type) -> type:
     return cls
 
 
+def _in_module_order(registered: dict[str, type]) -> dict[str, type]:
+    """Built-in modules in `_BUILTIN_MODULES` order (the UI's group order), whatever order
+    they were imported in; others after them; registration order within a module."""
+    rank = {m: i for i, m in enumerate(_BUILTIN_MODULES)}
+    return dict(sorted(registered.items(),
+                       key=lambda item: rank.get(item[1].__module__, len(rank))))
+
+
 def systems() -> dict[str, type]:
     _load_builtins()
-    return SYSTEMS
+    return _in_module_order(SYSTEMS)
 
 
 def measures() -> dict[str, type]:
     _load_builtins()
-    return MEASURES
+    return _in_module_order(MEASURES)
 
 
 def make_system(key: str, **kwargs):

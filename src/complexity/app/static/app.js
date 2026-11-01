@@ -38,12 +38,13 @@ function systemByKey(key) { return catalog.systems.find((s) => s.key === key); }
 const runKey = (system, pattern) => `${system}:${pattern}`;
 const runItems = new Map();      // runKey -> item element
 const measureItems = new Map();  // measure key -> item element
-// Per-object ratios (MEASURES.md §5.10): on by default, kept per browser, sent at Start.
-let perObject = true;
-try { perObject = localStorage.getItem("perObject") !== "off"; } catch {}
-// A measure's unit: its per-object unit when it has one and the option is on (for a running
-// session, as it was started).
-const unitOf = (m, on = active ? active.perObject : perObject) => (on && m.ratio ? m.ratio_unit : m.unit);
+// Normalized versions (MEASURES.md §5.10): on by default, kept per browser, sent at Start.
+let normalized = true;
+try { normalized = localStorage.getItem("normalized") !== "off"; } catch {}
+// Whether measure m is shown normalized: it has a normalized version and the option is on
+// (for a running session, as it was started).
+const isNormalized = (m, on = active ? active.normalized : normalized) => !!(on && m.ratio);
+const unitOf = (m, on) => (isNormalized(m, on) ? m.ratio_unit : m.unit);
 let selectedMeasures = new Set();
 
 // An item: a name, an optional muted "(note)" after it, and an optional meta line under it.
@@ -96,8 +97,8 @@ function buildMeasureList() {
     const tags = [[kind.tag, kind.tag], [m.granularity, "granularity"], [m.scope, "scope"],
       [m.temporal, "temporal"], ...(m.map ? [["heatmap", "heatmap"]] : [])];
     const meta = tags.map(([t, cls]) => `<span class="tag tag-${cls} tag-v-${t}" title="${TAG_HELP[t] || ""}">${t}</span>`).join("") +
-      ` <span class="unit-text" data-key="${m.key}">${unitOf(m, perObject)}</span>`;  // parameters are under the ⚙
-    const el = pickItem(`${kind.icon}${m.name}`, meta, () => {
+      ` <span class="unit-text" data-key="${m.key}">${unitOf(m, normalized)}</span>`;  // parameters are under the ⚙
+    const el = pickItem(`${m.icon} ${m.name}`, meta, () => {
       selectedMeasures.has(m.key) ? selectedMeasures.delete(m.key) : selectedMeasures.add(m.key);
       updateSidebar();
     });
@@ -215,10 +216,10 @@ function updateSidebar() {
 // Where a measure is highest (MEASURES.md §2.1): randomness measures peak at noise, structural ones
 // are low for both order and noise. Logical depth's proxy does neither reliably.
 const PEAKS = {
-  randomness: { icon: "🎲 ", tag: "randomness" },
-  structure: { icon: "🌿 ", tag: "structural" },
-  mixed: { icon: "", tag: "mixed" },
-  none: { icon: "📏 ", tag: "statistic" },
+  randomness: { tag: "randomness" },
+  structure: { tag: "structural" },
+  mixed: { tag: "mixed" },
+  none: { tag: "statistic" },
 };
 
 // Popups for the tags in the measure list (taxonomy from Complexity_Measure.pdf §1.1-1.2).
@@ -237,8 +238,8 @@ const TAG_HELP = {
   heatmap: "Has a spatial map: choose it under Heatmap (Run section) to see where the value comes from.",
 };
 
-// The per-object version, for measures that have one (MEASURES.md §5.10).
-const RATIO_NOTE = (m) => !m.ratio ? "" : `\n\nPer object (option beside the Measures title): the grid's total ${
+// The normalized version, for measures that have one (MEASURES.md §5.10).
+const RATIO_NOTE = (m) => !m.ratio ? "" : `\n\nNormalized (option beside the Measures title): the grid's total ${
   { mass: "above an empty frame, divided by the mass", change: "per step, divided by the change rate Σ|ΔA| per step" }[m.ratio]
 }, in ${m.ratio_unit}.`;
 
@@ -265,7 +266,7 @@ function start() {
   const measures = catalog.measures.map((m) => m.key).filter((k) => selectedMeasures.has(k));
   // no measures: run the simulations only
   sessionId++;
-  pending = { measures, slots: runRows.map((r) => r.slot), perObject };
+  pending = { measures, slots: runRows.map((r) => r.slot), normalized };
   ws.send(JSON.stringify({
     type: "start", id: sessionId, measures,
     measure_params: Object.fromEntries(measures.filter((k) => measureParams[k]).map((k) => {
@@ -273,7 +274,7 @@ function start() {
       return [k, Object.fromEntries(Object.entries(measureParams[k]).filter(([n]) => n in known))];
     })),
     runs: runRows.map((r) => ({ system: r.system, pattern: r.pattern, size: [size, size] })),
-    per_object: perObject,
+    normalized,
   }));
 }
 
@@ -355,7 +356,7 @@ function drawMaps(msg) {
 function onInit(msg) {
   // Labels under the views, in the table and the charts drop "(…)" descriptions.
   const runs = msg.runs.map((r, i) => ({ ...r, label: r.label.replace(/\s*\([^)]*\)/g, ""), slot: pending.slots[i] }));
-  active = { runs, perObject: pending.perObject,
+  active = { runs, normalized: pending.normalized,
     measures: pending.measures.filter((k) => runs.some((r) => r.measures.includes(k))) };
   const perRun = () => Object.fromEntries(active.measures.map((k) => [k, active.runs.map(() => [])]));
   history = { t: [], v: perRun(), w: perRun() };
@@ -476,7 +477,7 @@ function buildCharts() {
     const m = catalog.measures.find((x) => x.key === key);
     const el = document.createElement("div");
     el.className = "chart";
-    el.innerHTML = `<h3>${PEAKS[m.peaks_at].icon}${m.name}</h3><span class="unit">${unitOf(m)} vs. time step</span>`;
+    el.innerHTML = `<h3>${m.icon} ${m.name}${isNormalized(m) ? " (normalized)" : ""}</h3><span class="unit">${unitOf(m)} vs. time step</span>`;
     el.querySelector("h3").title = m.description;  // as in the measure list
     const c = document.createElement("canvas");
     const tip = document.createElement("div");
@@ -633,12 +634,12 @@ async function main() {
   $("map-measure").onchange = (e) => { setMap(e.target.value); renderMapControls(); };
   $("clear-runs").onclick = () => { runRows = []; updateSidebar(); };
   $("clear-measures").onclick = () => { selectedMeasures.clear(); updateSidebar(); };
-  $("per-object").checked = perObject;
-  $("per-object").onchange = (e) => {
-    perObject = e.target.checked;
-    try { localStorage.setItem("perObject", perObject ? "on" : "off"); } catch {}
+  $("normalized").checked = normalized;
+  $("normalized").onchange = (e) => {
+    normalized = e.target.checked;
+    try { localStorage.setItem("normalized", normalized ? "on" : "off"); } catch {}
     for (const span of document.querySelectorAll(".unit-text"))
-      span.textContent = unitOf(catalog.measures.find((m) => m.key === span.dataset.key), perObject);
+      span.textContent = unitOf(catalog.measures.find((m) => m.key === span.dataset.key), normalized);
   };
   $("select-structural").onclick = () => {  // a preset: the frame measures not peaking at noise
     selectedMeasures = new Set(catalog.measures

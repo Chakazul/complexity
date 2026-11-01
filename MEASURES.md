@@ -38,14 +38,21 @@ simulations do; measures that read a frame row by row see a seam (§9, Q6).
 
 ### 2.1 Where a measure peaks: randomness, structural, mixed
 
-Every measure declares `peaks_at`, shown in the UI as a tag and an emoji:
+Every measure declares `peaks_at`, shown in the UI as a tag:
 
-| Kind | Emoji | Meaning | Members |
-|---|---|---|---|
-| randomness | 🎲 | rises from order to disorder; highest for noise | compression (all), LZC, block entropy, fractal dimension, Lyapunov exponent, transient length, Langton's λ |
-| structural | 🌿 | low for both uniform frames and noise, highest in between | effective complexity, statistical complexity, transfer entropy, PID, FID, ITI (both), functional information |
-| mixed | — | neither reliably | logical depth (its proxy, §5.2.3) |
-| statistic | 📏 | not a complexity measure; for reference | total mass, moving speed, change rate (§5.9) |
+| Kind | Meaning | Members |
+|---|---|---|
+| randomness | rises from order to disorder; highest for noise | compression (all), LZC, block entropy, fractal dimension, Lyapunov exponent, transient length, Langton's λ |
+| structural | low for both uniform frames and noise, highest in between | effective complexity, statistical complexity, transfer entropy, PID, FID, ITI (both), functional information |
+| mixed | neither reliably | logical depth (its proxy, §5.2.3) |
+| statistic | not a complexity measure; for reference | total mass, moving speed, change rate (§5.9) |
+
+Each measure also has an emoji before its name in the UI (`Measure.icon`), by meaning;
+variants share one: 🗜️ compression (image and video), ✨ novelty, 🔤 Lempel–Ziv, 💎 effective
+complexity, ⏳ logical depth, 🔮 statistical complexity, 📡 transfer entropy, 🧱 block
+entropy, 🤝 PID and FID, 🦠 individuality (both), ❄️ fractal dimension, 🦋 Lyapunov
+exponent, ⏱️ transient length, 🎚️ Langton's λ, 🔑 functional information, ⚖️ mass, 💨 speed,
+🔄 change rate. (Until 2026-11-01 the emoji showed the kind: 🎲 randomness, 🌿 structural.)
 
 This is the classic split between measures of randomness (Kolmogorov complexity is often
 called algorithmic randomness) and measures of structured complexity, which are low at both
@@ -160,7 +167,7 @@ or add:
 | SC | Crutchfield & Young 1989; Crutchfield & Feldman (SFI WP 1996) | **Confirmed** (C_μ as the entropy of causal states; the 1989 reconstruction merges subtrees within a tolerance, here a G-test). **Adds**: excess entropy E ≤ C_μ, and the complexity–entropy diagram (E or C_μ against entropy density h_μ) as a parameter-free way to compare systems. |
 | EC | Gell-Mann & Lloyd 1996 | **Confirmed, with more detail**: EC = K of the ensemble in which the entity is typical; total information Σ = EC + S(ensemble); the best ensemble minimizes Σ, then EC. The noise-band proxy fixes one ensemble instead of minimizing. §5.2.2. |
 | LD | Bennett 1988 | **Confirmed, with more detail**: depth at significance s = least time of a program at most s bits longer than the shortest. Bennett treats regional depth in CA, and notes that irreversibility lets noisy systems correct errors. The decompression-time proxy is not in the uploaded Zenil 2020 (it is Zenil, Delahaye & Gaucherel 2012). |
-| AC, LZC | Zenil 2020 | **Confirmed**: LZ-family compressors estimate entropy rate, not algorithmic complexity (so 🎲). **Adds**: CTM/BDM, BDM(s) = Σ CTM(block) + log2(copies), works on 2-D arrays and gives a per-block map; "algorithmic information dynamics" ranks parts by how perturbing them changes complexity — another interventional precedent (Q15). |
+| AC, LZC | Zenil 2020 | **Confirmed**: LZ-family compressors estimate entropy rate, not algorithmic complexity (so randomness). **Adds**: CTM/BDM, BDM(s) = Σ CTM(block) + log2(copies), works on 2-D arrays and gives a per-block map; "algorithmic information dynamics" ranks parts by how perturbing them changes complexity — another interventional precedent (Q15). |
 | SE | Shannon 1948 | **Confirmed**: block entropy is Shannon's G_N, the entropy per symbol of N-blocks. |
 | FD | Mandelbrot 1967 | **Confirmed** (self-similarity dimension of a set in space). Not the attractor dimension of Yevenko et al. — that one is in phase space. |
 | LL | Langton 1990 | **Confirmed**: λ_Life = 0.273, in the transition region for 2-state, 9-cell CA. λ = 1 − 1/K is the most heterogeneous table (Life 0.5, 13 states 0.92), so min Orbium's 0.84 is near it. |
@@ -176,38 +183,38 @@ for discrete states only (§2.2).
 
 | PDF | Measure | Key | Kind | Tags | Computed | Map | Status |
 |---|---|---|---|---|---|---|---|
-| AC | Algorithmic complexity, by compression | `lzma`, `png`, `video_lzma`, `video_h264`, `novelty` | 🎲 | pattern, global, static (video: dynamic) | instance / object (video: trajectory / run) | tile (not H.264, novelty) | implemented |
-| AC | Lempel–Ziv complexity | `lzc` | 🎲 | pattern, global, static | instance / object | tile | implemented |
-| EC | Effective complexity (proxy) | `effective_complexity` | 🌿 | pattern, global, static | instance / object | — | implemented |
+| AC | Algorithmic complexity, by compression | `lzma`, `png`, `video_lzma`, `video_h264`, `novelty` | randomness | pattern, global, static (video: dynamic) | instance / object (video: trajectory / run) | tile (not H.264, novelty) | implemented |
+| AC | Lempel–Ziv complexity | `lzc` | randomness | pattern, global, static | instance / object | tile | implemented |
+| EC | Effective complexity (proxy) | `effective_complexity` | structural | pattern, global, static | instance / object | — | implemented |
 | LD | Logical depth (proxy) | `logical_depth` | mixed | pattern, global, static | instance / object | — | implemented |
-| SC | Statistical complexity (local) | `statistical_complexity` | 🌿 | pattern, local, dynamic | trajectory / run | local | implemented |
-| TE | Transfer entropy | `transfer_entropy` | 🌿 | pattern, local, dynamic | trajectory / run | local | implemented |
-| SE | Shannon (block) entropy | `block_entropy` | 🎲 | system, local, static | instance / object | local | implemented |
-| PID | Partial information decomposition | `pid` | 🌿 | system, local, dynamic | trajectory / run | tile | implemented |
-| FID | Functional information decomposition | `fid` | 🌿 | rule, local, dynamic | rule / run | tile | implemented |
-| ITI | Individuality, as in the paper | `iti_features` | 🌿 | pattern, local, dynamic | trajectory / run | — | implemented |
-| ITI | Individuality, local adaptation | `iti_local` | 🌿 | pattern, local, dynamic | trajectory / run | local | implemented |
-| FD | Fractal dimension | `fractal_dimension` | 🎲 | pattern, global, static | instance / object | — | implemented |
-| LE | Lyapunov exponent | `lyapunov` | 🎲 | rule, global, dynamic | trajectory / run | local | implemented |
-| TL | Transient length (growth class) | `transient_length` | 🎲 | rule, global, dynamic, discrete | rule / ensemble | — | implemented |
-| LL | Langton's λ | `langton_lambda` | 🎲 | rule, global, static, discrete | rule / ensemble | — | implemented |
-| FI | Functional information | `functional_information` | 🌿 | system, global, dynamic | ensemble / ensemble | — | implemented |
+| SC | Statistical complexity (local) | `statistical_complexity` | structural | pattern, local, dynamic | trajectory / run | local | implemented |
+| TE | Transfer entropy | `transfer_entropy` | structural | pattern, local, dynamic | trajectory / run | local | implemented |
+| SE | Shannon (block) entropy | `block_entropy` | randomness | system, local, static | instance / object | local | implemented |
+| PID | Partial information decomposition | `pid` | structural | system, local, dynamic | trajectory / run | tile | implemented |
+| FID | Functional information decomposition | `fid` | structural | rule, local, dynamic | rule / run | tile | implemented |
+| ITI | Individuality, as in the paper | `iti_features` | structural | pattern, local, dynamic | trajectory / run | — | implemented |
+| ITI | Individuality, local adaptation | `iti_local` | structural | pattern, local, dynamic | trajectory / run | local | implemented |
+| FD | Fractal dimension | `fractal_dimension` | randomness | pattern, global, static | instance / object | — | implemented |
+| LE | Lyapunov exponent | `lyapunov` | randomness | rule, global, dynamic | trajectory / run | local | implemented |
+| TL | Transient length (growth class) | `transient_length` | randomness | rule, global, dynamic, discrete | rule / ensemble | — | implemented |
+| LL | Langton's λ | `langton_lambda` | randomness | rule, global, static, discrete | rule / ensemble | — | implemented |
+| FI | Functional information | `functional_information` | structural | system, global, dynamic | ensemble / ensemble | — | implemented |
 | TD | Thermodynamic depth | — | — | pattern, global, dynamic | — | — | deferred (§5.8) |
 | IIT | Integrated information | — | — | system, global, dynamic | — | — | deferred (§5.8) |
 | AT | Assembly index | — | — | pattern, local (regional), static | — | — | deferred (§5.8) |
-| — | Total mass (statistic) | `mass` | 📏 | pattern, global, static | instance / object | — | implemented (§5.9) |
-| — | Moving speed (statistic) | `speed` | 📏 | pattern, global, dynamic | trajectory / run | — | implemented (§5.9) |
-| — | Change rate (statistic) | `change_rate` | 📏 | pattern, global, dynamic | trajectory / run | — | implemented (§5.9) |
-
-Statistical complexity and transfer entropy also have per-object versions (§5.10).
+| — | Total mass (statistic) | `mass` | statistic | pattern, global, static | instance / object | — | implemented (§5.9) |
+| — | Moving speed (statistic) | `speed` | statistic | pattern, global, dynamic | trajectory / run | — | implemented (§5.9) |
+| — | Change rate (statistic) | `change_rate` | statistic | pattern, global, dynamic | trajectory / run | — | implemented (§5.9) |
 | WZ | Wuensche's Z | — | — | rule, global, static, discrete | — | — | with elementary CA, M4 (§5.8) |
-| — | Multi-scale structural complexity | — | 🌿 | pattern, local, dynamic | trajectory / run (better: ensemble) | local | proposed: the goal measure (§8) |
-| — | Local information dynamics (storage, transfer, modification) | — | 🌿 | pattern, local, dynamic | trajectory / run | local | proposed (§8.2) |
-| — | Causal emergence / integrated information decomposition (ΦID) | — | 🌿 | pattern | trajectory / run | per unit | proposed (§8.2) |
-| — | O-information | — | 🌿 | system, local | trajectory / run | local | proposed (§8.2) |
-| — | Pointwise PID | — | 🌿 | system, local, dynamic | trajectory / run | local | proposed (§8.2) |
-| — | Logical depth, better proxies | — | 🌿? | pattern, global | instance / object | — | proposed (§5.2.3) |
-| — | Assembly copy number × index | — | 🌿 | pattern | instance / object | per object | proposed (§8.2) |
+| — | Multi-scale structural complexity | — | structural | pattern, local, dynamic | trajectory / run (better: ensemble) | local | proposed: the goal measure (§8) |
+| — | Local information dynamics (storage, transfer, modification) | — | structural | pattern, local, dynamic | trajectory / run | local | proposed (§8.2) |
+| — | Causal emergence / integrated information decomposition (ΦID) | — | structural | pattern | trajectory / run | per unit | proposed (§8.2) |
+| — | O-information | — | structural | system, local | trajectory / run | local | proposed (§8.2) |
+| — | Pointwise PID | — | structural | system, local, dynamic | trajectory / run | local | proposed (§8.2) |
+| — | Logical depth, better proxies | — | structural? | pattern, global | instance / object | — | proposed (§5.2.3) |
+| — | Assembly copy number × index | — | structural | pattern | instance / object | per object | proposed (§8.2) |
+
+Eight measures also have normalized, per-object versions (§5.10).
 
 Code: `src/complexity/measures/` — `compression.py`, `algorithmic.py` (LZC, EC, LD),
 `causal.py` (SC), `information.py` (TE, block entropy), `decomposition.py` (PID, FID),
@@ -531,7 +538,7 @@ linear, large exponential).
 creatures drift by fractions of a cell — so the old 1e-3 quantization gave every soup with
 a glider the cap. Linear and polynomial are close for Life (exponent ≈ 1.4): 16–96 gives
 linear, as in the paper, but 16–64 with fewer soups gave polynomial. The classes order
-rules from order to chaos, hence 🎲, but the paper places complex rules in the middle
+rules from order to chaos, hence randomness, but the paper places complex rules in the middle
 (linear, polynomial), not at the top. The noise baselines are no longer accepted (some of
 their patterns are continuous). ~5 s on GPU, ~20 s on CPU for Integer Lenia.
 
@@ -591,7 +598,7 @@ Most Lenia creatures sit at the 9-bit ceiling; telling them apart needs many mor
 ### 5.9 Statistics for reference (`mass`, `speed`, `change_rate`)
 
 Not complexity measures: plain statistics to read the others against (is the creature
-alive, is it moving), tagged 📏 *statistic* and skipped by the orientation tests.
+alive, is it moving), tagged *statistic* and skipped by the orientation tests.
 
 - **Total mass** (`mass`): the sum of the frame's cell values, in cells (live cells in
   Life; the mean of the channels for multi-channel Lenia). Glider 5, Orbium 72.7.
@@ -611,22 +618,23 @@ alive, is it moving), tagged 📏 *statistic* and skipped by the orientation tes
 - **Change rate** (`change_rate`): Σ|A(t+1) − A(t)| over the cells, averaged over the window
   (16 frames), in mass per step: motion and change in place alike. Glider 4 (2 births, 2
   deaths a step); Orbium 14.8, Paraptera pedes 55, Tetralapillium 7.5; still and frozen
-  patterns 0. The divisor of TE's per-object version (§5.10).
+  patterns 0. The divisor of TE's and PID's normalized versions (§5.10).
 
-### 5.10 Per-object ratios (option "per object", on by default in the UI)
+### 5.10 Normalized, per-object versions (option "normalized", on by default in the UI)
 
 Many measures are grid averages, so on a lone creature they mostly measure how much of the
-grid it covers and how much it changes (Q17). Their per-object versions divide that out:
+grid it covers and how much it changes (Q17). Their normalized versions divide that out, per
+object:
 (value − value on empty frames) × cells / divisor, where `cells` is the grid's H × W, so
 the numerator is the grid's total above an empty frame (a compressor's fixed overhead
 removed; 0 for the information measures), and the divisor is the mean mass or change rate
 (§5.9) over the measure's own window of raw frames (SC sees only 2-level symbols).
 
-| Measure | Divisor | Unit (grid average → per object) |
+| Measure | Divisor | Unit (grid average → normalized) |
 |---|---|---|
 | image compression (LZMA, PNG) | mass | bits/cell → bits/mass |
 | video compression (LZMA, H.264) | mass | bits/cell/frame → bits/mass/frame |
-| Lempel–Ziv complexity | mass | normalized → symbols/mass (c · log_L n symbols) |
+| Lempel–Ziv complexity | mass | relative to noise → symbols/mass (c · log_L n symbols) |
 | effective complexity | mass | bits/cell → bits/mass |
 | block entropy | mass | bits/cell → bits/mass |
 | statistical complexity | mass | bits/cell → bits/mass |
@@ -659,8 +667,9 @@ when TE is: TE / change rate stays within 1.6× its median (CV 0.24), steadier t
 (2.6×, 0.53), and across the creatures TE follows change rate as closely (log correlation
 0.98). TE / mass was in between (2.2×, 0.48).
 
-Implemented in the run (`Measure.ratio`, `ratio_unit`; `Run(per_object=True)`, CLI
-`--per-object`, the UI's checkbox beside the Measures title, sent at Start); the library
+Implemented in the run (`Measure.ratio`, `ratio_unit`; `Run(normalized=True)`, CLI
+`--normalized`, the UI's "normalized" checkbox beside the Measures title, sent at Start;
+normalized charts say "(normalized)" in their title); the library
 and CLI default to the grid averages. Other measures could declare a ratio the same way.
 
 Values (128², step ~300; LZMA, effective complexity and block entropy from the comparison
@@ -893,7 +902,7 @@ No. They measure structured complexity, and the others measure randomness (§2.1
 principle is "higher = more complex *by the measure's definition*". Inverting a measure that
 is low at both ends would make empty grids and noise score highest and structure lowest,
 which fits neither meaning. Negation fixes only measures that run the wrong way along the
-order-to-disorder axis. Instead, the UI tags each measure 🎲 randomness or 🌿 structural.
+order-to-disorder axis. Instead, the UI tags each measure randomness or structural.
 
 **Q2. Why is logical depth "mixed"?**
 Bennett's logical depth is structural in theory, but the decompression-time proxy measures
@@ -1043,7 +1052,7 @@ Tetralapillium metamorpha and Florakronium arcus (128², 50 measurements over 50
   gliders score ~0 (Orbium 0.01, Paraptera pedes 0.09), creatures whose mass varies
   smoothly ~1–1.3. Interesting, but not individuality in Krakauer's sense; that needs
   other creatures (§5.4).
-Hence the per-object ratios (§5.10), which keep what is specific to each creature. TE's
+Hence the normalized versions (§5.10), which keep what is specific to each creature. TE's
 divisor became the change rate rather than speed × mass, which spiked when a creature slowed
 down while still changing shape.
 

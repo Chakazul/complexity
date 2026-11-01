@@ -49,9 +49,9 @@ class RunSpec:
 
 class Run:
     def __init__(self, spec: RunSpec, measure_keys: list[str], measure_params: dict | None = None,
-                 per_object: bool = False):
+                 normalized: bool = False):
         self.spec = spec
-        self.per_object = per_object  # report measures' per-object ratios (Measure.ratio)
+        self.normalized = normalized  # report measures' normalized versions (Measure.ratio)
         self._empty: dict[tuple[str, int], float] = {}  # measure values on empty frames
         self.system = registry.make_system(spec.system)
         self.size = tuple(spec.size or self.system.default_size)
@@ -117,12 +117,12 @@ class Run:
                 values[m.key] = float(m.compute_state(self.system, self.state, rng, ctx))
             else:
                 values[m.key] = float(m.compute(self._frames_for(m), ctx))
-            if self.per_object and m.ratio:
-                values[m.key] = self._per_object(m, values[m.key])
+            if self.normalized and m.ratio:
+                values[m.key] = self._normalize(m, values[m.key])
             ms[m.key] = (time.perf_counter() - t0) * 1000
         return values, ms
 
-    def _per_object(self, m, value: float) -> float:
+    def _normalize(self, m, value: float) -> float:
         """`value` (a grid average) as a total over the grid above an empty frame, divided
         by the mean mass, or the change rate, of the measure's window: MEASURES.md §5.10.
         0 if the divisor is (near) 0: an empty grid, or nothing changing."""

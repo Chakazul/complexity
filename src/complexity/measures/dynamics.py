@@ -67,6 +67,7 @@ def separation_field(system: System, state, rng: jax.Array, steps: int, discrete
 @register_measure
 class Lyapunov(Measure):
     key = "lyapunov"
+    icon = "🦋"
     name = "Lyapunov exponent"
     unit = "1/step"
     group = "Dynamics"

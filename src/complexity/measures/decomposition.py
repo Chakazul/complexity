@@ -104,6 +104,7 @@ class _Decomposition(Measure):
 @register_measure
 class PartialInformation(_Decomposition):
     key = "pid"
+    icon = "🤝"
     name = "Partial information (PID)"
     ratio = "change"
     ratio_unit = "bits/Δmass"
@@ -125,6 +126,7 @@ class PartialInformation(_Decomposition):
 @register_measure
 class FunctionalDecomposition(_Decomposition):
     key = "fid"
+    icon = "🤝"
     name = "Functional information (FID)"
     description = (
         "Bohm et al.'s functional information decomposition of the map from (a cell's own "

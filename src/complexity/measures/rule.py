@@ -106,6 +106,7 @@ def growth_class(sizes, means) -> int:
 @register_measure
 class TransientLength(RuleMeasure):
     key = "transient_length"
+    icon = "⏱️"
     name = "Transient length"
     unit = "class"
     description = (
@@ -172,6 +173,7 @@ class TransientLength(RuleMeasure):
 @register_measure
 class LangtonLambda(RuleMeasure):
     key = "langton_lambda"
+    icon = "🎚️"
     name = "Langton's λ"
     unit = "fraction"
     description = (
@@ -223,6 +225,7 @@ def survival(system: System, states, steps: int, checks: int, max_area) -> jax.A
 @register_measure
 class FunctionalInformation(RuleMeasure):
     key = "functional_information"
+    icon = "🔑"
     name = "Functional information"
     unit = "bits"
     description = (

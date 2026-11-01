@@ -53,10 +53,10 @@ class Measure(ABC):
     implement `compute_map` (or `compute_state_map`), one value per cell; "tile" measures
     are applied by the run to tiles of the frame; None: no map.
 
-    `ratio` names a per-object version (MEASURES.md §5.10): the grid total above an empty
+    `ratio` names a normalized, per-object version (MEASURES.md §5.10): the grid total above an empty
     frame ((value − empty value) × cells) divided by the mean "mass", or the "change" rate
     Σ|ΔA| per step, over the measure's window.
-    The run reports it instead of the value when asked (`Run(per_object=True)`), in
+    The run reports it instead of the value when asked (`Run(normalized=True)`), in
     `ratio_unit`. The map stays per cell, in `map_unit`.
     """
 
@@ -75,6 +75,7 @@ class Measure(ABC):
     peaks_at: str = "randomness"  # "randomness", "structure", "mixed" or "none"
     ratio: str | None = None  # None, "mass" or "change": see the docstring
     ratio_unit: str = ""
+    icon: str = ""  # an emoji before the name in the UI; variants of a measure share one
     params: tuple[str, ...] = ()
     choices: dict[str, tuple[str, ...]] = {}  # allowed values of text parameters
     applies_to: str = ""  # which systems, if not all: shown when a measure is greyed out

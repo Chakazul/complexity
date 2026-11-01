@@ -62,6 +62,7 @@ class _Statistic(Measure):
 @register_measure
 class Mass(_Statistic):
     key = "mass"
+    icon = "⚖️"
     name = "Total mass"
     unit = "cells"
     description = (
@@ -77,6 +78,7 @@ class Mass(_Statistic):
 @register_measure
 class Speed(_Statistic):
     key = "speed"
+    icon = "💨"
     name = "Moving speed"
     unit = "cells/step"
     description = (
@@ -102,13 +104,14 @@ class Speed(_Statistic):
 @register_measure
 class ChangeRate(_Statistic):
     key = "change_rate"
+    icon = "🔄"
     name = "Change rate"
     unit = "mass/step"
     description = (
         "How much the frame changes per step: Σ|A(t+1) − A(t)| over the cells, averaged over "
         "the window. Covers motion and change in place alike (a still or frozen pattern: 0; "
         "an oscillator or a creature changing shape in place: > 0). The divisor of transfer "
-        "entropy's per-object version. A statistic for reference, not a complexity measure."
+        "entropy's normalized version. A statistic for reference, not a complexity measure."
     )
     window = 16
     params = ("window",)

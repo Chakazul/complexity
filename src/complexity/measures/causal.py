@@ -68,6 +68,7 @@ def causal_states(symbols: np.ndarray, n_levels: int, alpha: float):
 @register_measure
 class StatisticalComplexity(Measure):
     key = "statistical_complexity"
+    icon = "🔮"
     name = "Statistical complexity"
     unit = "bits/cell"
     map_unit = "bits/cell"

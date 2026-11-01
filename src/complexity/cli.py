@@ -42,7 +42,7 @@ def _run(args) -> None:
     for item in args.runs:
         system, pattern = item.split(":")
         runs.append(Run(RunSpec(system, pattern, size, args.seed), measures,
-                        per_object=args.per_object))
+                        normalized=args.normalized))
     with open(args.out, "w", newline="") if args.out else contextlib.nullcontext(sys.stdout) as out:
         writer = csv.writer(out)
         writer.writerow(["run", "system", "pattern", "t", *measures])
@@ -77,8 +77,9 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument("--every", type=int, default=1, help="measure every N steps")
     run.add_argument("--size", help="grid size HxW, e.g. 128x128")
     run.add_argument("--seed", type=int, default=0)
-    run.add_argument("--per-object", action="store_true",
-                     help="per-object ratios for measures that have one (MEASURES.md §5.10)")
+    run.add_argument("--normalized", action="store_true",
+                     help="normalized versions of measures that have one: per unit of mass or "
+                          "of mass changed (MEASURES.md §5.10)")
     run.add_argument("--out", help="CSV path (default: stdout)")
 
     args = parser.parse_args(argv)

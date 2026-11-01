@@ -70,9 +70,10 @@ def lz76(symbols: np.ndarray) -> int:
 @register_measure
 class LempelZiv(Measure):
     key = "lzc"
+    icon = "🔤"
     map = "tile"
     name = "Lempel-Ziv complexity"
-    unit = "normalized"
+    unit = "relative to noise"
     group = "Algorithmic complexity"
     ratio = "mass"
     ratio_unit = "symbols/mass"
@@ -112,6 +113,7 @@ def regular_part(frame: np.ndarray, sigma: float, z: float) -> np.ndarray:
 @register_measure
 class EffectiveComplexity(Measure):
     key = "effective_complexity"
+    icon = "💎"
     name = "Effective complexity (proxy)"
     unit = "bits/cell"
     group = "Algorithmic complexity"
@@ -137,6 +139,7 @@ class EffectiveComplexity(Measure):
 @register_measure
 class LogicalDepth(Measure):
     key = "logical_depth"
+    icon = "⏳"
     name = "Logical depth (proxy)"
     unit = "ns/cell"
     group = "Algorithmic complexity"

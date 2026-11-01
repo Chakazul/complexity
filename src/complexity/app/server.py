@@ -62,7 +62,7 @@ def catalog():
              "window": cls.window, "granularity": cls.granularity, "scope": cls.scope,
              "temporal": cls.temporal, "backend": cls.backend,
              "map": cls.map, "map_unit": cls.map_unit or cls.unit,
-             "ratio": cls.ratio, "ratio_unit": cls.ratio_unit,
+             "ratio": cls.ratio, "ratio_unit": cls.ratio_unit, "icon": cls.icon,
              "subject": cls.subject, "estimated_from": cls.estimated_from,
              "per_rule": issubclass(cls, RuleMeasure),
              "needs_discrete": cls.needs_discrete, "peaks_at": cls.peaks_at,
@@ -75,12 +75,12 @@ def catalog():
 
 class Session:
     def __init__(self, runs: list[dict], measures: list[str], measure_params: dict | None = None,
-                 id: int = 0, per_object: bool = False):
+                 id: int = 0, normalized: bool = False):
         self.id = id
         self.map_key: str | None = None
         self.runs = [
             Run(RunSpec(r["system"], r["pattern"], r.get("size"), r.get("seed", 0)), measures,
-                measure_params, per_object)
+                measure_params, normalized)
             for r in runs
         ]
 
@@ -138,7 +138,7 @@ async def websocket_endpoint(ws: WebSocket):
                     async with lock:
                         state["session"] = Session(msg["runs"], msg["measures"],
                                                    msg.get("measure_params"), msg.get("id", 0),
-                                                   bool(msg.get("per_object", False)))
+                                                   bool(msg.get("normalized", False)))
                         state["session"].map_key = state.get("map")
                     await ws.send_json(state["session"].init_message())
                     await tick(0)

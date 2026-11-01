@@ -427,11 +427,11 @@ def test_mass_and_speed():
     assert stats("lenia", "orbium", 64)["speed"] > 0.3
 
 
-def test_per_object_ratios():
+def test_normalized_versions():
     keys = ["statistical_complexity", "transfer_entropy", "mass", "speed"]
 
-    def values(size, per_object):
-        run = Run(RunSpec("lenia", "orbium", (size, size)), keys, per_object=per_object)
+    def values(size, normalized):
+        run = Run(RunSpec("lenia", "orbium", (size, size)), keys, normalized=normalized)
         run.step(300)
         return run.measure()[0]
 
@@ -444,18 +444,18 @@ def test_per_object_ratios():
     for key in ("statistical_complexity", "transfer_entropy"):
         assert 1 < large[key] / small[key] < 1.3, key
     frozen = Run(RunSpec("baseline", "frozen_noise_binary", (32, 32)), ["transfer_entropy"],
-                 per_object=True)
+                 normalized=True)
     frozen.step(20)
     assert frozen.measure()[0]["transfer_entropy"] == 0  # nothing changes: no ratio
     m = registry.make_measure("transfer_entropy")
     assert (m.ratio, m.ratio_unit, m.map_unit) == ("change", "bits/Δmass", "bits/cell/step")
 
 
-def test_per_object_te_has_no_spikes_when_a_creature_slows_down():
+def test_normalized_te_has_no_spikes_when_a_creature_slows_down():
     # Tetralapillium almost stops at times but keeps changing shape; TE / (speed × mass)
     # reached 39x its median there, TE / change rate stays within 2x (MEASURES §5.10)
     run = Run(RunSpec("lenia", "tetralapillium_metamorpha", (256, 256)),
-              ["transfer_entropy", "pid", "speed", "change_rate"], per_object=True)
+              ["transfer_entropy", "pid", "speed", "change_rate"], normalized=True)
     run.step(200)
     te, pid, speed = [], [], []
     for _ in range(40):
@@ -468,17 +468,23 @@ def test_per_object_te_has_no_spikes_when_a_creature_slows_down():
     assert max(te) < 2 * np.median(te) and max(pid) < 2 * np.median(pid)
 
 
-def test_compression_per_object_counts_bits_above_an_empty_frame():
+def test_normalized_compression_counts_bits_above_an_empty_frame():
     # LZMA's fixed overhead is subtracted, so the creature's bits per unit of mass do not
     # depend on the grid size (MEASURES §5.10)
     def lzma(size):
         run = Run(RunSpec("lenia", "orbium", (size, size)), ["lzma", "effective_complexity"],
-                  per_object=True)
+                  normalized=True)
         run.step(300)
         return run.measure()[0]
 
     small, large = lzma(128), lzma(256)
     for key in small:
         assert large[key] == pytest.approx(small[key], rel=0.03), key
-    empty = Run(RunSpec("baseline", "empty", (64, 64)), ["lzma", "lzc"], per_object=True)
+    empty = Run(RunSpec("baseline", "empty", (64, 64)), ["lzma", "lzc"], normalized=True)
     assert empty.measure()[0] == {"lzma": 0, "lzc": 0}
+
+
+def test_measures_are_listed_in_module_order():
+    keys = list(registry.measures())
+    assert keys[0] == "lzma" and keys[-3:] == ["mass", "speed", "change_rate"]
+    assert all(cls.icon for cls in registry.measures().values())

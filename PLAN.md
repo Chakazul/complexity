@@ -319,9 +319,11 @@ in **[MEASURES.md](MEASURES.md)**. In brief:
 
 - 20 measures cover all of the PDF's 18 except TD, IIT and AT (deferred) and WZ (with
   elementary CA in M4); ITI comes in two forms, compression in five.
-- Two statistics for reference, total mass and moving speed (📏), are listed with them.
-- Each measure peaks at randomness (🎲: compression, LZC, block entropy, FD, LE, TL, LL),
-  at structure (🌿: EC, SC, TE, PID, FID, ITI, FI) or neither (logical depth's proxy).
+- Three statistics for reference, total mass, moving speed and change rate, are listed
+  with them; eight measures have normalized, per-object versions (MEASURES.md §5.10).
+- Each measure peaks at randomness (compression, LZC, block entropy, FD, LE, TL, LL), at
+  structure (EC, SC, TE, PID, FID, ITI, FI) or neither (logical depth's proxy), shown as a
+  tag; an emoji before each name says what it measures (MEASURES.md §2.1).
 - Frame measures give time series; 11 also give spatial maps (heatmaps), per cell or per
   tile; TL, LL and FI are per rule.
 - The goal measure — a dynamic map, low for empty and noise, highest for networks of

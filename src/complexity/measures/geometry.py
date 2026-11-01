@@ -25,6 +25,7 @@ def box_counts(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 @register_measure
 class FractalDimension(Measure):
     key = "fractal_dimension"
+    icon = "❄️"
     name = "Fractal dimension (box counting)"
     unit = "dimension"
     group = "Geometry"
