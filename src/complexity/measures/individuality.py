@@ -169,36 +169,42 @@ def disk_mask(radius: float) -> np.ndarray:
     return x * x + y * y <= radius * radius
 
 
-def track_features(frames, label_maps, environment: str, reach: float,
-                   target_kind: str = "typical") -> np.ndarray:
-    """(S, E) per frame: S = the mass of a target creature chosen in the first frame (the
-    one closest to the median mass, "typical", or the most massive, "largest"), followed
-    by overlap (the creature sharing most cells with the previous target, at least
-    MIN_OVERLAP of them; when it divides, the larger part); E = the mass of the other creatures within `reach` of it ("near") or
-    of everything else ("all"). A lost target has S = 0."""
-    near = disk_mask(reach) if environment == "near" else None
+def follow_target(frames, label_maps, target_kind: str = "typical"):
+    """The target creature's mask in each frame (None once lost): chosen in the first frame
+    (the one closest to the median mass, "typical", or the most massive, "largest"), then
+    followed by overlap: the creature sharing most cells with the previous target, at
+    least MIN_OVERLAP of them; when it divides, the larger part."""
     target = None
-    out = []
-    for frame, labels in zip(frames, label_maps):
-        total = float(frame.sum())
-        if target is None:  # the first frame, or lost
-            ids = labels[labels > 0]
-            if out == [] and len(ids):
+    for i, (frame, labels) in enumerate(zip(frames, label_maps)):
+        if i == 0:
+            ids = np.unique(labels[labels > 0])
+            if len(ids):
                 masses = np.bincount(labels.ravel(), weights=frame.ravel())
-                ids = np.unique(ids)
                 if target_kind == "largest":
                     pick = ids[np.argmax(masses[ids])]
                 else:
                     pick = ids[np.argmin(np.abs(masses[ids] - np.median(masses[ids])))]
                 target = labels == pick
-        else:  # the creature sharing most cells, if they are at least `MIN_OVERLAP` of the target
+        elif target is not None:
             overlap = labels[target & (labels > 0)]
             best = np.bincount(overlap).argmax() if len(overlap) else 0
             keep = best and np.count_nonzero(overlap == best) >= MIN_OVERLAP * target.sum()
             target = labels == best if keep else None
+        yield target
+
+
+def track_features(frames, label_maps, environment: str, reach: float,
+                   target_kind: str = "typical") -> np.ndarray:
+    """(S, E) per frame: S = the mass of the target creature (`follow_target`), E = the
+    mass of the other creatures within `reach` of it ("near") or of everything else
+    ("all"). A lost target has S = 0."""
+    near = disk_mask(reach) if environment == "near" else None
+    out = []
+    for frame, labels, target in zip(frames, label_maps,
+                                     follow_target(frames, label_maps, target_kind)):
+        total = float(frame.sum())
         if target is None or not target.any():
             out.append((0.0, total if environment == "all" else 0.0))
-            target = None
             continue
         s = float(frame[target].sum())
         if environment == "all":
@@ -209,6 +215,18 @@ def track_features(frames, label_maps, environment: str, reach: float,
             e = float(frame[zone & (labels > 0) & ~target].sum())
         out.append((s, e))
     return np.array(out)
+
+
+def object_map(labels: np.ndarray, target: np.ndarray | None) -> np.ndarray:
+    """Labels recoded for display: 0 background, 1 the target, 2, 3, ... the others."""
+    is_other = (labels > 0) if target is None else (labels > 0) & ~target
+    others = np.unique(labels[is_other])
+    lut = np.zeros(labels.max() + 1, np.float32)
+    lut[others] = np.arange(2, 2 + len(others))
+    out = lut[labels]
+    if target is not None:
+        out[target] = 1
+    return out
 
 
 def quantize(x: np.ndarray, q: int) -> np.ndarray:
@@ -270,6 +288,15 @@ class FeatureIndividuality(Measure):
             hit = (frame, detect(frame, potential, self.threshold, self.saddle, min_area))
             self._cache[id(frame)] = hit
         return hit[1]
+
+    def objects(self, frames, ctx=NO_CONTEXT, potentials=None) -> np.ndarray:
+        """The latest frame's creatures for display (`object_map`), the target tracked over
+        the window as `compute` tracks it."""
+        reach = ctx.reach or 1
+        pots = potentials if potentials is not None else [None] * len(frames)
+        labels = [self._labels(f, u, reach) for f, u in zip(frames, pots)]
+        *_, target = follow_target(frames, labels, self.target)
+        return object_map(labels[-1], target)
 
     def compute(self, frames, ctx=NO_CONTEXT, potentials=None) -> float:
         reach = ctx.reach or 1

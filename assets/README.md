@@ -33,3 +33,9 @@ that version and the published version follows.
 | LL | Langton, C. G. (1990). Computation at the edge of chaos: Phase transitions and emergent computation. *Physica D: Nonlinear Phenomena, 42*(1–3), 12–37. https://doi.org/10.1016/0167-2789(90)90064-V | `Langton 1990 LL.pdf` |
 | WZ | Wuensche, A. (1994). *Complexity in one-D cellular automata: Gliders, basins of attraction and the Z parameter* (SFI Working Paper 1994-04-025). Santa Fe Institute. | `Wuensche 1994 WZ.pdf` |
 | WZ | Wuensche, A. (1998). *Classifying cellular automata automatically* (SFI Working Paper 1998-02-018). Santa Fe Institute. Published as Classifying cellular automata automatically: Finding gliders, filtering, and relating space-time patterns, attractor basins, and the Z parameter. *Complexity, 4*(3), 47–66 (1999). https://doi.org/10.1002/(SICI)1099-0526(199901/02)4:3<47::AID-CPLX9>3.0.CO;2-V | `Wuensche 1998 WZ.pdf` |
+
+## Figures
+
+`figures/` holds figures made by the scripts in [scripts/](../scripts/) and cited in
+[MEASURES.md](../MEASURES.md): `detection.png` and `tracking.png` from
+`scripts/detection_figures.py` (object detection in the potential K ∗ A, Q18).

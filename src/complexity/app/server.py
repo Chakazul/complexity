@@ -30,7 +30,7 @@ from fastapi.staticfiles import StaticFiles
 
 from complexity import registry
 from complexity.measures.base import RuleMeasure
-from complexity.session import Run, RunSpec
+from complexity.session import SPECIAL_MAPS, Run, RunSpec
 
 STATIC = Path(__file__).parent / "static"
 
@@ -50,6 +50,7 @@ def catalog():
     device = jax.devices()[0]
     return {
         "device": {"backend": jax.default_backend(), "name": device.device_kind},
+        "maps": [{"key": key, "name": name, "unit": unit} for key, (name, unit) in SPECIAL_MAPS.items()],
         "systems": [
             {"key": key, "name": cls.name, "patterns": cls.patterns,
              "n_states": {p: probes[key].n_states(p) for p in cls.patterns},

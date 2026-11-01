@@ -226,6 +226,11 @@ pattern.
 | `speed` | moving speed of the center of mass over a 33-frame window, centering each frame on the previous center first so that a creature crossing the torus's edge is not split (as the hand-coded Lenium does) | cells/step |
 | `change_rate` | Σ\|ΔA\| per step over the cells: motion and change in place; the divisor of normalized transfer entropy and PID | mass/step |
 
+**Heatmaps** (Run section): any selected measure with a map, and, for every run, the
+neighbour sum K ∗ A (how the model sees the world) and the detected objects, with the target
+of 🍄 Individuality (features) in its own colour (MEASURES.md §4, §5.4, Q18; figures in
+[assets/figures/](assets/figures/), made by `scripts/detection_figures.py`).
+
 **Normalized** (checkbox beside the Measures title, on by default; CLI `--normalized`; charts
 say "(normalized)"): per-object versions of the measures that have one —
 compression, LZC, effective complexity, block entropy and statistical complexity are

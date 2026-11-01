@@ -260,6 +260,11 @@ useful for the goal in §8: dark on noise and empty, following what structures d
 - **Tile**: LZMA, PNG, video LZMA, LZC, PID, FID. Tiles are about 1/16 of the grid, at least
   8 cells, and each shows its **excess over an empty tile**: on an 8×8 tile LZMA spends
   ~8 bits/cell on format overhead, which swamped every difference.
+- **Not measures**, always listed first: the neighbour sum K ∗ A (`System.potential`, the
+  orange ramp) and the detected objects (§5.4: the target in one colour, the other
+  creatures in a muted palette; the target is the one `iti_features` tracks when it runs,
+  else the typical creature of the current frame). Systems without a potential show no
+  neighbour sum, and their objects come from the frame.
 - Left out: effective complexity (a 2-cell blur leaves nothing on 8×8), fractal dimension
   (2 box sizes), logical depth (timing noise), H.264 and novelty (cost).
 - Colour: one orange ramp for magnitude (sequential = one hue), from the surface colour at
@@ -482,7 +487,7 @@ With `all`, colonial A is higher (scene 0.55 at 600, 0.98 at 2000) and nC 0. In 
 scenes, conditioning on the neighbours (A) removes about half of A*: half of what predicts
 a unit's mass is shared with what its neighbours do. A glider stream scores 0: the typical
 target is a glider, of constant mass, and A* ≤ H(S) = 0. Paraptera cavus furiosus is
-detected as two lobes, so each is the other's environment (nC 0.03).
+detected as its two units (Q18), so each is the other's environment (nC 0.03).
 
 **`iti_local` (adaptation).** Per creature cell: S = (own state, summed state of its 8
 neighbours in the same creature — the live-neighbour count for Life), E = summed state of
@@ -1089,18 +1094,27 @@ visible. What separates them is that each unit is its own *peak*: flooding from 
 (catchment basins) splits the colony, and merging neighbouring basins whose saddle is high
 relative to the lower peak rejoins the bumps of one creature. At a saddle ratio of 0.8:
 Aquarium 24 of 24 units (step 500), 31 of 32, 52 of 68 (step 2000, touching units merged),
-single creatures whole except Paraptera furiosus (2 lobes), Hydrogeminium (2), Urium (4)
-and Amoebium (5); 0.75 keeps those whole but merges more colony members and made the
-tracked target flicker between one and two units. No single ratio does both: in the
+single creatures whole except Paraptera furiosus (2), Hydrogeminium (2), Urium (4) and
+Amoebium (5). The two basins of Paraptera and Hydrogeminium are right, not over-splitting:
+these creatures are composites of two units (Paraptera of two Orbium- or Scutium-like
+units; Bert, 2026-11-01), and the basins find them — evidence that the basins of K ∗ A
+pick out the model's own units. Whether Urium's and Amoebium's parts are units too is
+open. 0.75 keeps all of them whole but merges more colony members and made the tracked
+target flicker between one and two units. No single ratio does both: in the
 model's own view, touching units do share one potential hill. Gating merges by the
-connectivity of A was tried and made it worse.
+connectivity of A was tried and made it worse. Figures (`scripts/detection_figures.py`):
+[detection.png](assets/figures/detection.png) (A > 0.1, K ∗ A > 0.1 and K ∗ A basins, per
+case) and [tracking.png](assets/figures/tracking.png) (a target unit followed through the
+Aquarium scene, with S and E). In the UI, the heatmap list has the neighbour sum and the
+detected objects (the target in its own colour) for every run.
 
 ## 10. Open questions
 
 - Multi-scale structural complexity: which base measure, which combination across scales
   (minimum, product, area under the profile), and how to set each scale's noise baseline.
 - `iti_features`: richer features than mass (speed, shape) for S and E; detection that
-  keeps touching colony members apart without splitting big creatures (Q18); following a
+  keeps touching colony members apart; are Urium's 4 and Amoebium's 5 basins units, as
+  Paraptera's and Hydrogeminium's 2 are (Q18)? following a
   target through divisions and merges rather than taking the larger part.
 - Does H.264 beat video LZMA for smoother (larger-R) creatures or longer windows?
 - Transfer entropy for smooth fields: offset ≈ R/4, and history length k > 1.

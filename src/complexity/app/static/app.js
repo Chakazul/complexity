@@ -418,16 +418,19 @@ function start() {
 let mapKey = "";
 try { mapKey = localStorage.getItem("mapKey") || ""; } catch {}
 
+// The maps that are not measures (neighbour sum, objects), then the chosen measures' maps.
 function mapMeasures() {
   const chosen = active ? active.measures : catalog.measures.map((m) => m.key).filter((k) => selectedMeasures.has(k));
-  return catalog.measures.filter((m) => m.map && chosen.includes(m.key));
+  return [...catalog.maps.map((m) => ({ ...m, map: "special" })),
+    ...catalog.measures.filter((m) => m.map && chosen.includes(m.key))];
 }
+const mapInfo = (key) => mapMeasures().find((m) => m.key === key) || catalog.measures.find((m) => m.key === key);
 
 function renderMapControls() {
   const sel = $("map-measure"), options = mapMeasures();
   if (mapKey && !options.some((m) => m.key === mapKey)) setMap("");
   sel.innerHTML = `<option value="">Off</option>` +
-    options.map((m) => `<option value="${m.key}"${m.key === mapKey ? " selected" : ""}>${m.name}${m.map === "tile" ? " (tiles)" : ""}</option>`).join("");
+    options.map((m) => `<option value="${m.key}"${m.key === mapKey ? " selected" : ""}>${m.icon ? m.icon + " " : ""}${m.name}${m.map === "tile" ? " (tiles)" : ""}</option>`).join("");
   $("views").classList.toggle("heat-on", !!mapKey);
   if (!mapKey) $("heat-legend").hidden = true;
 }
@@ -453,8 +456,35 @@ function decodeMap(m) {
   return new Float32Array(bytes.buffer);
 }
 
+// The objects map: 0 background, 1 the target (one colour), 2, 3, ... the other creatures
+// (a muted palette, cycled).
+function drawObjects(maps) {
+  const hex = (h) => [1, 3, 5].map((i) => parseInt(h.trim().slice(i, i + 2), 16));
+  const bg = hex(css("--surface-1")), target = hex(css("--object-target"));
+  const others = css("--object-others").split(",").map(hex);
+  maps.forEach((m, i) => {
+    const r = active.runs[i];
+    if (!m) { r.heat.getContext("2d").clearRect(0, 0, r.heat.width, r.heat.height); return; }
+    if (r.heat.width !== m.w || r.heat.height !== m.h) { r.heat.width = m.w; r.heat.height = m.h; }
+    const g = r.heat.getContext("2d"), img = g.createImageData(m.w, m.h), px = img.data;
+    for (let p = 0; p < m.v.length; p++) {
+      const v = m.v[p], c = v === 0 ? bg : v === 1 ? target : others[(v - 2) % others.length];
+      px[p * 4] = c[0]; px[p * 4 + 1] = c[1]; px[p * 4 + 2] = c[2]; px[p * 4 + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+  });
+  const legend = $("heat-legend");
+  legend.hidden = !maps.some(Boolean);
+  const counts = maps.filter(Boolean).map((m) => Math.max(0, ...m.v) - 1 + (m.v.includes(1) ? 1 : 0));
+  legend.innerHTML = `<span>Heatmap: <b>Objects</b> (creatures in the neighbour sum K ∗ A)</span>
+    <span><i class="swatch-box" style="background:${css("--object-target")}"></i>target</span>
+    <span><i class="swatch-box" style="background:${others.length ? css("--object-others").split(",")[0] : ""}"></i>others</span>
+    <span>${counts.join(" / ")} objects</span>`;
+}
+
 function drawMaps(msg) {
   const maps = msg.runs.map((r) => (r.map ? { ...r.map, v: decodeMap(r.map) } : null));
+  if (mapKey === "objects") return drawObjects(maps);
   let hi = 0;
   for (const m of maps) if (m) for (const v of m.v) if (v > hi) hi = v;
   const scale = hi > 0 ? hi : 1, ramp = heatRamp();
@@ -475,13 +505,13 @@ function drawMaps(msg) {
     }
     g.putImageData(img, 0, 0);
   });
-  const m = catalog.measures.find((x) => x.key === mapKey);
+  const m = mapInfo(mapKey);
   const legend = $("heat-legend");
   legend.hidden = !maps.some(Boolean);
   if (!legend.hidden) {
     const bar = `linear-gradient(90deg, ${css("--surface-1")}, ${css("--heat-mid")}, ${css("--heat-hi")})`;
     legend.innerHTML = `<span>Heatmap: <b>${m.name}</b>${m.map === "tile" ? " (per tile, above an empty tile)" : ""}</span>
-      <span>0</span><span class="bar" style="background:${bar}"></span><span>${+hi.toPrecision(3)} ${m.map_unit}</span>`;
+      <span>0</span><span class="bar" style="background:${bar}"></span><span>${+hi.toPrecision(3)} ${m.map_unit || m.unit}</span>`;
   }
 }
 

@@ -535,3 +535,14 @@ def test_measures_are_listed_in_module_order():
 def test_every_measure_has_an_equation_for_its_info_popup():
     for key, cls in registry.measures().items():
         assert cls.equation and cls.equation.count("{") == cls.equation.count("}"), key
+
+
+def test_neighbour_sum_and_objects_maps():
+    run = Run(RunSpec("lenia", "orbium", (64, 64)), [])
+    run.step(50)
+    potential, objects = run.map("potential"), run.map("objects")
+    assert potential.shape == (64, 64) and potential.max() > 0.1
+    assert set(np.unique(objects)) == {0, 1}  # one creature, the target
+    noise = Run(RunSpec("baseline", "iid_noise_binary", (32, 32)), [])
+    assert noise.map("potential") is None  # no potential: no map, but objects still
+    assert noise.map("objects").shape == (32, 32)

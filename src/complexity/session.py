@@ -20,6 +20,7 @@ import numpy as np
 
 from complexity import engine, registry
 from complexity.measures.base import Context, RuleMeasure, discretize, to_uint8
+from complexity.measures.individuality import FeatureIndividuality
 from complexity.measures.statistics import change_rate
 from complexity.systems.base import System
 
@@ -46,6 +47,11 @@ class RunSpec:
     def label(self) -> str:
         cls = registry.systems()[self.system]
         return f"{cls.name} · {cls.patterns[self.pattern]}"
+
+
+# maps that are not measures (`Run.map`): key -> (name, unit or None for labels)
+SPECIAL_MAPS = {"potential": ("Neighbour sum (K ∗ A)", "K ∗ A"),
+                "objects": ("Objects (target highlighted)", None)}
 
 
 class Run:
@@ -77,6 +83,7 @@ class Run:
         self._potential = (jax.jit(self.system.potential)
                            if has_potential and any(m.needs_potential for m in self.measures) else None)
         self.potentials = deque(maxlen=self.window)
+        self._potential_once = None  # for the "potential" and "objects" maps without a measure
         self._host_potentials = deque(maxlen=self.window)
         self._unsynced_potentials = 0
         if self._potential:
@@ -190,7 +197,11 @@ class Run:
     def map(self, key: str) -> np.ndarray | None:
         """The spatial map of measure `key` at the current step (MEASURES.md §4), float32
         (height, width) for local measures or (height / tile, width / tile) per tile; None
-        if the measure has no map or does not run here."""
+        if the measure has no map or does not run here. Two maps are not measures:
+        "potential", the neighbour sum K ∗ A, and "objects", the detected creatures with
+        the target as 1 (`individuality.object_map`)."""
+        if key in SPECIAL_MAPS:
+            return self._special_map(key)
         m = next((m for m in self.measures if m.key == key), None)
         if m is None or m.map is None:
             return None
@@ -207,6 +218,28 @@ class Run:
         empty = m.compute([np.zeros((t, t), f.dtype) for f in frames], ctx)
         return np.array([[m.compute([f[i * t:(i + 1) * t, j * t:(j + 1) * t] for f in frames], ctx)
                           for j in range(w)] for i in range(h)], np.float32) - empty
+
+    def _special_map(self, key: str) -> np.ndarray | None:
+        if type(self.system).potential is System.potential:
+            potential = None
+        elif self._potential:  # recorded for a measure
+            potential = self.host_potentials()[-1]
+        else:
+            if self._potential_once is None:
+                self._potential_once = jax.jit(self.system.potential)
+            potential = np.asarray(self._potential_once(self.state), np.float64)
+        if key == "potential":
+            return None if potential is None else potential.astype(np.float32)
+        iti = next((m for m in self.measures if m.key == "iti_features"), None)
+        if iti is not None:  # the creatures and target that the measure tracks
+            frames = self.host_frames()[-iti.window :]
+            pots = self.host_potentials()
+            return iti.objects(frames, self.contexts[iti.key],
+                               pots[-len(frames):] if pots is not None else None)
+        frame = self.host_frames()[-1]
+        ctx = Context(self.n_states, None, self.spec.system, self.spec.pattern,
+                      self.system.reach(self.spec.pattern))
+        return FeatureIndividuality().objects([frame], ctx, None if potential is None else [potential])
 
     def warming_up(self) -> list[str]:
         """Measures whose window is not full yet: their values cover fewer frames."""
