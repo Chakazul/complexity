@@ -888,6 +888,54 @@ noise; frozen noise; Life still lifes, the glider, Scutium (disintegrate on coll
 (no individuals); Orbium, the Aquarium unit, Aquarium colonies in static and moving modes
 (survive collisions, members stay individuals).
 
+### 8.1c Collision experiments (implemented 2026-11-01)
+
+`complexity.collisions`, run by `scripts/collisions.py` (records in
+`results/collisions/collisions.jsonl`, one JSON object per run; `scripts/relabel_collisions.py`
+relabels them without rerunning). A sample for the goal measure, not a survey: the
+full-fledged exploration is the Collider Lab, which can import this module (scene builder,
+outcome labels) and share the record format.
+
+- **Unit.** The pattern settles alone (300 steps), its object (the K ∗ A basin, §5.4) is
+  cropped with a margin of R/2, and its heading and speed are measured over 64 steps.
+- **Scenes.** Copies are rotated (by interpolation; Life in quarter turns, keeping its own
+  heading) onto courses that meet at the grid's centre: `pair` (two copies, headings Δ
+  apart: 180° head-on, 135°, 90°; impact offset 0, 0.25, 0.5 unit sizes; the second copy
+  mirrored or not), `noise` (the unit into an iid patch of its own size) and `alone`
+  (the control). The grid is large enough that no course wraps around the torus (at
+  least 256, 2 × start distance + 3 sizes); a 256 grid for the 73-cell Triscutium made
+  the copies overlap through the edge before they met.
+- **Run.** Until they meet (start distance / speed) and 400 steps more; objects detected
+  every 2 steps; one `Tracker` per thrown unit (a takeover skips creatures another
+  tracker holds); `contact` when the two were one object or their centres within a unit
+  size.
+- **Labels**, from the final objects, not the trackers (identity through a merge and a
+  split is ambiguous): unit-sized = ±25 % of a unit's mass, unit-like = 0.4-2×. *missed*
+  (no contact), *died* (under half the mass left; for noise, the unit under half its
+  mass), *divided* (more unit-like objects than thrown, holding 70 % of the mass:
+  replication), *goo* (more than twice the mass otherwise), *survived* (the thrown units
+  unit-sized again, nothing else of half a unit's mass), *merged* (fewer unit-sized
+  objects, a large one), *changed* (anything else). The unit-like range matters: a lone
+  Aquarium unit settles at 264 cells, units among others at ~140.
+
+| Unit | 18 collisions with a copy | Into noise | Alone |
+|---|---|---|---|
+| Orbium | survived 10, died 7 (all head-on and most 135°: annihilation), changed 1 (one left) | survived | survived |
+| Triscutium valvatus laterale | goo 18: runaway growth, ~90 objects of ~3000 cells, 70× the mass | goo | survived |
+| Aquarium unit (VT049W) | divided 18: replicates on contact into 4-30 units of ~145 cells | survived | survived |
+| Life glider (Δ 180°, 90°: 12) | died 6, divided 3 (still debris), changed 2, merged 1 | divided (debris) | survived |
+
+Readings: the controls survive, so the harness does not break units. The ranking expected
+above holds in its order: the Aquarium unit survives every encounter by reproducing, and
+each product is again an individual; Orbium survives glancing collisions and noise, and
+annihilates head-on; Triscutium (the Scutium-like unit) turns into goo at any touch, even
+of noise; the glider dies or leaves debris. Caveats: an outcome depends on the phase in
+which the units meet (Orbium at 90° survives or loses a unit with a few more settling
+steps), so labels are statistics over geometries, not per-run truths; in Life, still
+debris is unit-like by mass and counts as divided; "survived" does not yet check that the
+units separate and keep moving. Still to do: a unit into an existing colony, goo (none
+found yet), static Aquarium modes.
+
 ### 8.2 Other proposals
 
 - **Local information dynamics** (Lizier): local active information storage, transfer and

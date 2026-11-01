@@ -13,7 +13,7 @@ catalogue (`vendor/lenia/`).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 from functools import partial
 
@@ -164,6 +164,14 @@ class Lenia(System):
         else:
             A = model.step(st.A, st.K, st.m, st.s, st.T)
         return LeniaState(A, st.K, st.g, st.P, st.T, st.m, st.s)
+
+    def cells(self, pattern: str) -> np.ndarray:
+        (init,) = CREATURES[self.sources[pattern][0]]["cells"]
+        return np.asarray(init)
+
+    def with_cells(self, pattern: str, A) -> LeniaState:
+        st = self.init(pattern, np.shape(A), jax.random.key(0))
+        return replace(st, A=jnp.asarray(A, st.A.dtype))
 
     def potential(self, st: LeniaState) -> jax.Array:
         """K ∗ A with the normalized kernel; Integer Lenia's integer potential over its

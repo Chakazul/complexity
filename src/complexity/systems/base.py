@@ -13,6 +13,7 @@ from typing import Any
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 State = Any  # a pytree of arrays (plus static metadata, see jax.tree_util.register_dataclass)
 
@@ -80,6 +81,16 @@ class System(ABC):
         """A random configuration of the pattern's size: its bounding box (for a soup, the
         soup's area) filled with iid uniform states, placed as `init` places the pattern,
         under the pattern's rule (functional information). Optional, like `perturb`."""
+        raise NotImplementedError
+
+    def cells(self, pattern: str) -> np.ndarray:
+        """The pattern's own cells, as the state holds them ((h, w), or (h, w, channels)),
+        for building scenes (collision experiments). Optional."""
+        raise NotImplementedError
+
+    def with_cells(self, pattern: str, A) -> State:
+        """A state with the pattern's rule and cells A (the shape of a full grid, as
+        `cells` returns them). Optional, with `cells`."""
         raise NotImplementedError
 
     def potential(self, state: State) -> jax.Array:

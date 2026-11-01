@@ -189,7 +189,10 @@ class Tracker:
     def __init__(self, kind: str = "typical"):
         self.kind, self.target, self.last_centre, self.switches = kind, None, None, 0
 
-    def step(self, frame: np.ndarray, labels: np.ndarray) -> np.ndarray | None:
+    def step(self, frame: np.ndarray, labels: np.ndarray,
+             taken: np.ndarray | None = None) -> np.ndarray | None:
+        """The target in the next frame; a takeover skips creatures touching `taken` (cells
+        that other trackers hold)."""
         ids = np.unique(labels[labels > 0])
         follow = None
         if self.target is not None and len(ids):
@@ -204,6 +207,11 @@ class Tracker:
                     np.argmin(np.abs(masses - np.median(masses)))
                 follow = ids[pick]
             else:  # lost: the nearest creature takes over
+                if taken is not None:
+                    ids = np.setdiff1d(ids, labels[taken & (labels > 0)])
+                    if not len(ids):
+                        self.target = None
+                        return None
                 h, w = labels.shape
                 d = np.array([torus_centroid(labels == i) for i in ids]) - self.last_centre
                 d = np.minimum(np.abs(d), [h, w] - np.abs(d))

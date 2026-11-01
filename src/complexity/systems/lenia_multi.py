@@ -13,7 +13,7 @@ separate units on 256² (rotating rings and moving C-shapes), not into goo.
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import partial
 
 import jax
@@ -127,6 +127,13 @@ class MultiLenia(System):
     def step(self, st: MultiLeniaState) -> MultiLeniaState:
         A = model.multi_step(st.A, st.fK, st.m, st.s, st.h, st.Mk, st.Mc, st.T)
         return MultiLeniaState(A, st.fK, st.m, st.s, st.h, st.Mk, st.Mc, st.T)
+
+    def cells(self, pattern) -> np.ndarray:
+        return np.moveaxis(np.asarray(CREATURES[self.sources[pattern][0]]["cells"], np.float32), 0, -1)
+
+    def with_cells(self, pattern, A) -> MultiLeniaState:
+        st = self._init(pattern, np.shape(A)[:2], jax.random.key(0), "pattern")
+        return replace(st, A=jnp.asarray(A, jnp.float32))
 
     def potential(self, st: MultiLeniaState) -> jax.Array:
         """The mean of the kernels' potentials K_k ∗ A_c0(k) (each kernel normalized)."""

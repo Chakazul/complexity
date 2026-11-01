@@ -239,6 +239,11 @@ and transfer entropy and PID per unit of mass changed (bits/Δmass), instead of 
 averages, which mostly follow a creature's size and how much it changes (MEASURES.md §5.10,
 Q17).
 
+**Collision experiments** (M3b, MEASURES.md §8.1c): `uv run python scripts/collisions.py`
+throws units at copies of themselves and at noise, and labels the outcomes (survived,
+merged, divided, died, goo, missed) from the objects detected in K ∗ A; records go to
+`results/collisions/collisions.jsonl`.
+
 ## Adding a system or a measure
 
 Write one class, decorate it, and add its module to `_BUILTIN_MODULES` in
