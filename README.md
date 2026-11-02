@@ -6,7 +6,8 @@ comparing which measures suit which kinds of system. See
 [assets/Complexity_Measure.pdf](assets/Complexity_Measure.pdf) for the measures and
 systems in scope.
 
-Current demo: **Game of Life** and **Lenia** (continuous and Integer Lenia), simulated in
+Current demo: **Game of Life**, **elementary CA** and **Lenia** (continuous, Integer and
+multi-channel), simulated in
 **JAX** (CPU, GPU or TPU), measured by **image and video compression** as proxies for
 algorithmic (Kolmogorov) complexity, and by Lempel–Ziv complexity, block entropy, fractal
 dimension, effective complexity, logical depth, the Lyapunov exponent and transfer
@@ -30,7 +31,8 @@ described in **[MEASURES.md](MEASURES.md)**. In brief:
   heatmaps and per-measure settings in the UI.
 - **M3b:** multi-scale structural complexity, with multi-channel Lenia's Aquarium as the
   reference case.
-- **M4:** more systems: elementary CA, other CA rules, particle systems.
+- **M4:** more systems. Done: multi-channel Lenia (the Aquarium); elementary CA with
+  Wuensche's Z and thermodynamic depth. Next: other CA rules, particle systems.
 - **M5:** polishing and sharing: UI, batch experiments and a results site, CI,
   contributor guide, hosted demo.
 
@@ -90,11 +92,18 @@ uv run complexity run life:random --measures png,video_h264 --size 256x256 --eve
 | `lenia` — Lenia (continuous) | Orbium (default), random soup, Gyrorbium gyrans, Triscutium valvatus laterale, Helicium serratus turbulentus, Hydrogeminium natans, Paraptera arcus pedes, Paraptera cavus furiosus, Tetralapillium metamorpha, Florakronium arcus, Heptadentium scintillans, Asterium vagus, Asterium metamorpha currens, Amoebium foliatus, Urium longus |
 | `integer_lenia` — Integer Lenia (`P = 12`, 13 states) | minimum Orbium (default), random soup |
 | `life` — Game of Life (discrete) | glider (default), Gosper glider gun, lightweight / middleweight / heavyweight spaceships, Copperhead, Galaxy, Weekender, Lobster, Sir Robin, Pufferfish, Switch engine, Max, Sidecar gun, Star gate, R-pentomino, acorn, random soup |
+| `eca` — Elementary CA (256 rules, discrete) | rule 110 (default), 54, 30, 18, 90, 184, 108, 232, 160 from a random row; rules 110, 30, 90 from one cell; any rule as `rule<n>` or `rule<n>_seed` |
 | `lenia_multi` — Multi-channel Lenia (3 channels, 15 kernels) | Aquarium (self-replicating), Aquarium (soliton: VT049W, a lone unit that does not divide), Aquarium (8 units: VT049W, divide on collision) |
 | `baseline` — reference frames | empty (default); iid noise (new every step) and frozen noise (one frame held), each binary, 13-level or continuous |
 
 Multi-channel Lenia is shown in RGB (one colour per channel); measures read the mean of
 the channels. Its Aquarium patterns grow into networks of ~100 separate units on 256².
+
+An elementary CA's frame is its space-time diagram: the last *height* rows, the newest at
+the bottom, scrolling up a row per step. Frame measures therefore see space-time diagrams;
+those comparing consecutive frames (speed, change rate) mostly see the scroll. Rule 90 from
+a random row dies on rings of 2^k cells (the UI's square sizes 64, 128, 256): use the
+one-cell pattern, or a size such as 129.
 
 The baselines calibrate the measures: compare a system with noise of its own kind (binary
 for Life, 13 levels for Integer Lenia, continuous for Lenia).
@@ -303,10 +312,10 @@ src/complexity/
   engine.py              rollout (lax.scan), rollout_batch (vmap), advance
   session.py             Run: one system + its measures + a device frame buffer (UI and CLI)
   cli.py                 complexity serve | list | info | run
-  systems/               base.py, life.py, lenia.py, baseline.py (JAX)
+  systems/               base.py, life.py, eca.py, lenia.py, lenia_multi.py, baseline.py (JAX)
   measures/              base.py, compression.py, information.py (TE in JAX, block entropy),
                          algorithmic.py (LZC, EC, LD), geometry.py (FD), dynamics.py (LE),
-                         rule.py (TL, LL, FI), causal.py (SC), decomposition.py (PID, FID),
+                         rule.py (TL, LL, FI, WZ, TD), causal.py (SC), decomposition.py (PID, FID),
                          individuality.py (ITI)
   vendor/lenium/         code and data copied from Lenium, with source notes
   vendor/lenia/          patterns and RLE decoder from the original Lenia, with source notes

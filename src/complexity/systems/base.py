@@ -57,6 +57,12 @@ class System(ABC):
     def observe(self, state: State) -> jax.Array:
         """The current frame: float32 (height, width) with values in [0, 1]. Pure and jit-able."""
 
+    def configuration(self, state: State) -> jax.Array:
+        """The dynamical state alone as a frame, for measures that compare states (transient
+        length, Langton's λ): the frame itself, unless the frame shows more than the state
+        (an elementary CA's space-time diagram: its current row). Pure and jit-able."""
+        return self.observe(state)
+
     def render(self, state: State) -> jax.Array | None:
         """An RGB picture (height, width, 3) in [0, 1] for display, or None to show the
         frame in a colour map. Measures never see it. Optional."""
@@ -81,6 +87,17 @@ class System(ABC):
         """A random configuration of the pattern's size: its bounding box (for a soup, the
         soup's area) filled with iid uniform states, placed as `init` places the pattern,
         under the pattern's rule (functional information). Optional, like `perturb`."""
+        raise NotImplementedError
+
+    def rule_table(self, pattern: str) -> np.ndarray:
+        """A 1-D binary rule's outputs, indexed by neighbourhood value (the left cell the
+        high bit), length 2^K for K cells (Wuensche's Z). Optional, like `perturb`."""
+        raise NotImplementedError
+
+    def transition_map(self, pattern: str, n: int) -> np.ndarray:
+        """Each configuration's successor on a lattice of `n` cells, configurations numbered
+        0..states^n - 1: the whole state-transition graph of a tiny lattice (thermodynamic
+        depth). Optional, like `perturb`."""
         raise NotImplementedError
 
     def cells(self, pattern: str) -> np.ndarray:

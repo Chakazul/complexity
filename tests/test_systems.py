@@ -1,6 +1,7 @@
 """System goldens and JAX parity with the M0 NumPy implementations (PLAN.md §6)."""
 
 import hashlib
+from math import comb
 
 import jax
 import jax.numpy as jnp
@@ -190,9 +191,55 @@ def test_catalogue_creatures_use_the_bump_core_and_lenium_patterns_the_gaussian(
     assert names["helicium_serratus_turbulentus"] == "Helicium serratus turbulentus"
 
 
+# ---- elementary CA ----
+
+@pytest.fixture
+def eca():
+    return registry.make_system("eca")
+
+
+def test_eca_rule_30_and_rule_90_from_one_cell(eca):
+    """Rule 30 is left XOR (centre OR right); rule 90 from one cell is Pascal's triangle
+    mod 2, the newest row at the bottom of the scrolling diagram."""
+    state = eca.init("rule30_seed", (32, 65), KEY)
+    row = np.zeros(65, np.uint8)
+    row[32] = 1
+    for _ in range(31):
+        state = eca.step(state)
+        row = np.roll(row, 1) ^ (row | np.roll(row, -1))
+    assert (np.asarray(eca.configuration(state))[0] == row).all()
+    diagram = np.asarray(eca.observe(state))
+    assert diagram.shape == (32, 65) and diagram[0, 32] == 1 and diagram[0].sum() == 1
+    # the centre column, OEIS A051023
+    assert diagram[:13, 32].tolist() == [1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0]
+
+    state = run(eca, eca.init("rule90_seed", (32, 65), KEY), 31)
+    pascal = [[(k + n) % 2 == 0 and abs(k) <= n and comb(n, (k + n) // 2) % 2 for k in range(-32, 33)]
+              for n in range(32)]
+    assert (np.asarray(eca.observe(state)) == np.array(pascal, float)).all()
+
+
+def test_eca_rule_184_conserves_cars_and_maps_match_the_step(eca):
+    state = eca.init("rule184", (8, 64), KEY)
+    cars = int(eca.configuration(state).sum())
+    assert int(eca.configuration(run(eca, state, 100)).sum()) == cars
+    successor = eca.transition_map("rule110", 10)
+    for x in (0, 1, 345, 1023):
+        row = (x >> np.arange(10)) & 1
+        state = eca.step(eca._state("rule110", (2, 10), jnp.asarray(row, jnp.uint8)))
+        assert (np.asarray(eca.configuration(state))[0] == (successor[x] >> np.arange(10)) & 1).all()
+
+
+def test_eca_patterns_name_any_rule(eca):
+    assert eca.rule_table("rule110").tolist() == [0, 1, 1, 1, 0, 1, 1, 0]
+    assert eca.n_states("rule30_seed") == 2
+    with pytest.raises(KeyError):
+        eca.init("rule256", (8, 8), KEY)
+
+
 # ---- every system ----
 
-@pytest.mark.parametrize("system", ["life", "lenia", "integer_lenia"])
+@pytest.mark.parametrize("system", ["life", "lenia", "integer_lenia", "eca"])
 def test_every_pattern_inits_on_a_small_grid(system):
     sys_ = registry.make_system(system)
     for pattern in sys_.patterns:

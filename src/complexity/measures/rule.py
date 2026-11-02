@@ -26,7 +26,7 @@ def state_hashes(system: System, states, steps: int, levels: int):
     hashes of shape (batch, steps, 2)), two uint32 hashes per frame. Frames are quantized to
     `levels` levels first (k / (levels - 1) exactly for a discrete system with
     `levels = n_states`)."""
-    h, w = system.observe(jax.tree.map(lambda x: x[0], states)).shape
+    h, w = system.configuration(jax.tree.map(lambda x: x[0], states)).shape
     r = jax.random.bits(jax.random.key(0), (2, h, w), jnp.uint32)
 
     def hash_(frame):
@@ -36,7 +36,7 @@ def state_hashes(system: System, states, steps: int, levels: int):
     def run(state):
         def body(s, _):
             s = system.step(s)
-            return s, hash_(system.observe(s))
+            return s, hash_(system.configuration(s))
 
         return lax.scan(body, state, length=steps)
 
@@ -45,9 +45,9 @@ def state_hashes(system: System, states, steps: int, levels: int):
 
 @partial(jax.jit, static_argnums=(0, 2))
 def _initial_hashes(system: System, states, levels: int) -> jax.Array:
-    h, w = system.observe(jax.tree.map(lambda x: x[0], states)).shape
+    h, w = system.configuration(jax.tree.map(lambda x: x[0], states)).shape
     r = jax.random.bits(jax.random.key(0), (2, h, w), jnp.uint32)
-    q = jnp.round(jax.vmap(system.observe)(states) * (levels - 1)).astype(jnp.uint32)
+    q = jnp.round(jax.vmap(system.configuration)(states) * (levels - 1)).astype(jnp.uint32)
     return jnp.sum(q[:, None] * r, axis=(2, 3), dtype=jnp.uint32)[:, None]
 
 
@@ -83,7 +83,9 @@ def growth_class(sizes, means) -> int:
     """Hudcová & Mikolov's transient class of mean transients `means` at grid sides `sizes`:
     an index into GROWTH_CLASSES. Bounded if the means change by less than a step or a
     quarter of their mean; otherwise the best R² (in transient steps) among log, linear,
-    polynomial (power law) and exponential fits."""
+    polynomial (power law) and exponential fits. Polynomial means faster than linear, as in
+    the paper: a power law with exponent at most 1, which can fit logarithmic growth as well
+    as a log does over a few sizes, leaves the choice to the log and linear fits."""
     n, mu = np.asarray(sizes, float), np.asarray(means, float)
     if np.ptp(mu) < max(1.0, 0.25 * mu.mean()):
         return 0
@@ -94,10 +96,11 @@ def growth_class(sizes, means) -> int:
     def fit(x, y):  # least squares y = a + b x, predicted y
         return np.polyval(np.polyfit(x, y, 1), x)
 
+    exponent = np.polyfit(np.log(n), np.log1p(mu), 1)[0]
     scores = [
         r2(fit(np.log(n), mu)),
         r2(fit(n, mu)),
-        r2(np.expm1(fit(np.log(n), np.log1p(mu)))),
+        r2(np.expm1(fit(np.log(n), np.log1p(mu)))) if exponent > 1 else -np.inf,
         r2(np.expm1(fit(n, np.log1p(mu)))),
     ]
     return 1 + int(np.argmax(scores))
@@ -183,7 +186,8 @@ class LangtonLambda(RuleMeasure):
     description = (
         "Langton's lambda: the fraction of the rule table that leads to a non-quiescent "
         "(nonzero) state, i.e. the probability that a uniformly random neighbourhood "
-        "produces a live cell. Estimated by stepping a `size`² grid of iid uniform states "
+        "produces a live cell. Exact for a rule with a rule table (elementary CA: rule 110 "
+        "5/8); otherwise estimated by stepping a `size`² grid of iid uniform states "
         "once (Life: 140/512 = 0.273). Discrete rules only. Near 0: frozen; around 0.3 for "
         "binary rules: complex; toward 1 - 1/states: chaotic."
     )
@@ -196,8 +200,10 @@ class LangtonLambda(RuleMeasure):
                 and all(system.n_states(p) for p in system.patterns))
 
     def compute_rule(self, system, pattern, ctx=NO_CONTEXT) -> float:
+        if type(system).rule_table is not System.rule_table:
+            return float(np.mean(system.rule_table(pattern) != 0))
         state = system.uniform(pattern, (self.size, self.size), jax.random.key(0))
-        return float(jnp.mean(system.observe(system.step(state)) > 0))
+        return float(jnp.mean(system.configuration(system.step(state)) > 0))
 
 
 @partial(jax.jit, static_argnums=0, static_argnames=("steps", "checks"))
@@ -271,3 +277,120 @@ class FunctionalInformation(RuleMeasure):
             degree.append(np.asarray(run(batch)))
         degree = np.concatenate(degree)
         return float(np.log2(1 / np.mean(degree >= degree[0])))
+
+
+def z_left(table: np.ndarray) -> float:
+    """Wuensche's Z_left of a binary rule table over K-cell neighbourhoods (indexed with the
+    left cell as the high bit): the probability that, filling in a pre-image from left to
+    right, the next cell is fixed by the rule. R_{K-j} is the fraction of the table in
+    deterministic 2^(j+1)-tuples: neighbourhoods sharing their first K-j-1 cells, whose
+    output depends only on cell K-j (the last j cells wild) and differs with it."""
+    table = np.asarray(table, np.int64)
+    K = int(np.log2(len(table)))
+    v = np.arange(len(table))
+    z = 0.0
+    for j in range(K):
+        x = (v >> j) & 1  # the cell K - j, the next to fill in
+        flipped = (table ^ x).reshape(-1, 2 ** (j + 1))  # groups: shared first K - j - 1 cells
+        r = np.mean(np.repeat((flipped == flipped[:, :1]).all(axis=1), 2 ** (j + 1)))
+        z += r * (1 - z)  # R_K + R_{K-1}(1 - R_K) + R_{K-2}(1 - R_{K-1})(1 - R_K) + ...
+    return z
+
+
+def mirror(table: np.ndarray) -> np.ndarray:
+    """The rule table with its neighbourhoods reflected (left and right cells swapped)."""
+    table = np.asarray(table)
+    K = int(np.log2(len(table)))
+    v = np.arange(len(table))
+    reflected = sum(((v >> i) & 1) << (K - 1 - i) for i in range(K))
+    return table[reflected]
+
+
+def wuensche_z(table: np.ndarray) -> float:
+    """Z = max(Z_left, Z_right), Z_right being Z_left of the reflected rule."""
+    return max(z_left(table), z_left(mirror(table)))
+
+
+@register_measure
+class WuenscheZ(RuleMeasure):
+    key = "wuensche_z"
+    icon = "🔙"
+    equation = (r"Z = \max(Z_L, Z_R),\quad Z_L = R_K + \sum_{i=1}^{K-1} R_{K-i}"
+                r"\prod_{j=0}^{i-1} (1 - R_{K-j}),\quad R_m = n_m / 2^K")
+    reference = "Wuensche 1994"
+    name = "Wuensche's Z"
+    unit = "probability"
+    description = (
+        "Wuensche's Z parameter: the probability that, when a pre-image of a state is "
+        "filled in cell by cell, the next cell is determined by the rule table (from the "
+        "left, Z_left, or from the right, Z_right; Z is the larger). n_m counts the table's "
+        "entries in deterministic tuples: groups of neighbourhoods whose output depends "
+        "only on the next cell and changes with it. Computed from the rule table alone. "
+        "Low Z: many pre-images and garden-of-Eden states (ordered); Z = 1: at most 2^(K-1) "
+        "pre-images (chaotic, e.g. rule 30); complex rules in between (rule 110: 0.75)."
+    )
+    applies_to = "1-D binary rules with a rule table (elementary CA)"
+
+    def accepts(self, system) -> bool:
+        return type(system).rule_table is not System.rule_table
+
+    def compute_rule(self, system, pattern, ctx=NO_CONTEXT) -> float:
+        return wuensche_z(system.rule_table(pattern))
+
+
+def depth_per_cell(successor: np.ndarray, cells: int, steps: int | None = None) -> float:
+    """Mean thermodynamic depth after `steps` steps of a deterministic map over all
+    configurations, uniformly weighted at the start, in bits per cell: (log2 N - H(S_t)) /
+    cells, the entropy of the histories that led to S_t. With `steps` None, once every
+    configuration has reached its cycle (the image stops shrinking)."""
+    counts = np.ones(len(successor))
+    support, t = len(successor), 0
+    while steps is None or t < steps:
+        counts = np.bincount(successor, weights=counts, minlength=len(successor))
+        t += 1
+        if steps is None:
+            support, before = int(np.count_nonzero(counts)), support
+            if support == before:
+                break
+    p = counts[counts > 0] / len(successor)
+    return float((np.log2(len(successor)) + np.sum(p * np.log2(p))) / cells)
+
+
+@register_measure
+class ThermodynamicDepth(RuleMeasure):
+    key = "thermodynamic_depth"
+    icon = "🌡️"
+    equation = (r"D(s) = -\log_2 P(\text{history} \mid S_t = s),\qquad "
+                r"\bar D_t = \tfrac{1}{n} H(S_0 \mid S_t) = \tfrac{1}{n}\,(n - H(S_t))")
+    reference = "Lloyd & Pagels 1988"
+    name = "Thermodynamic depth"
+    unit = "bits/cell"
+    description = (
+        "Lloyd & Pagels' thermodynamic depth, exactly, on a tiny lattice: the depth of a "
+        "state is -log2 of the probability of the history that led to it, given the state. "
+        "For a deterministic rule started from every configuration of an n-cell ring "
+        "with equal probability, a state's histories are its ancestors, so the mean depth "
+        "is H(S_0 | S_t) = n - H(S_t): the information about the start that the dynamics "
+        "has erased. Per cell, after `steps` steps (auto: once every configuration is on "
+        "its cycle), averaged over rings of `min_size` to `size` cells, since on one ring "
+        "it depends on the ring's number theory (rule 90 erases everything on 2^k cells, one "
+        "bit on odd rings). 0 for reversible rules (identity, shift); 1 for rule 0, which erases "
+        "everything, so it peaks at neither structure nor randomness but at "
+        "irreversibility, as Lloyd & Pagels note of dissipative systems."
+    )
+    peaks_at = "mixed"
+    temporal = "dynamic"
+    granularity = "pattern"  # Lloyd & Pagels: a state with its history
+    min_size = 12
+    size = 17
+    steps = None
+    params = ("min_size", "size", "steps")
+    applies_to = "rules whose whole state-transition graph a tiny lattice holds (elementary CA)"
+
+    def accepts(self, system) -> bool:
+        return type(system).transition_map is not System.transition_map
+
+    def compute_rule(self, system, pattern, ctx=NO_CONTEXT) -> float:
+        sizes = range(min(self.min_size, self.size), self.size + 1)
+        return float(np.mean([depth_per_cell(system.transition_map(pattern, n), n, self.steps)
+                              for n in sizes]))

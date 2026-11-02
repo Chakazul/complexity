@@ -306,9 +306,34 @@ Reference "systems" that calibrate every measure. Expected values are tested (ME
   part of the pattern key (`iid_noise_binary`, `frozen_noise_13`, …) rather than a system
   parameter, so the UI and CLI pick it like any pattern (done, M3).
 
-### 4.4 Later systems (backlog)
-Elementary CA (rule space, for LL / WZ / TL), larger-than-life and multi-channel Lenia,
-Boids, Particle Life, Particle Lenia, Swarm Chemistry. Particle systems render to a
+### 4.4 Elementary CA — `eca` (2026-11-02)
+Wolfram's 256 rules: binary cells on a ring, the next state a function of a cell and its
+two neighbours, `n_states = 2`. The rule table (8 outputs, bit v of the rule number for
+neighbourhood v = 4 left + 2 centre + right) is data in the state, so all rules share one
+compiled step and can be batched over rules. Pattern keys name a rule and its start:
+`rule110` (random row, 50 %, the default) or `rule110_seed` (one live cell); any rule
+0–255 is accepted, nine are listed by Wolfram class (110 and 54: 4; 30, 18, 90: 3; 184,
+108, 232: 2; 160: 1) and 110, 30, 90 from one cell.
+- **Frame = space-time diagram**: the state holds the last `height` rows of a `width`-cell
+  ring, the newest at the bottom, scrolling up one row per step. Frame measures see the
+  diagram, as ECA compression and entropy usually do; frame-to-frame statistics (speed,
+  change rate) mostly see the scroll. A new `System.configuration(state)` gives the
+  dynamical state alone (the current row; the frame for every other system), which
+  transient length and Langton's λ now compare. Lyapunov perturbs one cell of the current
+  row and counts the damage in the diagram.
+- `rule_table(pattern)` (Wuensche's Z; Langton's λ, exactly, from the table) and
+  `transition_map(pattern, n)` (each configuration's successor on an n-cell ring:
+  thermodynamic depth) are new optional `System` methods.
+- Rule 90 is nilpotent on rings of 2^k cells: from a random row it dies within a width of
+  steps at the UI's square sizes. Its one-cell pattern draws the Sierpinski triangle.
+- Tests: rule 30 against its boolean form and its centre column (OEIS A051023), rule 90
+  from one cell against Pascal's triangle mod 2, rule 184 conserves cars, the transition
+  map agrees with the step.
+- Rule space: `scripts/eca_rule_space.py` computes λ, Z, depth and the transient class of
+  the 88 equivalence classes (MEASURES.md §5.7.4–5).
+
+### 4.5 Later systems (backlog)
+Outer-totalistic and larger-than-life CA, Boids, Particle Life, Particle Lenia, Swarm Chemistry. Particle systems render to a
 density frame for frame-based measures and also expose positions/velocities for
 particle-native measures.
 
@@ -318,8 +343,8 @@ The definitions, explanations, categorization and implementation decisions of al
 measures — implemented, deferred and proposed — with first values and the design Q&A, are
 in **[MEASURES.md](MEASURES.md)**. In brief:
 
-- 20 measures cover all of the PDF's 18 except TD, IIT and AT (deferred) and WZ (with
-  elementary CA in M4); ITI comes in two forms, compression in five.
+- 22 measures cover all of the PDF's 18 except IIT and AT (deferred); ITI comes in two
+  forms, compression in five. WZ and TD came with elementary CA (M4).
 - Three statistics for reference, total mass, moving speed and change rate, are listed
   with them; eight measures have normalized, per-object versions (MEASURES.md §5.10).
 - Each measure peaks at randomness (compression, LZC, block entropy, FD, LE, TL, LL), at
@@ -465,8 +490,9 @@ causal reach, local stability) with no objects or experiments, for a later sessi
 - [ ] Compare with causal emergence / ΦID (Rosas, Mediano et al. 2020) and O-information
       on per-unit macro variables
 
-### M4 — More dynamical complex systems (§4.4, PDF §3)
-- [ ] Elementary CA (rule space) + Wuensche's Z; thermodynamic depth on tiny lattices
+### M4 — More dynamical complex systems (§4.4–4.5, PDF §3)
+- [x] Elementary CA (rule space) + Wuensche's Z; thermodynamic depth on tiny lattices
+      (§4.4, MEASURES.md §5.7.4–5; 2026-11-02)
 - [x] Multi-channel Lenia with the Aquarium (§4.2b)
 - [ ] von Neumann / outer-totalistic CA; larger-than-life
 - [ ] Particle systems: Boids, Particle Life, Particle Lenia, Swarm Chemistry (+ density
@@ -546,3 +572,8 @@ causal reach, local stability) with no objects or experiments, for a later sessi
   the goal-measure prototype C = S × M × I as 🧫 Autopoiesis (batched twin runs).
 - 2026-11-02 — M3b paused: Autopoiesis is correct but slow for many creatures and
   complicated; a physical, autograd-based measure is the next idea (later). Next: M4.
+- 2026-11-02 — M4: elementary CA (`eca`, frame = scrolling space-time diagram,
+  `System.configuration` for state comparisons), Wuensche's Z and thermodynamic depth
+  (exact on 12–17-cell rings) as rule measures, λ exact from rule tables; transient
+  classes agree with Hudcová & Mikolov on 77 of 88 ECA after requiring polynomial to be
+  superlinear (MEASURES.md §5.7).

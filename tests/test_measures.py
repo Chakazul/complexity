@@ -11,7 +11,14 @@ from complexity.measures.decomposition import fid, pid
 from complexity.measures.geometry import box_counts
 from complexity.measures.individuality import basins, decompose, detect, torus_label, track_features
 from complexity.measures.information import block_entropy, transfer_entropy
-from complexity.measures.rule import growth_class, transient
+from complexity.measures.rule import (
+    depth_per_cell,
+    growth_class,
+    mirror,
+    transient,
+    wuensche_z,
+    z_left,
+)
 from complexity.measures.statistics import centers
 from complexity.session import Run, RunSpec
 
@@ -264,6 +271,34 @@ def test_functional_information_rates_soups_below_creatures():
     assert rule("functional_information", "lenia", "random", **kw) < 1
     assert rule("functional_information", "lenia", "orbium", **kw) == pytest.approx(5)
     assert rule("functional_information", "life", "random", **kw) < 1
+
+
+def test_wuensche_z_reproduces_the_papers_example_and_known_rules():
+    # Wuensche 1994 §7: a K = 5 rule, its table listed from neighbourhood 31 down to 0
+    listed = "10111001100001100011101011110000"
+    table = np.array([int(c) for c in reversed(listed)])
+    assert z_left(table) == 0.671875 and z_left(mirror(table)) == 0.5625
+    assert wuensche_z(table) == 0.671875
+    eca = registry.make_system("eca")
+    z = {r: rule("wuensche_z", "eca", f"rule{r}") for r in (0, 30, 90, 110, 184)}
+    assert z == {0: 0, 30: 1, 90: 1, 110: 0.75, 184: 0.5}  # 30 and 90 are permutive
+    assert not registry.make_measure("wuensche_z").accepts(registry.make_system("life"))
+    assert registry.make_measure("wuensche_z").accepts(eca)
+
+
+def test_thermodynamic_depth_is_the_entropy_of_erased_histories():
+    assert depth_per_cell(np.array([1, 2, 0, 0]), 2) == 0.25  # 3-cycle; one of 4 histories merged
+    assert depth_per_cell(np.array([0, 0, 0, 0]), 2) == 1  # everything erased
+    assert depth_per_cell(np.array([1, 2, 3, 3]), 2, steps=1) == 0.25
+    for r, depth in ((0, 1), (204, 0), (170, 0)):  # erasing; identity and shift are reversible
+        assert rule("thermodynamic_depth", "eca", f"rule{r}") == pytest.approx(depth)
+    assert 0.1 < rule("thermodynamic_depth", "eca", "rule30") < rule("thermodynamic_depth", "eca", "rule110") < 1
+    assert not registry.make_measure("thermodynamic_depth").accepts(registry.make_system("life"))
+
+
+def test_langton_lambda_of_elementary_ca_is_read_from_the_table():
+    assert rule("langton_lambda", "eca", "rule110") == 5 / 8
+    assert rule("langton_lambda", "eca", "rule30_seed") == 1 / 2
 
 
 def test_rule_measures_are_constant_and_cached_per_rule():

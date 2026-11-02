@@ -173,8 +173,8 @@ or add:
 | SE | Shannon 1948 | **Confirmed**: block entropy is Shannon's G_N, the entropy per symbol of N-blocks. |
 | FD | Mandelbrot 1967 | **Confirmed** (self-similarity dimension of a set in space). Not the attractor dimension of Yevenko et al. — that one is in phase space. |
 | LL | Langton 1990 | **Confirmed**: λ_Life = 0.273, in the transition region for 2-state, 9-cell CA. λ = 1 − 1/K is the most heterogeneous table (Life 0.5, 13 states 0.92), so min Orbium's 0.84 is near it. |
-| WZ | Wuensche 1994, 1998 | **Confirmed**: Z = max(Z_left, Z_right), the probability that the next cell of a pre-image is fixed by the rule table; low Z is ordered (many garden-of-Eden states), high Z chaotic, complex in between. **Adds** (1998): the variance of the input entropy (entropy of the rule-table lookup frequencies) over time — high for glider rules. It needs only the run and the lookup table, so it applies to Life and Integer Lenia now (§8.2). |
-| TD | Lloyd & Pagels 1988 | **Confirmed**: depth of a state = −k ln p(the trajectory that led to it \| the state); the mean over trajectories is their entropy, for Hamiltonian systems coarse- minus fine-grained entropy. |
+| WZ | Wuensche 1994, 1998 | **Implemented** (§5.7.4; the 1994 worked example reproduced). **Confirmed**: Z = max(Z_left, Z_right), the probability that the next cell of a pre-image is fixed by the rule table; low Z is ordered (many garden-of-Eden states), high Z chaotic, complex in between. **Adds** (1998): the variance of the input entropy (entropy of the rule-table lookup frequencies) over time — high for glider rules. It needs only the run and the lookup table, so it applies to Life and Integer Lenia now (§8.2). |
+| TD | Lloyd & Pagels 1988 | **Implemented** exactly on tiny rings (§5.7.5). **Confirmed**: depth of a state = −k ln p(the trajectory that led to it \| the state); the mean over trajectories is their entropy, for Hamiltonian systems coarse- minus fine-grained entropy. |
 
 ## 3. Catalogue
 
@@ -200,14 +200,14 @@ for discrete states only (§2.2).
 | LE | Lyapunov exponent | `lyapunov` | randomness | rule, global, dynamic | trajectory / run | local | implemented |
 | TL | Transient length (growth class) | `transient_length` | randomness | rule, global, dynamic, discrete | rule / ensemble | — | implemented |
 | LL | Langton's λ | `langton_lambda` | randomness | rule, global, static, discrete | rule / ensemble | — | implemented |
+| WZ | Wuensche's Z | `wuensche_z` | randomness | rule, global, static, discrete | rule / rule table | — | implemented (§5.7.4) |
 | FI | Functional information | `functional_information` | structural | system, global, dynamic | ensemble / ensemble | — | implemented |
-| TD | Thermodynamic depth | — | — | pattern, global, dynamic | — | — | deferred (§5.8) |
+| TD | Thermodynamic depth (exact, tiny rings) | `thermodynamic_depth` | mixed | pattern, global, dynamic | rule / ensemble (all configurations) | — | implemented (§5.7.5) |
 | IIT | Integrated information | — | — | system, global, dynamic | — | — | deferred (§5.8) |
 | AT | Assembly index | — | — | pattern, local (regional), static | — | — | deferred (§5.8) |
 | — | Total mass (statistic) | `mass` | statistic | pattern, global, static | instance / object | — | implemented (§5.9) |
 | — | Moving speed (statistic) | `speed` | statistic | pattern, global, dynamic | trajectory / run | — | implemented (§5.9) |
 | — | Change rate (statistic) | `change_rate` | statistic | pattern, global, dynamic | trajectory / run | — | implemented (§5.9) |
-| WZ | Wuensche's Z | — | — | rule, global, static, discrete | — | — | with elementary CA, M4 (§5.8) |
 | — | Multi-scale structural complexity | — | structural | pattern, local, dynamic | trajectory / run (better: ensemble) | local | proposed: the goal measure (§8) |
 | — | Local information dynamics (storage, transfer, modification) | — | structural | pattern, local, dynamic | trajectory / run | local | proposed (§8.2) |
 | — | Causal emergence / integrated information decomposition (ΦID) | — | structural | pattern | trajectory / run | per unit | proposed (§8.2) |
@@ -220,7 +220,7 @@ Eight measures also have normalized, per-object versions (§5.10).
 
 Code: `src/complexity/measures/` — `compression.py`, `algorithmic.py` (LZC, EC, LD),
 `causal.py` (SC), `information.py` (TE, block entropy), `decomposition.py` (PID, FID),
-`individuality.py` (ITI), `geometry.py` (FD), `dynamics.py` (LE), `rule.py` (TL, LL, FI),
+`individuality.py` (ITI), `geometry.py` (FD), `dynamics.py` (LE), `rule.py` (TL, LL, FI, WZ, TD),
 `statistics.py` (mass, speed, change rate).
 
 ## 4. Granularity and heatmaps
@@ -240,10 +240,9 @@ Code: `src/complexity/measures/` — `compression.py`, `algorithmic.py` (LZC, EC
 | Statistical complexity | ✓ local complexity field (Shalizi) | ✓ | indirect |
 | PID, FID | per tile (I_min has no per-cell form) | ✓ | system |
 | ITI | `iti_local` per cell; `iti_features` per individual | ✓ | indirect |
-| TL, LL, FI | — | — | ✓ |
 | IIT (deferred) | tiny patches only | ✓ | indirect |
 | AT (deferred) | per object | ✓ | indirect |
-| TD (deferred) | — | — | ✓ |
+| TL, LL, FI, WZ, TD | — | — | ✓ |
 
 **What gives a per-cell map** (§9, Q4): being computed from the run's frames and being an
 average of a per-cell quantity, so that the map's mean is the measure. Local TE,
@@ -572,7 +571,18 @@ of their mean. `report`: `class` (0 bounded, 1 log, 2 linear, 3 polynomial, 4 ex
 or `exponent` (slope of ln(1 + μ) against ln n, a continuous companion: 0 bounded, 1
 linear, large exponential).
 
-**Notes.** Discrete systems only (Life, Integer Lenia): continuous Lenia never repeats —
+**Polynomial means faster than linear** (2026-11-02): a power law wins only with an
+exponent above 1; otherwise the log and linear fits decide. Without that, a sublinear power
+law (rule 6: n^0.4) fitted log growth better over 6–8 sizes, and 16 of the paper's 38 log
+ECA came out polynomial. **ECA check** (`scripts/eca_rule_space.py`, sides 20–200 as in the
+paper): 77 of 88 classes agree with Hudcová & Mikolov's table — all 27 bounded, all 38 log,
+8 of 9 linear (rule 110 is polynomial here, exponent 1.6; the paper calls it linear with a
+steep slope); 4 of their 6 exponential (54 and 73 come out polynomial). Their additive "affine" and
+"fractal" classes, whose transients oscillate with n's divisors, split between exponential and
+linear here. Comparisons of states use `System.configuration` (an ECA's current row, not its
+space-time diagram).
+
+**Notes.** Discrete systems only (Life, Integer Lenia, ECA): continuous Lenia never repeats —
 creatures drift by fractions of a cell — so the old 1e-3 quantization gave every soup with
 a glider the cap. Linear and polynomial are close for Life (exponent ≈ 1.4): 16–96 gives
 linear, as in the paper, but 16–64 with fewer soups gave polynomial. The classes order
@@ -585,7 +595,9 @@ their patterns are continuous). ~5 s on GPU, ~20 s on CPU for Integer Lenia.
 The fraction of the rule table that leads to a non-quiescent state: the probability that a
 uniformly random neighbourhood produces a live cell. Estimated by stepping a 256² grid of
 iid uniform states once (`System.uniform`). Life: 140/512 = 0.273 (born with 3 of 8
-neighbours, 56 tables; survive with 2 or 3, 84). Discrete rules only.
+neighbours, 56 tables; survive with 2 or 3, 84). Discrete rules only. A system with a rule
+table (`System.rule_table`: elementary CA) gives it exactly, as the table's share of
+nonzero outputs (rule 110: 5/8); the estimate from one 128-cell row was 0.605.
 
 #### 5.7.3 Functional information (`functional_information`, FI)
 
@@ -617,11 +629,62 @@ Gosper gun, a self-replicating Aquarium) fails its own mass limit early and scor
 Most Lenia creatures sit at the 9-bit ceiling; telling them apart needs many more samples
 (2048 on the GPU in ~5 s: still 11 bits = ceiling for Orbium, Scutium, min Orbium).
 
+#### 5.7.4 Wuensche's Z (`wuensche_z`, WZ; 2026-11-02)
+
+**Definition.** Wuensche 1994: filling in a pre-image of a state cell by cell from the left,
+Z_left is the probability that the next cell is fixed by the rule table; Z_right the same
+from the right; Z = max(Z_left, Z_right). For K-cell neighbourhoods, R_K is the share of the
+table in *deterministic pairs* (two neighbourhoods differing only in the last cell, with
+different outputs), R_{K−1} the share in deterministic 4-tuples (the last cell wild, the one
+before it deciding the output), and so on to one 2^K-tuple;
+Z_left = R_K + R_{K−1}(1 − R_K) + R_{K−2}(1 − R_{K−1})(1 − R_K) + ….
+Z = 1: at most 2^(K−1) pre-images (chaotic and reversible rules); low Z: many pre-images and
+garden-of-Eden states (order); complex rules in between, often 0.75.
+
+**Implementation.** From the rule table alone (`System.rule_table`, 1-D binary rules: the
+elementary CA), in `rule.py` (`z_left`, `mirror`, `wuensche_z`). Reproduces the paper's
+worked example exactly (a K = 5 rule: Z_left 0.671875, Z_right 0.5625; tested), and
+Hudcová & Mikolov's Z for 87 of the 88 ECA classes. The 88th, rule 3 (output 1 iff left and
+centre are 0), they list as 0.25; here 0.5: from the right, the left cell is fixed whenever
+the centre is 0 (half the table), so Z_right ≥ 0.5, and Z is the same for rule 3's mirror
+and complement (17, 63, 119). Probably a slip in their table.
+
+**Notes.** Over the 88 classes Z takes six values: 0.75 for 36 rules, 0.5 for 27, 1 for 12.
+Z = 0.75 holds rules 110, 54 and 62, as Wuensche predicts, but also most log-transient
+(ordered) rules, so it narrows the search without deciding it (as Hudcová & Mikolov note).
+Z = 1 holds both the chaotic rules (30, 45, 90, 105, 150) and the reversible ones (15, 51,
+170, 204), told apart by thermodynamic depth (§5.7.5). The Wuensche 1998 input-entropy
+variance (§8.2) is not implemented yet.
+
+#### 5.7.5 Thermodynamic depth (`thermodynamic_depth`, TD; 2026-11-02)
+
+**Definition.** Lloyd & Pagels 1988: the depth of a state is −log P(the history that led to
+it | the state); its mean over the histories is their entropy. For a deterministic rule
+with every configuration equally likely at the start, the histories of a state s at step t
+are its t-step ancestors, so D(s) = log2 N_t(s) and the mean depth is
+H(S_0 | S_t) = n − H(S_t): the information about the start that the dynamics has erased.
+
+**Implementation.** Exact, over the whole state-transition graph of tiny rings
+(`System.transition_map`: each configuration's successor; elementary CA). Counts of the
+configurations' images are pushed through the map (`np.bincount`) until the image stops
+shrinking, when every configuration is on its cycle and H(S_t) no longer changes (or for
+`steps` steps); the result is (n − H(S_t)) / n in bits per cell. On one ring the value
+depends on the ring's number theory (rule 90 is nilpotent on 2^k cells, so it erases all
+16 bits at n = 16 but one bit on odd rings; rule 18 jumps to 0.99 at n = 15), so it is
+averaged over rings of 12 to 17 cells (`min_size`, `size`; 0.5 s per rule). Exact
+values tested: 1 for rule 0, 0 for identity (204) and shift (170).
+
+**Notes.** TD peaks at irreversibility, not at complexity: the rules that erase everything
+(depth 1) are exactly Wolfram's class 1 (0, 8, 32, 40, 128, 136, 160; 168 at 0.99), depth 0
+are the reversible rules (15, 51, 170, 204; and 154, bijective on these rings). Chaotic rules are shallow (30: 0.24,
+45: 0.19, 90: 0.28): they keep almost all of their past, as surjective rules must. The
+complex and traffic rules sit in the middle (110: 0.47, 54: 0.46, 184: 0.41). Median depth
+by transient class: bounded 0.30 (spread 0–1), log 0.47, linear 0.49, polynomial 0.46,
+exponential 0.28. Tagged "mixed". Lloyd & Pagels define it for a state with its history
+(pattern-level); the mean over all starts makes this a rule-level value.
+
 ### 5.8 Deferred
 
-- **Thermodynamic depth (TD; Lloyd & Pagels).** For a deterministic system it is the
-  entropy over a state's possible histories; computable only for tiny lattices. Revisit
-  with elementary CA (M4).
 - **Integrated information (IIT; Tononi).** Φ is exponential in system size: only ~3×3
   binary patches are tractable (`pyphi`), and a patch's Φ is not the system's. It is not a
   local measure as the PDF tags it (§2.3); its complexes are regions with causal boundaries
@@ -631,7 +694,6 @@ Most Lenia creatures sit at the 9-bit ceiling; telling them apart needs many mor
   the index is exponential in object size. Revisit for small discrete patches, with copy
   number (§8.2). Assembly A = Σ_i e^{a_i}(n_i − 1)/N_T is an ensemble quantity: unique objects
   i with index a_i and copy number n_i among N_T objects.
-- **Wuensche's Z (WZ).** Rule-level, static, for elementary CA; added with that system (M4).
 
 ### 5.9 Statistics for reference (`mass`, `speed`, `change_rate`)
 
@@ -741,7 +803,9 @@ at 4× the area). Compare creatures at equal grid size.
 
 - **Per-measure tests**: LZ76 against the direct parse; block entropy on stripes; FD on a
   point, line and plane; PID and FID on textbook gates; ITI on self- and environment-driven
-  series; Langton's λ of Life; local maps average to the value; tile maps are zero away from
+  series; Langton's λ of Life and rule 110; Wuensche's Z on the paper's example and on
+  rules 0, 30, 90, 110, 184; thermodynamic depth on small maps and rules 0, 204, 170;
+  local maps average to the value; tile maps are zero away from
   structure; parameters from the UI are typed and checked.
 
 ## 7. First values
@@ -767,7 +831,26 @@ Hexadentium, Amoebium dentalis) have since been replaced (PLAN.md §4.2).
   soups, 0 for noise; `iti_features` Orbium 0, gun 0.45, Tetralapillium 1.0, noise 0.03.
 - TL (growth class, 2026-11-01): Life linear (exponent 1.43); min Orbium's Integer Lenia
   log (0.57). Earlier single-size values (64²) are superseded.
-- LL: Life 0.269 (exact 0.273); min Orbium 0.84.
+- LL: Life 0.269 (exact 0.273); min Orbium 0.84. ECA (exact, from the table): rule 110
+  0.625, 30 / 54 / 90 / 184 0.5, 18 and 160 0.25.
+- Elementary CA (2026-11-02, rule-space script; the 88 classes in
+  `results/eca_rule_space/rules.csv`, figure `assets/figures/eca_rule_space.png`):
+
+  | Rule | Wolfram class | λ | Z | TD bits/cell | TL class |
+  |---|---|---|---|---|---|
+  | 110 | 4 | 0.625 | 0.75 | 0.47 | polynomial |
+  | 54 | 4 | 0.5 | 0.75 | 0.46 | polynomial |
+  | 30 | 3 | 0.5 | 1 | 0.24 | exponential |
+  | 18 | 3 | 0.25 | 0.5 | 0.65 | linear |
+  | 90 | 3 | 0.5 | 1 | 0.28 | exponential |
+  | 184 | 2 | 0.5 | 0.5 | 0.41 | linear |
+  | 108 | 2 | 0.5 | 0.75 | 0.23 | bounded |
+  | 232 | 2 | 0.5 | 0.5 | 0.40 | log |
+  | 160 | 1 | 0.25 | 0.5 | 0.99 | log |
+
+  Frame measures on the space-time diagram (64², step 100): block entropy, TE, SC, PID
+  and FID rank rules 110 and 54 above the class-2 rules (TE 0.43 / 0.39 against 0.24 for
+  184, 0.22 for 108); compression, LZC and block entropy put rule 30 on top, as for noise.
 - FI (random patterns of the pattern's size, 512 samples, ceiling 9 bits; 2026-11-01): at
   the ceiling Orbium, min Orbium, Scutium, Helicium, Hydrogeminium, Paraptera a. l.,
   Hexadentium; Gyrorbium and Paraptera c. f. 7.4; Tetralapillium 2.7; Kronium 1.2;
