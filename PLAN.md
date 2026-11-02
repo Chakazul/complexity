@@ -504,8 +504,10 @@ causal reach, local stability) with no objects or experiments, for a later sessi
       driver is asked first (`complexity/device.py`) and `JAX_PLATFORMS=cpu` set if it has
       no device, instead of the plugin's traceback
 - [x] UI starts with Orbium, Paraptera arcus pedes, Paraptera cavus furiosus,
-      Tetralapillium metamorpha, Florakronium arcus and continuous iid noise; with no
-      measure selected it runs the simulations only
+      Tetralapillium metamorpha, Florakronium arcus and continuous iid noise, and with
+      image and video LZMA, temporal novelty, SC, TE, individuality (features) and the
+      Lyapunov exponent ticked (2026-11-02); with no measure selected it runs the
+      simulations only
 - [ ] UI: "compiling…" state on start; export the session as CSV; record to MP4
       (baselines are selectable as systems and warm-up points are dimmed since M3)
 - [ ] `experiments/*.toml` config format and `complexity experiment <config>`; batched

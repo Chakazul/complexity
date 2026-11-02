@@ -380,9 +380,11 @@ const SUBJECT_NOTE = (m) => `\n\nComputed here: a property of ${
   { instance: "one frame", trajectory: "a stretch of the run", rule: "the rule", ensemble: "an ensemble" }[m.subject]
 }, estimated from ${{ object: "that frame", run: "this run", ensemble: "an ensemble of runs" }[m.estimated_from]}.`;
 
-// Off by default: LZMA compresses tighter than PNG and H.264 on every run measured so far;
-// rule-level measures take seconds on the first tick.
-const UNTICKED = new Set(["png", "video_h264"]);
+// Ticked at start (Bert, 2026-11-02); the others are a click away.
+const DEFAULT_MEASURES = new Set([
+  "lzma", "video_lzma", "novelty", "statistical_complexity", "transfer_entropy",
+  "iti_features", "lyapunov",
+]);
 
 // ---------- session ----------
 
@@ -794,7 +796,7 @@ async function main() {
     ["baseline", "iid_noise_continuous"],
   ]) addRun(system, pattern);
   selectedMeasures = new Set(catalog.measures
-    .filter((m) => !UNTICKED.has(m.key) && !m.per_rule).map((m) => m.key));
+    .filter((m) => DEFAULT_MEASURES.has(m.key)).map((m) => m.key));
   buildRunList();
   buildMeasureList();
   updateSidebar();
