@@ -69,6 +69,11 @@ local fields for transfer entropy, statistical complexity, block entropy and the
 twin's divergence, per tile for compression, LZC, PID and FID, drawn next to each frame
 with a scale shared across runs.
 
+Charts plot each measure against the time step, except the rule-level measures (transient
+length, Langton's λ, functional information, Wuensche's Z, thermodynamic depth): they are
+constant over a run, so they are drawn as one bar per run, labelled with its value
+(transient length by its class name).
+
 **Preset** (under Heatmap) sets up a comparison for one kind of system: a few of its
 patterns with noise of its kind, the measures that are informative for it, and a grid size.
 

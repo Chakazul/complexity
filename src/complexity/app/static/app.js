@@ -713,7 +713,8 @@ function buildCharts() {
     const m = catalog.measures.find((x) => x.key === key);
     const el = document.createElement("div");
     el.className = "chart";
-    el.innerHTML = `<h3>${m.icon} ${m.name}${isNormalized(m) ? " (normalized)" : ""}</h3><span class="unit">${unitOf(m)} vs. time step</span>`;
+    // rule-level measures are constant over a run: one bar per run instead of a line
+    el.innerHTML = `<h3>${m.icon} ${m.name}${isNormalized(m) ? " (normalized)" : ""}</h3><span class="unit">${unitOf(m)}${m.per_rule ? " per run (constant: a property of the rule)" : " vs. time step"}</span>`;
     el.querySelector("h3").onclick = () => openInfo(m);  // the same popup as the list's ⓘ
     const c = document.createElement("canvas");
     const tip = document.createElement("div");
@@ -727,11 +728,70 @@ function buildCharts() {
     }
     el.append(tip);
     box.append(el);
-    const chart = { key, canvas: c, tip, hover: null };
+    const chart = { key, canvas: c, tip, hover: null, bars: m.per_rule };
     c.addEventListener("mousemove", (e) => { chart.hover = e.offsetX; dirty = true; });
     c.addEventListener("mouseleave", () => { chart.hover = null; tip.style.display = "none"; dirty = true; });
     charts[key] = chart;
   }
+}
+
+// Names of transient length's classes, shown on its bars (unless it reports the exponent).
+const BAR_NAMES = { transient_length: ["bounded", "log", "linear", "polynomial", "exponential"] };
+
+function barText(key, v) {
+  const names = BAR_NAMES[key];
+  if (names && measureParams[key]?.report !== "exponent" && Number.isInteger(v)) return names[v] ?? String(v);
+  return String(+v.toPrecision(3));
+}
+
+// One bar per run: its latest value. For measures that do not change over a run.
+function drawBars(chart, g, W, H) {
+  const series = history.v[chart.key];
+  const values = series.map((s) => { for (let k = s.length - 1; k >= 0; k--) if (s[k] !== null) return s[k]; return null; });
+  const known = values.filter((v) => v !== null);
+  if (!known.length) return;
+  const pad = { l: 46, r: 10, t: 18, b: 8 };
+  let lo = Math.min(0, ...known), hi = Math.max(0, ...known);
+  if (hi - lo < 1e-9) hi = lo + 1;
+  const yt = niceTicks(lo, hi);
+  lo = Math.min(lo, yt[0]); hi = Math.max(hi, yt[yt.length - 1]);
+  const Y = (v) => H - pad.b - ((v - lo) / (hi - lo)) * (H - pad.t - pad.b);
+  g.font = "11px system-ui, sans-serif";
+  g.fillStyle = css("--text-muted"); g.strokeStyle = css("--grid"); g.lineWidth = 1;
+  g.textAlign = "right"; g.textBaseline = "middle";
+  for (const v of yt) {
+    const y = Math.round(Y(v)) + 0.5;
+    g.beginPath(); g.moveTo(pad.l, y); g.lineTo(W - pad.r, y); g.stroke();
+    g.fillText(+v.toPrecision(3), pad.l - 6, y);
+  }
+  const slot = (W - pad.l - pad.r) / values.length, bw = Math.min(56, slot * 0.7);
+  const hovered = chart.hover === null ? -1 : Math.floor((chart.hover - pad.l) / slot);
+  g.textAlign = "center";
+  values.forEach((v, i) => {
+    const x = pad.l + slot * (i + 0.5);
+    if (v === null) {
+      g.fillStyle = css("--text-muted"); g.textBaseline = "bottom";
+      g.fillText("n/a", x, Y(0) - 2);
+      return;
+    }
+    g.fillStyle = seriesColor(active.runs[i].slot);
+    g.globalAlpha = hovered < 0 || hovered === i ? 1 : 0.45;
+    const y0 = Y(0), y1 = Y(v);
+    g.fillRect(x - bw / 2, Math.min(y0, y1), bw, Math.max(1, Math.abs(y1 - y0)));
+    g.globalAlpha = 1;
+    g.fillStyle = css("--text-secondary");
+    g.textBaseline = v >= 0 ? "bottom" : "top";
+    g.fillText(barText(chart.key, v), x, v >= 0 ? y1 - 2 : y1 + 2);
+  });
+  if (hovered >= 0 && hovered < values.length) {
+    const v = values[hovered], col = seriesColor(active.runs[hovered].slot);
+    chart.tip.innerHTML = `<div class="row"><span class="swatch" style="background:${col}"></span>${active.runs[hovered].label}<b>${v === null ? "n/a" : barText(chart.key, v)}</b></div>`;
+    chart.tip.style.display = "block";
+    const box = chart.canvas.getBoundingClientRect(), parent = chart.canvas.parentElement.getBoundingClientRect();
+    const left = box.left - parent.left + pad.l + slot * (hovered + 1);
+    chart.tip.style.left = `${Math.min(left, parent.width - chart.tip.offsetWidth - 8)}px`;
+    chart.tip.style.top = `${box.top - parent.top + 8}px`;
+  } else chart.tip.style.display = "none";
 }
 
 function drawChart(chart) {
@@ -743,6 +803,7 @@ function drawChart(chart) {
   g.clearRect(0, 0, W, H);
   const ts = history.t, series = history.v[chart.key], warming = history.w[chart.key];
   if (!ts.length) return;
+  if (chart.bars) return drawBars(chart, g, W, H);
   const pad = { l: 46, r: 10, t: 8, b: 22 };
   let lo = Infinity, hi = -Infinity;
   for (const s of series) for (const v of s) if (v !== null) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
