@@ -69,6 +69,22 @@ local fields for transfer entropy, statistical complexity, block entropy and the
 twin's divergence, per tile for compression, LZC, PID and FID, drawn next to each frame
 with a scale shared across runs.
 
+**Preset** (under Heatmap) sets up a comparison for one kind of system: a few of its
+patterns with noise of its kind, the measures that are informative for it, and a grid size.
+
+| Preset | Runs | Measures |
+|---|---|---|
+| Lenia | Orbium, Gyrorbium, Paraptera pedes and furiosus, Tetralapillium, Asterium vagus, soup, continuous noise (128²) | image and video LZMA, novelty, SC, TE, FID, ITI features, Lyapunov, mass, speed |
+| Integer Lenia | min Orbium, its soup, continuous Orbium, 13-level iid and frozen noise (128²) | image and video LZMA, block entropy, SC, TE, ITI features, Lyapunov, transient length, λ, mass, speed |
+| Multi-channel Lenia | the three Aquarium patterns, Orbium, continuous noise (256²) | image and video LZMA, novelty, SC, TE, ITI features, Lyapunov, mass |
+| Game of Life | glider, Gosper gun, Galaxy, R-pentomino, Pufferfish, soup, binary iid and frozen noise (128²) | image and video LZMA, LZC, block entropy, SC, TE, PID, FID, ITI features, Lyapunov, transient length, λ |
+| Elementary CA | rules 110, 54, 30, 184, 232, 160, rule 90 from one cell, binary noise (128²) | image LZMA, LZC, block entropy, SC, TE, FID, Lyapunov, λ, Wuensche's Z, thermodynamic depth, transient length |
+
+Why: continuous Lenia never repeats, so transient length and λ are left out; discrete systems
+add the exact-symbol measures (LZC, block entropy, the rule-level ones); the Aquarium's
+networks of units are what ITI features and SC/TE are for; an elementary CA's frame is a
+scrolling space-time diagram, so video compression, speed and change rate are left out.
+
 A ⚙ beside a measure opens its settings (window, levels, offset, component, …); changes
 apply at the next Start and are remembered in the browser. Hover a greyed-out measure to
 see which systems it skips and why.

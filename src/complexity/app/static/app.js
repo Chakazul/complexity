@@ -386,6 +386,73 @@ const DEFAULT_MEASURES = new Set([
   "iti_features", "lyapunov",
 ]);
 
+// Presets: a few patterns of one system, with noise of its kind and other references, and
+// the measures that are informative for it (MEASURES.md §3, §7). Measures a system does not
+// accept are skipped as usual; rule-level ones take seconds on the first tick.
+const PRESETS = {
+  lenia: {
+    name: "Lenia", size: 128,
+    runs: [["lenia", "orbium"], ["lenia", "gyrorbium_gyrans"], ["lenia", "paraptera_arcus_pedes"],
+      ["lenia", "paraptera_cavus_furiosus"], ["lenia", "tetralapillium_metamorpha"],
+      ["lenia", "asterium_vagus"], ["lenia", "random"], ["baseline", "iid_noise_continuous"]],
+    // continuous: no transient length or λ; compression and novelty for form, SC, TE, FID
+    // and ITI for structure, Lyapunov for the chaotic creatures, speed for gliders
+    measures: ["lzma", "video_lzma", "novelty", "statistical_complexity", "transfer_entropy",
+      "fid", "iti_features", "lyapunov", "mass", "speed"],
+  },
+  integer_lenia: {
+    name: "Integer Lenia", size: 128,
+    runs: [["integer_lenia", "min_orbium"], ["integer_lenia", "random"], ["lenia", "orbium"],
+      ["baseline", "iid_noise_13"], ["baseline", "frozen_noise_13"]],
+    // 13 exact levels: the discrete measures apply too (block entropy, transient length, λ)
+    measures: ["lzma", "video_lzma", "block_entropy", "statistical_complexity",
+      "transfer_entropy", "iti_features", "lyapunov", "transient_length", "langton_lambda",
+      "mass", "speed"],
+  },
+  lenia_multi: {
+    name: "Multi-channel Lenia", size: 256,
+    runs: [["lenia_multi", "aquarium"], ["lenia_multi", "aquarium_unit"],
+      ["lenia_multi", "aquarium_scene"], ["lenia", "orbium"], ["baseline", "iid_noise_continuous"]],
+    // networks of units: per-object views (ITI features), structure (SC, TE), mass for growth
+    measures: ["lzma", "video_lzma", "novelty", "statistical_complexity", "transfer_entropy",
+      "iti_features", "lyapunov", "mass"],
+  },
+  life: {
+    name: "Game of Life", size: 128,
+    runs: [["life", "glider"], ["life", "gosper_glider_gun"], ["life", "galaxy"],
+      ["life", "r_pentomino"], ["life", "pufferfish"], ["life", "random"],
+      ["baseline", "iid_noise_binary"], ["baseline", "frozen_noise_binary"]],
+    // binary: LZC and block entropy are exact; PID and FID reproduce the papers' Life values;
+    // transient length (linear) and λ (0.273) are the rule's
+    measures: ["lzma", "video_lzma", "lzc", "block_entropy", "statistical_complexity",
+      "transfer_entropy", "pid", "fid", "iti_features", "lyapunov", "transient_length",
+      "langton_lambda"],
+  },
+  eca: {
+    name: "Elementary CA", size: 128,
+    runs: [["eca", "rule110"], ["eca", "rule54"], ["eca", "rule30"], ["eca", "rule184"],
+      ["eca", "rule232"], ["eca", "rule160"], ["eca", "rule90_seed"], ["baseline", "iid_noise_binary"]],
+    // frames are space-time diagrams: image measures and local fields read them; video,
+    // speed and change rate see the scroll, so they are left out; the rule-level ones
+    // (λ, Z, depth, transient class) separate the Wolfram classes
+    measures: ["lzma", "lzc", "block_entropy", "statistical_complexity", "transfer_entropy",
+      "fid", "lyapunov", "langton_lambda", "wuensche_z", "thermodynamic_depth",
+      "transient_length"],
+  },
+};
+
+function applyPreset(key) {
+  const preset = PRESETS[key];
+  if (!preset) return;
+  runRows = [];
+  for (const [system, pattern] of preset.runs) addRun(system, pattern);
+  const known = new Set(catalog.measures.map((m) => m.key));
+  selectedMeasures = new Set(preset.measures.filter((k) => known.has(k)));
+  $("size").value = String(preset.size);
+  updateSidebar();
+  setStatus(`preset ${preset.name}: press Start`);
+}
+
 // ---------- session ----------
 
 // Each start gets a new id, echoed by the server on its init and ticks. Ticks of the old
@@ -801,6 +868,8 @@ async function main() {
   buildMeasureList();
   updateSidebar();
   $("map-measure").onchange = (e) => { setMap(e.target.value); renderMapControls(); };
+  for (const [key, p] of Object.entries(PRESETS)) $("preset").add(new Option(p.name, key));
+  $("preset").onchange = (e) => applyPreset(e.target.value);
   $("clear-runs").onclick = () => { runRows = []; updateSidebar(); };
   $("clear-measures").onclick = () => { selectedMeasures.clear(); updateSidebar(); };
   closable($("info"), $("info-close"));

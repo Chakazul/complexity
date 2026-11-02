@@ -508,6 +508,9 @@ causal reach, local stability) with no objects or experiments, for a later sessi
       image and video LZMA, temporal novelty, SC, TE, individuality (features) and the
       Lyapunov exponent ticked (2026-11-02); with no measure selected it runs the
       simulations only
+- [x] UI presets (2026-11-02): a Preset dropdown under Heatmap for Lenia, Integer Lenia,
+      multi-channel Lenia, Game of Life and elementary CA selects a few patterns, noise of
+      their kind, the informative measures and a grid size (README)
 - [ ] UI: "compiling…" state on start; export the session as CSV; record to MP4
       (baselines are selectable as systems and warm-up points are dimmed since M3)
 - [ ] `experiments/*.toml` config format and `complexity experiment <config>`; batched
