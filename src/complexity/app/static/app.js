@@ -1,7 +1,7 @@
 // Complexity Lab client: builds run/measure pickers from /api/catalog, streams from /ws.
 "use strict";
 
-const MAX_RUNS = 6;
+const MAX_RUNS = 8;
 const MAX_POINTS = 3000;
 const $ = (id) => document.getElementById(id);
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();

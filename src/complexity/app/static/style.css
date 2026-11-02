@@ -16,6 +16,8 @@
   --series-4: #eda100;
   --series-5: #dd78c4;
   --series-6: #6038a6;
+  --series-7: #00838a;
+  --series-8: #8a5a2b;
   /* heatmap: one orange ramp (dataviz sequential), from the surface at 0 */
   --heat-mid: #eb6834;
   --heat-hi: #5c1d06;
@@ -52,6 +54,8 @@
     --series-4: #a5931b;
     --series-5: #f52ab6;
     --series-6: #6c469f;
+    --series-7: #1fa5ad;
+    --series-8: #b07a45;
     --heat-mid: #d95926;
     --heat-hi: #ffd2b8;
     --object-target: #ff6b66;
@@ -84,6 +88,8 @@
   --series-4: #a5931b;
   --series-5: #f52ab6;
   --series-6: #6c469f;
+  --series-7: #1fa5ad;
+  --series-8: #b07a45;
   --heat-mid: #d95926;
   --heat-hi: #ffd2b8;
   --object-target: #ff6b66;
