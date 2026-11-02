@@ -335,7 +335,7 @@ compiled step and can be batched over rules. Pattern keys name a rule and its st
   the 88 equivalence classes (MEASURES.md §5.7.4–5).
 
 ### 4.5 Later systems (backlog)
-Outer-totalistic and larger-than-life CA, Boids, Particle Life, Particle Lenia, Swarm Chemistry. Particle systems render to a
+Outer-totalistic and larger-than-life CA, Flow Lenia, Asymptotic Lenia, Boids, Particle Life, Particle Lenia, Swarm Chemistry. Particle systems render to a
 density frame for frame-based measures and also expose positions/velocities for
 particle-native measures.
 
@@ -497,6 +497,12 @@ causal reach, local stability) with no objects or experiments, for a later sessi
       (§4.4, MEASURES.md §5.7.4–5; 2026-11-02)
 - [x] Multi-channel Lenia with the Aquarium (§4.2b)
 - [ ] von Neumann / outer-totalistic CA; larger-than-life
+- [ ] Flow Lenia (Plantec et al. 2023): mass-conserving Lenia, the growth field turned into
+      a flow that moves matter (reintegration tracking); parameters localized in the cells
+      and carried with the flow, so several rules mix in one world
+- [ ] Asymptotic Lenia (Kawaguchi et al. 2024): A ← A + Δt (T(K ∗ A) − A), the state relaxing
+      toward a target instead of adding growth and clipping; smooth, so Yevenko et al.
+      2025's Lyapunov spectrum and Kaplan–Yorke dimension apply (MEASURES.md §2.4, §5.6)
 - [ ] Particle systems: Boids, Particle Life, Particle Lenia, Swarm Chemistry (+ density
       rendering, positions for particle-native measures)
 

@@ -32,7 +32,8 @@ described in **[MEASURES.md](MEASURES.md)**. In brief:
 - **M3b:** multi-scale structural complexity, with multi-channel Lenia's Aquarium as the
   reference case.
 - **M4:** more systems. Done: multi-channel Lenia (the Aquarium); elementary CA with
-  Wuensche's Z and thermodynamic depth. Next: other CA rules, particle systems.
+  Wuensche's Z and thermodynamic depth. Next: other CA rules, Flow Lenia and
+  Asymptotic Lenia, particle systems.
 - **M5:** polishing and sharing: UI, batch experiments and a results site, CI,
   contributor guide, hosted demo.
 
