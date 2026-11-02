@@ -1074,6 +1074,27 @@ creatures run ahead of their C patch by the time a field takes; (4) grids must b
 enough for the contact test (Orbium at 128² meets the noise's remains or itself: C = 0);
 (5) on the GPU runs are not bit-reproducible, so values move by ~10 % between runs.
 
+**Assessment, and M3b paused** (Bert, 2026-11-02, from watching it in the UI). Autopoiesis
+does what was asked — it follows the requirements of §8.1b — but it is less useful than
+hoped: slow on scenes of many creatures (the Aquarium with 8 units grows to dozens; each
+needs its own twin runs and object matching), and complicated, because it rests on
+object detection (§5.4) and on interventions run in real time (perturbations and a
+collision-like contact test). The problem is in the idea, not the implementation: a
+measure that must find individuals and experiment on each of them inherits both costs.
+It stays in the measure list as the reference prototype.
+
+**Next idea (deferred to a later session): a "physical" measure**, with no object
+detection and no real-time experiments: a dense field read from the dynamics themselves,
+closer to the autograd idea of §8.1b and Q13. For a differentiable system (Lenia),
+`jax.jvp` / `jax.vjp` give the linear response of the next steps to a change of any cell,
+at the cost of a few steps and batched over probes; from it, per cell or region: how far a
+disturbance spreads (causal reach, its boundary), whether it decays (local Lyapunov /
+stable part of the spectrum, Yevenko et al. 2025, §5.6) and whether it stays inside a
+coherent region (containment as a property of the Jacobian, not of detected objects).
+Self-maintenance would show as regions where disturbances decay and stay contained;
+individuality as the boundaries of such regions, found rather than detected. Discrete
+systems (Life) would need finite differences or another route.
+
 ### 8.2 Other proposals
 
 - **Local information dynamics** (Lizier): local active information storage, transfer and
@@ -1303,6 +1324,14 @@ connectivity of A was tried and made it worse. Figures (`scripts/detection_figur
 case) and [tracking.png](assets/figures/tracking.png) (a target unit followed through the
 Aquarium scene, with S and E). In the UI, the heatmap list has the neighbour sum and the
 detected objects (the target in its own colour) for every run.
+
+**Q19. Is the goal measure useful as built (Autopoiesis, C = S × M × I)?** (Bert,
+2026-11-02)
+It meets the requirements and ranks the reference scenes and the collision outcomes in
+the expected order (§8.1d), but in use it is slow for many creatures and complicated: it
+needs object detection and real-time interventions on each object. That is a property of
+the idea. M3b is paused; a more "physical" measure, a dense linear-response field from
+autograd without objects or experiments, is the next idea (§8.1d), for a later session.
 
 ## 10. Open questions
 

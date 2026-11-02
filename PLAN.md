@@ -420,7 +420,17 @@ then polishing and sharing.
       behind a ⚙ (typed and checked by the server, kept per browser, applied at the next
       Start); compatibility hints name the skipped systems and what the measure needs
 
-### M3b — Multi-scale structural complexity (MEASURES.md §8), after multi-channel Lenia (M4)
+### M3b — Multi-scale structural complexity (MEASURES.md §8) — ⏸ paused 2026-11-02
+
+Paused after the prototype goal measure (🧫 Autopoiesis): it meets the requirements but is
+slow for scenes of many creatures and complicated (object detection, real-time
+interventions); the next idea is a "physical" measure from autograd (linear response,
+causal reach, local stability) with no objects or experiments, for a later session
+(MEASURES.md §8.1d, Q19). Work moves to M4.
+
+- [ ] (next idea, later) A physical goal measure: a dense field from `jax.jvp` / `jax.vjp`
+      (how far disturbances spread, whether they decay and stay contained), no object
+      detection, no real-time experiments
 - [ ] Reference cases: empty and noise (low); goo-like structures (self-organizing, one
       level); single creatures (Aquarium unit); **Aquarium** networks: self-replicating
       (`aquarium`) and dividing on collision (`aquarium_scene`) (highest) — the Aquarium
@@ -531,3 +541,8 @@ then polishing and sharing.
   class over grid sizes; random patterns of the creature's size with a graded function).
 - 2026-11-01 — Lenia creatures revised (13 from the catalogue, PLAN §4.2); catalogue
   creatures run on the bump kernel core they were found with, others on the Gaussian.
+- 2026-11-01 — M3b: ITI on scenes (creatures detected in the potential K ∗ A, tracked per
+  run), collision experiments (pairs, noise, colonies; Synorbium; Triscutium's goo), and
+  the goal-measure prototype C = S × M × I as 🧫 Autopoiesis (batched twin runs).
+- 2026-11-02 — M3b paused: Autopoiesis is correct but slow for many creatures and
+  complicated; a physical, autograd-based measure is the next idea (later). Next: M4.
