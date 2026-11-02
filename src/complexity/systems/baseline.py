@@ -4,11 +4,15 @@ random frame held still, and a fresh random frame every step.
 Noise comes binary (as Game of Life), with 13 levels (as Integer Lenia's minimum Orbium) or
 continuous (as Lenia), so each system can be compared with noise of its own kind. The level
 count is part of the pattern, so the UI and CLI choose it like any other pattern.
+
+1-D iid noise (`iid_noise_1d_binary`) is the reference for elementary CA: a space-time
+diagram of iid random rows that scrolls up one row per step, a fresh row at the bottom, as
+an elementary CA's frame does.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import partial
 
 import jax
@@ -39,13 +43,14 @@ def noise(rng: jax.Array, size: tuple[int, int], levels: int) -> jax.Array:
 
 
 @partial(jax.tree_util.register_dataclass, data_fields=["A", "rng"],
-         meta_fields=["levels", "fresh"])
+         meta_fields=["levels", "fresh", "rows"])
 @dataclass(frozen=True)
 class BaselineState:
     A: jax.Array  # float32 frame
     rng: jax.Array
     levels: int  # 0 = continuous
     fresh: bool  # new noise every step
+    rows: bool = False  # 1-D: only a new bottom row, the rest scrolled up
 
 
 @register_system
@@ -57,6 +62,7 @@ class Baseline(System):
         **{f"{kind}_{lv}": f"{label} ({LEVEL_NAMES[lv]})"
            for kind, label in (("iid_noise", "IID noise"), ("frozen_noise", "Frozen noise"))
            for lv in LEVELS},
+        "iid_noise_1d_binary": "IID noise, 1-D rows (binary; for elementary CA)",
     }
 
     def n_states(self, pattern: str) -> int | None:
@@ -66,13 +72,19 @@ class Baseline(System):
         kind, levels = parse(pattern)
         rng, sub = jax.random.split(rng)
         A = jnp.zeros(size, jnp.float32) if kind == "empty" else noise(sub, size, levels)
-        return BaselineState(A, rng, levels, kind == "iid_noise")
+        return BaselineState(A, rng, levels, kind.startswith("iid_noise"), kind == "iid_noise_1d")
 
     def step(self, state: BaselineState) -> BaselineState:
         if not state.fresh:
             return state
         rng, sub = jax.random.split(state.rng)
-        return BaselineState(noise(sub, state.A.shape, state.levels), rng, state.levels, True)
+        if state.rows:
+            row = noise(sub, state.A.shape[1:], state.levels)
+            return replace(state, A=jnp.roll(state.A, -1, 0).at[-1].set(row), rng=rng)
+        return replace(state, A=noise(sub, state.A.shape, state.levels), rng=rng)
+
+    def configuration(self, state: BaselineState) -> jax.Array:
+        return state.A[-1:] if state.rows else state.A
 
     def observe(self, state: BaselineState) -> jax.Array:
         return state.A
@@ -84,12 +96,11 @@ class Baseline(System):
         """The pattern's noise kind with cells A, and a noise stream of its own: a copy
         with other cells is a different run (iid noise diverges at once)."""
         st = self.init(pattern, np.shape(A), jax.random.key(1))
-        return BaselineState(jnp.asarray(A, jnp.float32), st.rng, st.levels, st.fresh)
+        return replace(st, A=jnp.asarray(A, jnp.float32))
 
     def replace_cells(self, state: BaselineState, A) -> BaselineState:
         """Other cells and another noise stream, as `with_cells`."""
-        return BaselineState(jnp.asarray(A, jnp.float32), jax.random.fold_in(state.rng, 1),
-                             state.levels, state.fresh)
+        return replace(state, A=jnp.asarray(A, jnp.float32), rng=jax.random.fold_in(state.rng, 1))
 
     def perturb(self, state: BaselineState, rng: jax.Array) -> BaselineState:
         """One cell to the next level (discrete) or small noise (continuous), and a different
@@ -101,4 +112,4 @@ class Baseline(System):
                                                state.A[y, x] + step))
         else:
             A = jnp.clip(state.A + 1e-5 * jax.random.normal(rng, state.A.shape), 0, 1)
-        return BaselineState(A, jax.random.fold_in(state.rng, 1), state.levels, state.fresh)
+        return replace(state, A=A, rng=jax.random.fold_in(state.rng, 1))

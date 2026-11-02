@@ -848,9 +848,24 @@ Hexadentium, Amoebium dentalis) have since been replaced (PLAN.md §4.2).
   | 232 | 2 | 0.5 | 0.5 | 0.40 | log |
   | 160 | 1 | 0.25 | 0.5 | 0.99 | log |
 
-  Frame measures on the space-time diagram (64², step 100): block entropy, TE, SC, PID
-  and FID rank rules 110 and 54 above the class-2 rules (TE 0.43 / 0.39 against 0.24 for
-  184, 0.22 for 108); compression, LZC and block entropy put rule 30 on top, as for noise.
+  Frame measures on the space-time diagram (64², step 100), against **1-D iid noise**
+  (`baseline:iid_noise_1d_binary`, random rows scrolling as an ECA's frame does):
+
+  | Run | LZMA | LZC | SE | SC | TE | FID | LE |
+  |---|---|---|---|---|---|---|---|
+  | rule 110 | 1.06 | 0.82 | 0.79 | 4.11 | 0.43 | 0.19 | 0.15 |
+  | rule 30 | 1.50 | 1.05 | 0.89 | 4.19 | 0.36 | 0.08 | 0.16 |
+  | rule 184 | 0.31 | 0.19 | 0.40 | 1.61 | 0.24 | 0.09 | 0.09 |
+  | 1-D noise | 1.52 | 1.04 | 1.00 | 4.99 | 0.23 | 0 | 0.17 |
+  | 2-D noise | 1.54 | 1.05 | 1.00 | 0.03 | 0 | 0 | 0.17 |
+
+  **The temporal frame measures mostly see the scroll.** A frame is the previous one shifted
+  up a row, so each cell's next value is its lower neighbour's: SC finds 5 bits of causal
+  states in scrolling noise (more than rule 110's 4.1) and TE 0.23 bits (as much as rule
+  184). Measured against 1-D noise, not 2-D noise, only TE above 0.23 and FID (0 on noise;
+  110 and 54 at 0.19) separate the complex rules. Proper ECA forms would read time within
+  the diagram (row t → row t + 1, Lizier's local TE on ECA) instead of across frames; not
+  done yet. Compression, LZC and block entropy put rule 30 on top, as for noise.
 - FI (random patterns of the pattern's size, 512 samples, ceiling 9 bits; 2026-11-01): at
   the ceiling Orbium, min Orbium, Scutium, Helicium, Hydrogeminium, Paraptera a. l.,
   Hexadentium; Gyrorbium and Paraptera c. f. 7.4; Tetralapillium 2.7; Kronium 1.2;

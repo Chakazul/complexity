@@ -431,8 +431,9 @@ const PRESETS = {
   eca: {
     name: "Elementary CA", size: 128,
     runs: [["eca", "rule110"], ["eca", "rule54"], ["eca", "rule30"], ["eca", "rule184"],
-      ["eca", "rule232"], ["eca", "rule160"], ["eca", "rule90_seed"], ["baseline", "iid_noise_binary"]],
-    // frames are space-time diagrams: image measures and local fields read them; video,
+      ["eca", "rule232"], ["eca", "rule160"], ["eca", "rule90_seed"], ["baseline", "iid_noise_1d_binary"]],
+    // frames are space-time diagrams, compared with scrolling 1-D noise; image measures and
+    // local fields read them; video,
     // speed and change rate see the scroll, so they are left out; the rule-level ones
     // (λ, Z, depth, transient class) separate the Wolfram classes
     measures: ["lzma", "lzc", "block_entropy", "statistical_complexity", "transfer_entropy",

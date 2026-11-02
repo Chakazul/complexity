@@ -83,12 +83,13 @@ patterns with noise of its kind, the measures that are informative for it, and a
 | Integer Lenia | min Orbium, its soup, continuous Orbium, 13-level iid and frozen noise (128²) | image and video LZMA, block entropy, SC, TE, ITI features, Lyapunov, transient length, λ, mass, speed |
 | Multi-channel Lenia | the three Aquarium patterns, Orbium, continuous noise (256²) | image and video LZMA, novelty, SC, TE, ITI features, Lyapunov, mass |
 | Game of Life | glider, Gosper gun, Galaxy, R-pentomino, Pufferfish, soup, binary iid and frozen noise (128²) | image and video LZMA, LZC, block entropy, SC, TE, PID, FID, ITI features, Lyapunov, transient length, λ |
-| Elementary CA | rules 110, 54, 30, 184, 232, 160, rule 90 from one cell, binary noise (128²) | image LZMA, LZC, block entropy, SC, TE, FID, Lyapunov, λ, Wuensche's Z, thermodynamic depth, transient length |
+| Elementary CA | rules 110, 54, 30, 184, 232, 160, rule 90 from one cell, 1-D binary noise (128²) | image LZMA, LZC, block entropy, SC, TE, FID, Lyapunov, λ, Wuensche's Z, thermodynamic depth, transient length |
 
 Why: continuous Lenia never repeats, so transient length and λ are left out; discrete systems
 add the exact-symbol measures (LZC, block entropy, the rule-level ones); the Aquarium's
 networks of units are what ITI features and SC/TE are for; an elementary CA's frame is a
-scrolling space-time diagram, so video compression, speed and change rate are left out.
+scrolling space-time diagram, so video compression, speed and change rate are left out, and
+its noise reference scrolls too (SC and TE score the scroll itself: MEASURES.md §7).
 
 A ⚙ beside a measure opens its settings (window, levels, offset, component, …); changes
 apply at the next Start and are remembered in the browser. Hover a greyed-out measure to
@@ -115,7 +116,7 @@ uv run complexity run life:random --measures png,video_h264 --size 256x256 --eve
 | `life` — Game of Life (discrete) | glider (default), Gosper glider gun, lightweight / middleweight / heavyweight spaceships, Copperhead, Galaxy, Weekender, Lobster, Sir Robin, Pufferfish, Switch engine, Max, Sidecar gun, Star gate, R-pentomino, acorn, random soup |
 | `eca` — Elementary CA (256 rules, discrete) | rule 110 (default), 54, 30, 18, 90, 184, 108, 232, 160 from a random row; rules 110, 30, 90 from one cell; any rule as `rule<n>` or `rule<n>_seed` |
 | `lenia_multi` — Multi-channel Lenia (3 channels, 15 kernels) | Aquarium (self-replicating), Aquarium (soliton: VT049W, a lone unit that does not divide), Aquarium (8 units: VT049W, divide on collision) |
-| `baseline` — reference frames | empty (default); iid noise (new every step) and frozen noise (one frame held), each binary, 13-level or continuous |
+| `baseline` — reference frames | empty (default); iid noise (new every step) and frozen noise (one frame held), each binary, 13-level or continuous; 1-D binary iid noise (random rows scrolling, as an elementary CA's frame) |
 
 Multi-channel Lenia is shown in RGB (one colour per channel); measures read the mean of
 the channels. Its Aquarium patterns grow into networks of ~100 separate units on 256².

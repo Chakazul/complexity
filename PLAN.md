@@ -302,6 +302,8 @@ Reference "systems" that calibrate every measure. Expected values are tested (ME
 - `empty` — all zeros.
 - `frozen_noise` — one random frame repeated (static randomness).
 - `iid_noise` — a new random frame every step (dynamic randomness).
+- `iid_noise_1d_binary` (2026-11-02) — random rows scrolling up, a fresh one each step:
+  the reference for elementary CA, whose frame scrolls the same way.
 - The noise kind matches the system being compared: binary, 13-level or continuous. It is
   part of the pattern key (`iid_noise_binary`, `frozen_noise_13`, …) rather than a system
   parameter, so the UI and CLI pick it like any pattern (done, M3).

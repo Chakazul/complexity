@@ -296,3 +296,13 @@ def test_aquarium_self_replicates_and_the_vt049w_unit_does_not():
     later = engine.advance(lm, unit, 500)
     assert _units(lm, later) == 1
     assert 2.0 < float(later.A.sum() / unit.A.sum()) < 2.6  # grows into its adult size, ~2.3x
+
+
+def test_1d_noise_scrolls_like_an_elementary_ca():
+    base = registry.make_system("baseline")
+    state = base.init("iid_noise_1d_binary", (16, 32), KEY)
+    after = base.step(state)
+    a, b = np.asarray(base.observe(state)), np.asarray(base.observe(after))
+    assert (b[:-1] == a[1:]).all() and not (b[-1] == a[-1]).all()
+    assert set(np.unique(b)) <= {0.0, 1.0} and base.n_states("iid_noise_1d_binary") == 2
+    assert base.configuration(after).shape == (1, 32)
