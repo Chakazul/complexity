@@ -530,6 +530,10 @@ causal reach, local stability) with no objects or experiments, for a later sessi
 - [ ] `CONTRIBUTING.md`: adding a system / measure, the conventions in §2, the test checklist
 - [ ] GitHub Actions: ruff + pytest on CPU JAX
 - [ ] License; citation file
+- [x] Sharing from a remote machine (2026-11-02, README "Sharing the UI"): zlib-compressed
+      frames, server-side limits (runs, sizes, speed), optional password (HTTP Basic, then a
+      cookie for the WebSocket), `--public` (measure parameters ≤ 16× default, 4 sessions),
+      behind a Cloudflare tunnel
 - [ ] Hugging Face Space deployment of the UI
 - [ ] Publish the repo; announce to collaborators
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import csv
+import os
 import sys
 
 from complexity import registry
@@ -66,6 +67,13 @@ def main(argv: list[str] | None = None) -> None:
     serve = sub.add_parser("serve", help="start the interactive UI")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
+    serve.add_argument("--password", help="ask visitors for this password (better: set "
+                       "COMPLEXITY_PASSWORD, which stays out of the shell history)")
+    serve.add_argument("--public", action="store_true",
+                       help="for a shared server: measure parameters at most 16x their "
+                            "defaults, and --max-sessions 4 unless given")
+    serve.add_argument("--max-sessions", type=int,
+                       help="simultaneous browser sessions (default: unlimited, 4 with --public)")
 
     sub.add_parser("list", help="list systems, patterns and measures")
     sub.add_parser("info", help="show the JAX version, backend and devices")
@@ -86,7 +94,15 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "serve":
         import uvicorn
 
-        print(f"Open http://{args.host}:{args.port}")
+        if args.password:
+            os.environ["COMPLEXITY_PASSWORD"] = args.password
+        if args.public:
+            os.environ["COMPLEXITY_PUBLIC"] = "1"
+        sessions = args.max_sessions if args.max_sessions is not None else 4 if args.public else 0
+        os.environ["COMPLEXITY_MAX_SESSIONS"] = str(sessions)
+        print(f"Open http://{args.host}:{args.port}"
+              + (" (password required)" if os.environ.get("COMPLEXITY_PASSWORD") else "")
+              + (f", at most {sessions} sessions" if sessions else ""))
         uvicorn.run("complexity.app.server:app", host=args.host, port=args.port, log_level="warning")
     elif args.command == "list":
         _list()

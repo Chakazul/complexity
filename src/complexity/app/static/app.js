@@ -521,9 +521,15 @@ function heatRamp() {
 }
 
 function decodeMap(m) {
-  const bin = atob(m.data), bytes = new Uint8Array(bin.length);
+  return new Float32Array(m.bytes.buffer);  // inflated on arrival (see `receive`)
+}
+
+// Frames and maps arrive zlib-compressed and base64-encoded (server.py).
+async function inflate(b64) {
+  const bin = atob(b64), bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new Float32Array(bytes.buffer);
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 // The objects map: 0 background, 1 the target (one colour), 2, 3, ... the other creatures
@@ -663,19 +669,19 @@ function buildViews() {
   });
 }
 
-function drawFrame(i, b64) {
+function drawFrame(i, raw) {
   const r = active.runs[i];
-  const raw = atob(b64), px = r.image.data, lut = r.lut;
+  const px = r.image.data, lut = r.lut;
   if (r.rgb) {  // a system's own RGB picture (multi-channel Lenia)
     for (let p = 0; p < raw.length / 3; p++) {
-      px[p * 4] = raw.charCodeAt(p * 3); px[p * 4 + 1] = raw.charCodeAt(p * 3 + 1);
-      px[p * 4 + 2] = raw.charCodeAt(p * 3 + 2); px[p * 4 + 3] = 255;
+      px[p * 4] = raw[p * 3]; px[p * 4 + 1] = raw[p * 3 + 1];
+      px[p * 4 + 2] = raw[p * 3 + 2]; px[p * 4 + 3] = 255;
     }
     r.ctx.putImageData(r.image, 0, 0);
     return;
   }
   for (let p = 0; p < raw.length; p++) {
-    const v = raw.charCodeAt(p) * 3;
+    const v = raw[p] * 3;
     px[p * 4] = lut[v]; px[p * 4 + 1] = lut[v + 1]; px[p * 4 + 2] = lut[v + 2]; px[p * 4 + 3] = 255;
   }
   r.ctx.putImageData(r.image, 0, 0);
@@ -881,14 +887,30 @@ function setStatus(s) { $("status").textContent = s; }
 function connect() {
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
   ws.onopen = () => { setStatus("connected"); sendSpeed(); sendMap(); };
-  ws.onclose = () => { setStatus("disconnected — retrying"); setPlaying(false); setTimeout(connect, 1000); };
-  ws.onmessage = (e) => {
-    const msg = JSON.parse(e.data);
-    if ((msg.type === "init" || msg.type === "tick") && msg.id !== sessionId) return;  // stale
-    if (msg.type === "init") onInit(msg);
-    else if (msg.type === "tick") onTick(msg);
-    else if (msg.type === "error") setStatus(msg.message);
+  ws.onclose = (e) => {
+    setPlaying(false);
+    if (e.code === 1008) return setStatus("password needed: reload the page");
+    if (e.code !== 1013) setStatus("disconnected — retrying");  // 1013: server full, said so
+    setTimeout(connect, e.code === 1013 ? 10000 : 1000);
   };
+  // Inflating frames is asynchronous: messages are handled one after another, in order.
+  let inbox = Promise.resolve();
+  ws.onmessage = (e) => { inbox = inbox.then(() => receive(e.data)).catch((err) => setStatus(String(err))); };
+}
+
+async function receive(data) {
+  const msg = JSON.parse(data);
+  if ((msg.type === "init" || msg.type === "tick") && msg.id !== sessionId) return;  // stale
+  if (msg.type === "tick") {
+    await Promise.all(msg.runs.map(async (r) => {
+      r.frame = await inflate(r.frame);
+      if (r.map) r.map.bytes = await inflate(r.map.data);
+    }));
+    if (msg.id !== sessionId) return;  // restarted meanwhile
+  }
+  if (msg.type === "init") onInit(msg);
+  else if (msg.type === "tick") onTick(msg);
+  else if (msg.type === "error") setStatus(msg.message);
 }
 
 // The speed sliders pick an index into these.

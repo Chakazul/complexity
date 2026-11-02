@@ -10,22 +10,36 @@ Protocol (JSON messages):
   server -> client (init and tick echo the start's id, so the client can drop stale ticks)
     {"type": "init", "id": int, "runs": [{"label", "system", "n_states", "rgb", "height", "width", "measures",
                                "skipped", "config": {key: {param: value}}}]}
-    {"type": "tick", "id": int, "t": int, "runs": [{"frame": base64 uint8 (h w, or h w 3 if rgb), "values": {}, "ms": {},
+    {"type": "tick", "id": int, "t": int, "runs": [{"frame": base64 zlib uint8 (h w, or h w 3 if rgb), "values": {}, "ms": {},
                                           "warming_up": [keys],
-                                          "map"?: {"h", "w", "data": base64 float32}}]}
+                                          "map"?: {"h", "w", "data": base64 zlib float32}}]}
     {"type": "error", "message": str}
+
+Frames and maps are zlib-compressed (the browser inflates them with DecompressionStream):
+uncompressed, eight 128² runs at 30 FPS are ~5 MB/s, too much to share over the internet.
+
+Sharing (README "Sharing the UI"): the server checks what a client asks for (LIMITS), and,
+configured by `complexity serve` through environment variables, asks for a password
+(COMPLEXITY_PASSWORD: HTTP Basic auth, then a cookie that also admits the WebSocket),
+caps measure parameters at PARAM_FACTOR times their defaults (COMPLEXITY_PUBLIC) and the
+number of simultaneous sessions (COMPLEXITY_MAX_SESSIONS).
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
+import hmac
+import os
+import secrets
 import time
+import zlib
 from pathlib import Path
 
 import jax
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from complexity import registry
@@ -36,6 +50,70 @@ STATIC = Path(__file__).parent / "static"
 
 app = FastAPI(title="complexity")
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+# What one client may ask for, as in the UI (8 runs, sizes up to 256, speed sliders).
+LIMITS = {"runs": 8, "min_size": 8, "max_size": 256, "steps_per_tick": 64, "fps": 60}
+PARAM_FACTOR = 16  # public servers: numeric measure parameters at most this times the default
+COOKIE = "complexity_auth"
+sessions = 0  # open WebSocket connections
+
+
+def password() -> str:
+    return os.environ.get("COMPLEXITY_PASSWORD", "")
+
+
+def token() -> str:
+    """The cookie value that proves the password was given (an HMAC of it)."""
+    return hmac.new(password().encode(), b"complexity", hashlib.sha256).hexdigest()
+
+
+def basic_auth_ok(header: str | None) -> bool:
+    """An HTTP Basic `Authorization` header with the password (any user name)."""
+    if not header or not header.startswith("Basic "):
+        return False
+    try:
+        _, _, given = base64.b64decode(header[6:]).decode().partition(":")
+    except ValueError:
+        return False
+    return secrets.compare_digest(given.encode(), password().encode())
+
+
+@app.middleware("http")
+async def require_password(request: Request, call_next):
+    if not password() or secrets.compare_digest(request.cookies.get(COOKIE, ""), token()):
+        return await call_next(request)
+    if not basic_auth_ok(request.headers.get("authorization")):
+        return Response("password required", status_code=401,
+                        headers={"WWW-Authenticate": 'Basic realm="complexity"'})
+    response = await call_next(request)
+    secure = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
+    response.set_cookie(COOKIE, token(), httponly=True, samesite="strict", secure=secure)
+    return response
+
+
+def check_start(msg: dict) -> None:
+    """Raise ValueError if a start message asks for more than LIMITS allows, or, on a public
+    server, for measure parameters beyond PARAM_FACTOR times their defaults."""
+    runs = msg["runs"]
+    if not 1 <= len(runs) <= LIMITS["runs"]:
+        raise ValueError(f"1 to {LIMITS['runs']} runs")
+    for r in runs:
+        size = r.get("size")
+        if size is not None and not (len(size) == 2 and all(
+                isinstance(n, int) and LIMITS["min_size"] <= n <= LIMITS["max_size"] for n in size)):
+            raise ValueError(f"grid sides from {LIMITS['min_size']} to {LIMITS['max_size']}")
+    if os.environ.get("COMPLEXITY_PUBLIC"):
+        measures = registry.measures()
+        for key, params in (msg.get("measure_params") or {}).items():
+            for name, value in params.items():
+                default = getattr(measures[key], name, None) if key in measures else None
+                if (isinstance(default, (int, float)) and not isinstance(default, bool)
+                        and isinstance(value, (int, float)) and value > PARAM_FACTOR * default):
+                    raise ValueError(f"{key}: {name} at most {PARAM_FACTOR * default} here")
+
+
+def pack(data: bytes) -> str:
+    return base64.b64encode(zlib.compress(data, 1)).decode()
 
 
 @app.get("/")
@@ -100,19 +178,29 @@ class Session:
         for run in self.runs:
             run.step(steps)
             values, ms = run.measure()
-            frame = base64.b64encode(run.frame_u8().tobytes()).decode()
+            frame = pack(run.frame_u8().tobytes())
             item = {"frame": frame, "values": values, "ms": ms, "warming_up": run.warming_up()}
             heat = run.map(self.map_key) if self.map_key else None
             if heat is not None:
                 item["map"] = {"h": heat.shape[0], "w": heat.shape[1],
-                               "data": base64.b64encode(heat.astype("<f4").tobytes()).decode()}
+                               "data": pack(heat.astype("<f4").tobytes())}
             out.append(item)
         return {"type": "tick", "id": self.id, "t": self.runs[0].t if self.runs else 0, "runs": out}
 
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
+    global sessions
+    if password() and not secrets.compare_digest(ws.cookies.get(COOKIE, ""), token()):
+        await ws.close(code=1008)  # policy violation: no password given
+        return
     await ws.accept()
+    max_sessions = int(os.environ.get("COMPLEXITY_MAX_SESSIONS") or 0)
+    if max_sessions and sessions >= max_sessions:
+        await ws.send_json({"type": "error", "message": f"server full ({max_sessions} sessions): retrying"})
+        await ws.close(code=1013)  # try again later
+        return
+    sessions += 1
     state = {"session": None, "playing": False, "steps": 1, "fps": 30}
     lock = asyncio.Lock()
 
@@ -137,6 +225,7 @@ async def websocket_endpoint(ws: WebSocket):
             kind = msg.get("type")
             try:
                 if kind == "start":
+                    check_start(msg)
                     async with lock:
                         state["session"] = Session(msg["runs"], msg["measures"],
                                                    msg.get("measure_params"), msg.get("id", 0),
@@ -158,11 +247,12 @@ async def websocket_endpoint(ws: WebSocket):
                     if state["session"] and not state["playing"]:
                         await tick(0)  # show it now, also when paused
                 elif kind == "speed":
-                    state["steps"] = max(1, int(msg.get("steps_per_tick", 1)))
-                    state["fps"] = max(1, int(msg.get("fps", 30)))
-            except (KeyError, ValueError) as e:
+                    state["steps"] = min(LIMITS["steps_per_tick"], max(1, int(msg.get("steps_per_tick", 1))))
+                    state["fps"] = min(LIMITS["fps"], max(1, int(msg.get("fps", 30))))
+            except (KeyError, ValueError, TypeError) as e:
                 await ws.send_json({"type": "error", "message": f"{type(e).__name__}: {e}"})
     except WebSocketDisconnect:
         pass
     finally:
+        sessions -= 1
         task.cancel()

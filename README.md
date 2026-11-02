@@ -108,6 +108,32 @@ uv run complexity run life:gosper_glider_gun lenia:orbium --steps 1000 --out res
 uv run complexity run life:random --measures png,video_h264 --size 256x256 --every 10
 ```
 
+## Sharing the UI
+
+Run the server on an always-on machine (a GPU helps) and give others a link through a
+tunnel, so no port has to be opened. Each browser gets its own session; all share the
+machine.
+
+```bash
+git clone https://github.com/Chakazul/complexity.git && cd complexity
+uv sync --extra cuda13 && uv run complexity info     # check the GPU is listed
+tmux new -s complexity                                # keeps running after you log out
+export COMPLEXITY_PASSWORD='choose-one'               # optional; out of the shell history: use read -s
+export XLA_PYTHON_CLIENT_PREALLOCATE=false            # if others use the GPU too
+uv run complexity serve --public                      # 127.0.0.1:8000
+cloudflared tunnel --url http://localhost:8000        # in a second tmux window: prints an https link
+```
+
+Visitors open the link and, with a password set, enter it in the browser's login prompt
+(any user name). `--public` caps measure settings at 16× their defaults and allows 4
+simultaneous sessions (`--max-sessions N` to change); a fifth visitor is told the server is
+full and retried every 10 s. Every server checks what a client asks for: at most 8 runs,
+grid sides 8–256, 64 steps per frame, 60 FPS. Frames are sent zlib-compressed (a creature
+frame 4–37× smaller; noise does not compress), about 0.1–1.3 MB/s for eight 128² runs at
+30 FPS (single creatures least, soups most; each noise run adds ~0.6 MB/s). Alternatives to Cloudflare's quick tunnel (a new link each start): a named tunnel on
+your own domain, or Tailscale to invite specific people. Do not serve on `0.0.0.0` with the
+port open: there is no HTTPS without a tunnel.
+
 ## Systems and patterns
 
 | System | Patterns |
